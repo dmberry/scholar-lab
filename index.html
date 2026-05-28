@@ -11,22 +11,30 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.0 · proof-of-concept</span>
+    <span class="tb-sub" id="tb-version">v0.2.0</span>
   </div>
   <div class="tb-actions">
-    <div class="tb-zoom" title="Adjust card font size">
+    <div class="tb-group tb-zoom" title="Adjust card font size">
       <button class="tb-btn tb-zoom-btn" data-zoom="-">A−</button>
       <button class="tb-btn tb-zoom-btn" data-zoom="+">A+</button>
     </div>
-    <button class="tb-btn" id="tb-ref-all" title="Toggle REF 2029 window (2021–2028) on every card at once">REF 2029</button>
-    <button class="tb-btn" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">📊 Analytics</button>
-    <button class="tb-btn" id="tb-data" title="Edit the staff list and unit membership">⚙ Data</button>
-    <button class="tb-btn" id="tb-new-unit" title="Create a new unit — you'll be prompted for its faculty, school, name and UoA">＋ New unit</button>
-    <button class="tb-btn" id="tb-load-unit" title="Load a unit Markdown file from disk">⬆ Load unit</button>
-    <button class="tb-btn" id="tb-save-unit" title="Download the current unit as a Markdown file">⤓ Save unit</button>
-    <button class="tb-btn" id="tb-refresh" title="Force-refresh every cached Scholar profile">↻ Refresh all</button>
-    <a href="/api/export.json" class="tb-btn" title="Download the full unit + every cached Scholar payload as one JSON file">⤓ Export JSON</a>
-    <button class="tb-btn primary" onclick="window.print()" title="Open browser print dialog — choose 'Save as PDF' for a clean printable report">⤓ Export PDF</button>
+    <div class="tb-group">
+      <button class="tb-btn" id="tb-ref-all" title="Toggle REF 2029 window (2021–2028) on every card at once">REF 2029</button>
+      <button class="tb-btn" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">📊 Analytics</button>
+    </div>
+    <div class="tb-group" role="group" aria-label="Data management">
+      <button class="tb-btn" id="tb-data" title="Edit the staff list and unit membership">⚙ Data</button>
+      <button class="tb-btn" id="tb-new-unit" title="Create a new unit — you'll be prompted for its faculty, school, name and UoA">＋ Unit</button>
+      <button class="tb-btn" id="tb-load-unit" title="Load a unit Markdown file from disk">⬆ Load</button>
+      <button class="tb-btn" id="tb-save-unit" title="Download the current unit as a Markdown file">⤓ Save</button>
+    </div>
+    <div class="tb-group">
+      <button class="tb-btn" id="tb-refresh" title="Force-refresh every cached Scholar profile in the current view">↻ Refresh</button>
+    </div>
+    <div class="tb-group" role="group" aria-label="Export">
+      <a href="/api/export.json" class="tb-btn" title="Download the full unit + every cached Scholar payload as one JSON file">⤓ JSON</a>
+      <button class="tb-btn primary" onclick="window.print()" title="Open browser print dialog — choose 'Save as PDF' for a clean printable report">⤓ PDF</button>
+    </div>
   </div>
 </nav>
 

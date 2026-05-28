@@ -21,18 +21,19 @@ body {
   line-height: 1.45;
 }
 
-/* Toolbar */
+/* Toolbar — sticky, wraps gracefully on narrow widths. */
 .toolbar {
   position: sticky; top: 0; z-index: 30;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 1rem; padding: .55rem 1.2rem;
+  gap: .8rem 1rem; padding: .5rem 1rem;
   background: #ffffffee; backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
   font-size: .85rem;
+  flex-wrap: wrap;          /* allow brand + actions to wrap to a 2nd line */
 }
 .tb-brand {
-  display: flex; align-items: baseline; gap: .55rem;
-  min-width: 0; flex: 1 1 auto; overflow: hidden;
+  display: flex; align-items: baseline; gap: .5rem;
+  min-width: 0; flex: 0 1 auto; overflow: hidden;
 }
 .tb-logo { color: var(--accent); font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
 .tb-name {
@@ -43,11 +44,28 @@ body {
   color: var(--muted); font-size: .72rem; white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
 }
-@media (max-width: 820px) { .tb-sub { display: none; } }
+@media (max-width: 1100px) { .tb-name { display: none; } }   /* logo + version only */
+@media (max-width: 520px)  { .tb-sub  { display: none; } }   /* logo only */
+
 .tb-actions {
-  display: flex; gap: .35rem; justify-content: flex-end;
-  flex-shrink: 0;  /* keep buttons on one row */
+  display: flex; align-items: center;
+  gap: .4rem .9rem;          /* small gap inside groups, larger between groups */
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  min-width: 0;
 }
+.tb-group {
+  display: inline-flex; align-items: center; gap: .25rem;
+  /* Subtle vertical separator between groups. */
+  position: relative;
+}
+.tb-group + .tb-group::before {
+  content: "";
+  position: absolute; left: -.45rem; top: 15%; bottom: 15%;
+  border-left: 1px solid var(--border);
+}
+
 .tb-btn {
   display: inline-flex; align-items: center; gap: .3rem;
   font: inherit; font-size: .78rem;
@@ -63,12 +81,19 @@ body {
 .tb-btn[disabled] { opacity: .55; pointer-events: none; }
 .tb-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tb-btn.active:hover { background: #163d70; color: #fff; }
-@media (max-width: 700px) {
-  .tb-btn { font-size: .7rem; padding: .25rem .5rem; }
+@media (max-width: 900px) {
+  .tb-btn { font-size: .72rem; padding: .25rem .5rem; }
+  .tb-actions { gap: .35rem .65rem; }
 }
-.tb-zoom { display: inline-flex; gap: 0; border-radius: 6px; overflow: hidden; }
+@media (max-width: 600px) {
+  .tb-btn { font-size: .68rem; padding: .2rem .4rem; }
+  .tb-actions { gap: .25rem .45rem; }
+  .tb-group + .tb-group::before { display: none; }  /* divider too tight at small */
+}
+
+.tb-zoom { gap: 0; border-radius: 6px; overflow: hidden; }
 .tb-zoom .tb-btn {
-  border-radius: 0; padding: .3rem .55rem; min-width: 32px; justify-content: center;
+  border-radius: 0; padding: .3rem .55rem; min-width: 30px; justify-content: center;
 }
 .tb-zoom .tb-btn:first-child { border-right: 0; border-top-left-radius: 6px; border-bottom-left-radius: 6px; }
 .tb-zoom .tb-btn:last-child  { border-top-right-radius: 6px; border-bottom-right-radius: 6px; }
