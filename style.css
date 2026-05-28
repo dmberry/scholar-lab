@@ -669,6 +669,33 @@ h2 {
   html { font-size: 11pt; }
   body { background: #fff; color: #000; padding: 10mm 12mm; }
 
+  /* ── Analytics-only print mode ──────────────────────────────────────
+     Triggered by .printing-analytics on <body> (set by the modal's "⤓ PDF"
+     button). Hides everything except the analytics card and lets it span
+     full width; sections don't split across pages. */
+  body.printing-analytics > *:not(#analytics-modal) { display: none !important; }
+  body.printing-analytics #analytics-modal {
+    position: static !important;
+    background: none !important;
+    display: block !important;
+  }
+  body.printing-analytics .analytics-card,
+  body.printing-analytics .modal-card.analytics-card {
+    box-shadow: none !important;
+    border: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+  body.printing-analytics .close,
+  body.printing-analytics #a-print,
+  body.printing-analytics #a-reset { display: none !important; }
+  body.printing-analytics .analytics-section { break-inside: avoid; page-break-inside: avoid; }
+  body.printing-analytics .quad,
+  body.printing-analytics .heatmap { break-inside: avoid; page-break-inside: avoid; }
+
   /* Hide chrome that's not useful on paper */
   .toolbar, .modal, .sort-bar, .hint { display: none !important; }
 
@@ -1024,7 +1051,63 @@ h2 {
   padding: .25rem .5rem; text-transform: none; letter-spacing: 0;
 }
 .analytics-scope select:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
-.analytics-scope #a-reset { font-size: .72rem; padding: .25rem .65rem; margin-left: auto; }
+.analytics-scope .a-spacer { flex: 1 1 auto; }
+.analytics-scope #a-reset,
+.analytics-scope #a-print {
+  font-size: .72rem; padding: .25rem .65rem;
+}
+/* Active-exclusions banner: tiny, top-right of the analytics modal,
+   above the close button's row. Clickable — opens the excluded-staff list. */
+.analytics-excl-note {
+  position: absolute;
+  top: .75rem; right: 2.6rem;
+  margin: 0; padding: .05rem .25rem;
+  background: transparent; border: 0;
+  font: inherit;
+  font-size: .62rem; color: var(--muted);
+  font-style: italic;
+  max-width: 40%; text-align: right;
+  line-height: 1.2;
+  cursor: pointer;
+  border-radius: 3px;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 2px;
+}
+.analytics-excl-note:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+@media (max-width: 600px) {
+  .analytics-excl-note { font-size: .58rem; right: 2.4rem; }
+}
+
+/* Excluded-staff modal. */
+.modal-card.excluded-card { max-width: 760px; }
+.excluded-table {
+  width: 100%; border-collapse: collapse; font-size: .82rem; margin-top: .6rem;
+}
+.excluded-table th {
+  text-align: left; font-weight: 600; color: var(--muted);
+  font-size: .68rem; text-transform: uppercase; letter-spacing: .04em;
+  padding: .35rem .5rem .3rem 0;
+  border-bottom: 1px solid var(--border);
+}
+.excluded-table td {
+  padding: .4rem .5rem .4rem 0;
+  border-bottom: 1px solid #f0eee8;
+  vertical-align: top;
+}
+.excluded-table td small { display: block; color: var(--muted); font-size: .7rem; }
+.excl-reason {
+  display: inline-block;
+  font-size: .7rem; font-weight: 600;
+  padding: .05rem .45rem; border-radius: 999px;
+  letter-spacing: .03em;
+}
+.excl-emeritus { background: #e7eef8; color: var(--accent); }
+.excl-visiting { background: #fef0e0; color: #b06820; }
+.excl-both     { background: #f4e9f3; color: #7a3a78; }
 .analytics-section {
   border-top: 1px solid var(--border);
   padding: 1.2rem 0 .6rem;

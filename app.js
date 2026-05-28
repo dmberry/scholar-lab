@@ -595,7 +595,92 @@ document.addEventListener("click", (e) => {
 // set staff member (mostly cached hits — fast). Computes per-unit aggregates.
 
 // Analytics scope state — defaults to whole faculty (all of everything).
-let ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__" };
+let ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: "unit" };
+
+// Predicate shared across analytics + main grid. Honours the "Hide emeritus"
+// and "Hide visiting" toggles in the sort bar.
+function passesExclusions(p) {
+  return !(excludeEmeritus() && isEmeritus(p))
+      && !(excludeVisiting() && isVisiting(p));
+}
+function activeExclusionLabel() {
+  const out = [];
+  if (excludeEmeritus()) out.push("emeritus");
+  if (excludeVisiting()) out.push("visiting");
+  if (!out.length) return "";
+  return "Excluding " + out.join(" + ");
+}
+
+// List every staff member currently hidden by the Hide-emeritus / Hide-visiting
+// toggles, with the reason for each. Returns sorted by surname.
+function collectExcludedStaff() {
+  const out = [];
+  const dropE = excludeEmeritus();
+  const dropV = excludeVisiting();
+  if (!dropE && !dropV) return out;
+  const visit = (units, fac) => {
+    for (const u of (units || [])) {
+      if (u.disabled) continue;
+      for (const p of (u.staff || [])) {
+        const isE = dropE && isEmeritus(p);
+        const isV = dropV && isVisiting(p);
+        if (!isE && !isV) continue;
+        const reason = [isE && "emeritus", isV && "visiting"].filter(Boolean).join(" + ");
+        out.push({ name: p.name, title: p.title, unit: u.name, faculty: fac.name, reason });
+      }
+    }
+  };
+  for (const fac of FACULTIES) {
+    for (const sch of (fac.schools || [])) visit(sch.units, fac);
+    visit(fac.units, fac);
+  }
+  out.sort((a, b) => surnameOf(a.name).localeCompare(surnameOf(b.name)) || a.name.localeCompare(b.name));
+  return out;
+}
+
+// Open a small modal listing all excluded staff. Built on demand and
+// re-populated each open so it picks up toggle changes.
+function openExcludedModal() {
+  let modal = document.getElementById("excluded-modal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "excluded-modal";
+    modal.className = "modal hidden";
+    modal.innerHTML = `
+      <div class="modal-card excluded-card">
+        <button class="close" data-excluded-close aria-label="Close">×</button>
+        <div id="excluded-body"></div>
+      </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.add("hidden");
+    });
+    modal.querySelector("[data-excluded-close]").addEventListener("click", () => modal.classList.add("hidden"));
+  }
+  const list = collectExcludedStaff();
+  const body = modal.querySelector("#excluded-body");
+  if (!list.length) {
+    body.innerHTML = `<h3>Excluded staff</h3>
+      <p class="data-help">No exclusions active — toggle Hide emeritus / Hide visiting in the sort bar.</p>`;
+  } else {
+    body.innerHTML = `
+      <h3>Excluded staff (${list.length})</h3>
+      <p class="data-help">Hidden from the main grid and from analytics because of the
+        <b>Hide emeritus</b> / <b>Hide visiting</b> toggles in the sort bar.</p>
+      <table class="excluded-table">
+        <thead><tr><th>Name</th><th>Title</th><th>Unit</th><th>Reason</th></tr></thead>
+        <tbody>
+          ${list.map(r => `<tr>
+            <td><b>${escapeHTML(r.name)}</b></td>
+            <td>${escapeHTML(r.title || "")}</td>
+            <td>${escapeHTML(r.unit)}<br><small>${escapeHTML(r.faculty)}</small></td>
+            <td><span class="excl-reason excl-${r.reason.includes("+") ? "both" : r.reason}">${escapeHTML(r.reason)}</span></td>
+          </tr>`).join("")}
+        </tbody>
+      </table>`;
+  }
+  modal.classList.remove("hidden");
+}
 
 function _allActiveUnitsForScope(scope) {
   const out = [];
@@ -630,75 +715,132 @@ async function renderAnalyticsForScope() {
   // Re-bind the scope dropdowns immediately
   bindAnalyticsScope();
 
+  const groupBy = ANALYTICS_SCOPE.groupBy || "unit";
   const scopedUnits = _allActiveUnitsForScope(ANALYTICS_SCOPE);
-  const rows = [];
-  const tasks = [];
-  for (const {unit, faculty: fac} of scopedUnits) {
+
+  // Walk every staff member in scope, tag with their unit/faculty/effective
+  // UoA, and apply the Hide-emeritus / Hide-visiting toggles so analytics
+  // matches what the main grid is showing.
+  const allStaff = [];
+  for (const { unit, faculty: fac } of scopedUnits) {
     for (const p of (unit.staff || [])) {
-      if (p.scholar_id && p.scholar_status === "set") {
-        tasks.push({ p, unit, fac });
-      }
+      if (!passesExclusions(p)) continue;
+      allStaff.push({
+        p, unit, fac,
+        uoaCode: effectiveUoa(p, unit) || 0,   // 0 = no UoA
+      });
     }
   }
-  // Pull in parallel (cache-warm = instant), cap to 6 concurrent
+
+  // Fetch Scholar payloads for set staff (cache-warm = instant), capped 6.
+  const tasks = allStaff.filter(x => x.p.scholar_id && x.p.scholar_status === "set");
+  const rows = [];
   const queue = tasks.slice();
   await Promise.all(Array.from({length: 6}, async () => {
     while (queue.length) {
-      const { p, unit, fac } = queue.shift();
+      const { p, unit, fac, uoaCode } = queue.shift();
       try {
         const r = await fetch(`/api/scholar/${encodeURIComponent(p.scholar_id)}`);
         if (r.ok) {
           const d = await r.json();
-          rows.push({ name: p.name, unit: unit.name, unitSlug: unit.slug, faculty: fac.name,
-                      citedby: d.citedby ?? 0, hindex: d.hindex ?? 0, hindex5y: d.hindex5y ?? 0,
-                      citedby5y: d.citedby5y ?? 0, refPubs: d.ref_eligible_count ?? 0,
-                      cpy: d.cites_per_year || {} });
+          rows.push({
+            name: p.name, unit: unit.name, unitSlug: unit.slug, faculty: fac.name,
+            uoaCode,
+            citedby: d.citedby ?? 0, hindex: d.hindex ?? 0, hindex5y: d.hindex5y ?? 0,
+            citedby5y: d.citedby5y ?? 0, refPubs: d.ref_eligible_count ?? 0,
+            cpy: d.cites_per_year || {},
+          });
         }
       } catch {}
     }
   }));
 
-  // Build per-unit aggregates (scoped + only active units).
-  const unitAgg = new Map();
-  for (const {unit: u, faculty: fac} of scopedUnits) {
-    unitAgg.set(u.slug, {
-      name: u.name, faculty: fac.name, total: u.staff.length,
-      set: u.staff.filter(p => p.scholar_status === "set").length,
-      missing: u.staff.filter(p => p.scholar_status === "missing").length,
-      unchecked: u.staff.filter(p => p.scholar_status === "unchecked").length,
-      citedbySum: 0, refPubsSum: 0, h5h_ratios: [], hindexMean: 0,
-      cpyTotal: {},
+  // Build aggregates — by unit OR by UoA depending on groupBy. Keep the
+  // same output shape so every renderXxx() function works for both modes.
+  const agg = new Map();
+  const ensure = (key, name, faculty) => {
+    if (!agg.has(key)) agg.set(key, {
+      key, name, faculty, total: 0, set: 0, missing: 0, unchecked: 0,
+      citedbySum: 0, refPubsSum: 0, hindexMean: 0, h5h_ratios: [], cpyTotal: {},
     });
-  }
-  for (const r of rows) {
-    const a = unitAgg.get(r.unitSlug);
-    if (!a) continue;
-    a.citedbySum += r.citedby;
-    a.refPubsSum += r.refPubs;
-    a.hindexMean += r.hindex;
-    if (r.hindex > 0) a.h5h_ratios.push(r.hindex5y / r.hindex);
-    for (const [y, v] of Object.entries(r.cpy)) {
-      a.cpyTotal[y] = (a.cpyTotal[y] || 0) + (v || 0);
+    return agg.get(key);
+  };
+  if (groupBy === "uoa") {
+    // Pre-seed the buckets for every UoA that has ≥1 staff in scope.
+    for (const x of allStaff) {
+      const code = x.uoaCode;
+      const u = code ? UOA_BY_CODE[code] : null;
+      const key = code ? `uoa-${code}` : "uoa-none";
+      const name = code ? `UoA ${code} · ${u?.name || ""}` : "No UoA assigned";
+      const a = ensure(key, name, "");
+      a.total++;
+      if      (x.p.scholar_status === "set")     a.set++;
+      else if (x.p.scholar_status === "missing") a.missing++;
+      else                                       a.unchecked++;
+    }
+    for (const r of rows) {
+      const code = r.uoaCode;
+      const key = code ? `uoa-${code}` : "uoa-none";
+      const a = agg.get(key);
+      if (!a) continue;
+      a.citedbySum += r.citedby;
+      a.refPubsSum += r.refPubs;
+      a.hindexMean += r.hindex;
+      if (r.hindex > 0) a.h5h_ratios.push(r.hindex5y / r.hindex);
+      for (const [y, v] of Object.entries(r.cpy)) a.cpyTotal[y] = (a.cpyTotal[y] || 0) + (v || 0);
+    }
+  } else {
+    // Unit mode.
+    for (const { unit, faculty: fac } of scopedUnits) {
+      ensure(`unit-${unit.slug}`, unit.name, fac.name);
+    }
+    for (const x of allStaff) {
+      const a = agg.get(`unit-${x.unit.slug}`);
+      if (!a) continue;
+      a.total++;
+      if      (x.p.scholar_status === "set")     a.set++;
+      else if (x.p.scholar_status === "missing") a.missing++;
+      else                                       a.unchecked++;
+    }
+    for (const r of rows) {
+      const a = agg.get(`unit-${r.unitSlug}`);
+      if (!a) continue;
+      a.citedbySum += r.citedby;
+      a.refPubsSum += r.refPubs;
+      a.hindexMean += r.hindex;
+      if (r.hindex > 0) a.h5h_ratios.push(r.hindex5y / r.hindex);
+      for (const [y, v] of Object.entries(r.cpy)) a.cpyTotal[y] = (a.cpyTotal[y] || 0) + (v || 0);
     }
   }
-  for (const a of unitAgg.values()) {
+  for (const a of agg.values()) {
     a.hindexMean = a.set ? a.hindexMean / a.set : 0;
     a.h5h_median = median(a.h5h_ratios);
     a.perCapita = a.set ? a.citedbySum / a.set : 0;
     a.refPerActive = a.set ? a.refPubsSum / a.set : 0;
   }
-  const aggList = [...unitAgg.values()].filter(a => a.total > 0);
+  // Sort UoA buckets by code (so the headers read 1 → 34) when in UoA mode.
+  let aggList = [...agg.values()].filter(a => a.total > 0);
+  if (groupBy === "uoa") {
+    aggList.sort((a, b) => {
+      const ac = parseInt(a.key.replace("uoa-", ""), 10) || 999;
+      const bc = parseInt(b.key.replace("uoa-", ""), 10) || 999;
+      return ac - bc;
+    });
+  }
 
-  // ── Render the 6 sections ────────────────────────────────────────────────
+  const bucketLabel = groupBy === "uoa" ? "UoAs" : "units";
+  // Cross-listings doesn't fit UoA mode (a person belongs to one UoA at a time
+  // in the model). Hide it there.
+  const crossSection = groupBy === "uoa" ? "" : renderCrossListings();
   body.innerHTML = `
     ${renderAnalyticsScopeBar()}
     ${renderVisibility(aggList)}
     ${renderCitationTotals(aggList)}
     ${renderRefReadiness(aggList)}
     ${renderMomentumQuadrant(aggList)}
-    ${renderCrossListings()}
+    ${crossSection}
     ${renderHeatmap(aggList)}
-    <p class="analytics-foot">Computed from ${rows.length} hydrated Scholar profiles across ${aggList.length} active units.</p>
+    <p class="analytics-foot">Computed from ${rows.length} hydrated Scholar profiles across ${aggList.length} ${bucketLabel}. ${activeExclusionLabel() ? `<span class="analytics-excl">· ${escapeHTML(activeExclusionLabel())}</span>` : ""}</p>
   `;
   bindAnalyticsScope();
 }
@@ -722,21 +864,34 @@ function renderAnalyticsScopeBar() {
   const unitOpts = `<option value="__all__">All units</option>` +
     scopedUnits.map(({unit}) => `<option value="${escapeAttr(unit.slug)}" ${unit.slug===scope.unitSlug?"selected":""}>${escapeHTML(unit.name)}</option>`).join("");
 
+  const groupBy = scope.groupBy || "unit";
+  const excl = activeExclusionLabel();
   return `<div class="analytics-scope">
     <label>Faculty <select id="a-fac">${facOpts}</select></label>
     <label class="${showSchools?'':'sc-hidden'}">School <select id="a-sch" ${showSchools?'':'disabled'}>${schoolOpts}</select></label>
     <label>Unit <select id="a-unit">${unitOpts}</select></label>
+    <span class="a-spacer"></span>
+    <label class="a-groupby" title="Aggregate sections by unit OR by REF 2029 UoA bucket">Group by
+      <select id="a-groupby">
+        <option value="unit" ${groupBy==="unit"?"selected":""}>Unit</option>
+        <option value="uoa"  ${groupBy==="uoa"?"selected":""}>UoA</option>
+      </select>
+    </label>
     <button class="tb-btn" id="a-reset" title="Reset to whole-faculty view">Reset</button>
-  </div>`;
+    <button class="tb-btn" id="a-print" title="Export this analytics view as PDF (browser print dialog)">⤓ PDF</button>
+  </div>
+  ${excl ? `<button class="analytics-excl-note" type="button" id="a-excl-open" title="Click to see the excluded staff">${escapeHTML(excl)} — inherited from main view.</button>` : ""}`;
 }
 
 function bindAnalyticsScope() {
   const fac = document.getElementById("a-fac");
   const sch = document.getElementById("a-sch");
   const u   = document.getElementById("a-unit");
+  const grp = document.getElementById("a-groupby");
   const rst = document.getElementById("a-reset");
+  const prn = document.getElementById("a-print");
   fac?.addEventListener("change", () => {
-    ANALYTICS_SCOPE = { facultySlug: fac.value, schoolSlug: "__all__", unitSlug: "__all__" };
+    ANALYTICS_SCOPE = { ...ANALYTICS_SCOPE, facultySlug: fac.value, schoolSlug: "__all__", unitSlug: "__all__" };
     renderAnalyticsForScope();
   });
   sch?.addEventListener("change", () => {
@@ -747,9 +902,23 @@ function bindAnalyticsScope() {
     ANALYTICS_SCOPE = { ...ANALYTICS_SCOPE, unitSlug: u.value };
     renderAnalyticsForScope();
   });
-  rst?.addEventListener("click", () => {
-    ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__" };
+  grp?.addEventListener("change", () => {
+    ANALYTICS_SCOPE = { ...ANALYTICS_SCOPE, groupBy: grp.value };
     renderAnalyticsForScope();
+  });
+  rst?.addEventListener("click", () => {
+    ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: ANALYTICS_SCOPE.groupBy || "unit" };
+    renderAnalyticsForScope();
+  });
+  prn?.addEventListener("click", () => {
+    // Tag <body> so the analytics-only print stylesheet kicks in, print, then strip.
+    document.body.classList.add("printing-analytics");
+    const cleanup = () => {
+      document.body.classList.remove("printing-analytics");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    setTimeout(() => window.print(), 50);
   });
 }
 
@@ -1486,6 +1655,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-load-unit")) document.getElementById("data-load-input")?.click();
   if (e.target.closest("#tb-save-unit")) saveCurrentUnit();
   if (e.target.closest("#tb-new-unit")) newUnitFlow();
+  if (e.target.closest("#a-excl-open")) openExcludedModal();
 });
 
 // Toolbar "Save unit" — download the currently-selected unit's Markdown file.
