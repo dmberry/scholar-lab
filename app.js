@@ -868,17 +868,24 @@ function renderMomentumQuadrant(aggList) {
 }
 
 function renderCrossListings() {
-  // Walk faculties, collect people-by-id with all (unit) memberships
+  // Walk faculties, collect people-by-id with all (unit) memberships. Units
+  // can live directly under a faculty or under a school inside it — guard
+  // both since either array can be absent after the Markdown loader drops
+  // empty collections.
   const map = new Map();
-  for (const fac of FACULTIES) {
-    for (const u of fac.units) {
-      if (u.disabled) continue;
-      for (const p of (u.staff || [])) {
-        const key = p.staff_id || p.name;
-        if (!map.has(key)) map.set(key, { name: p.name, units: [] });
-        map.get(key).units.push(`${u.name} (${fac.name})`);
-      }
+  const visit = (u, fac) => {
+    if (!u || u.disabled) return;
+    for (const p of (u.staff || [])) {
+      const key = p.staff_id || p.name;
+      if (!map.has(key)) map.set(key, { name: p.name, units: [] });
+      map.get(key).units.push(`${u.name} (${fac.name})`);
     }
+  };
+  for (const fac of FACULTIES) {
+    for (const sch of (fac.schools || [])) {
+      for (const u of (sch.units || [])) visit(u, fac);
+    }
+    for (const u of (fac.units || [])) visit(u, fac);
   }
   const multi = [...map.values()].filter(p => p.units.length > 1)
                                   .sort((a, b) => b.units.length - a.units.length || a.name.localeCompare(b.name));
@@ -1743,7 +1750,7 @@ async function loadStaff() {
   fetch("/api/version").then(r => r.ok ? r.json() : null).then(v => {
     if (v?.version) {
       const el = document.getElementById("tb-version");
-      if (el) el.textContent = `v${v.version} · proof-of-concept`;
+      if (el) el.textContent = `v${v.version}`;
     }
   }).catch(() => {});
   // Surface any data-file parse warnings to the console for visibility.
