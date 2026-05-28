@@ -1,0 +1,24 @@
+# ── Staff data ─────────────────────────────────────────────
+# data/ holds the per-unit Markdown files — personal data (names,
+# staff IDs, Scholar IDs). Never commit it. Copy data.example/ to
+# data/ to get started.
+data/
+
+# Legacy single-file format (pre-Markdown) and its backups
+staff.json
+staff.bak.*.json
+
+# Cached Google Scholar payloads (per-profile, 7-day TTL)
+.cache/
+
+# Exports
+scholar-dashboard-*.json
+scholar-export-*.json
+
+# ── Python ─────────────────────────────────────────────────
+.venv/
+__pycache__/
+*.pyc
+
+# ── OS / editor ────────────────────────────────────────────
+.DS_Store
