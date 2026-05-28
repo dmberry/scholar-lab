@@ -549,7 +549,22 @@ document.addEventListener("click", (e) => {
 });
 
 // "Hide emeritus" / "Hide visiting" toggles — restore state from localStorage
-// at load time, re-render on change.
+// at load time, re-render and update the "N hidden" pill on change.
+function updateExcludedPill() {
+  const pill = document.getElementById("excluded-pill");
+  if (!pill) return;
+  const list = collectExcludedStaff();
+  if (!list.length) {
+    pill.classList.add("hidden");
+    pill.textContent = "";
+    return;
+  }
+  pill.classList.remove("hidden");
+  // Dedupe by name (cross-listed staff appear once per unit in the raw list).
+  const uniq = new Set(list.map(r => r.name)).size;
+  pill.textContent = `${uniq} hidden ⓘ`;
+  pill.title = `${uniq} staff hidden by current exclusions — click for details`;
+}
 [
   { id: "exclude-emeritus", key: "sd-exclude-emeritus", read: excludeEmeritus },
   { id: "exclude-visiting", key: "sd-exclude-visiting", read: excludeVisiting },
@@ -560,8 +575,11 @@ document.addEventListener("click", (e) => {
   cb.addEventListener("change", () => {
     localStorage.setItem(key, cb.checked ? "1" : "0");
     renderPeople();
+    updateExcludedPill();
   });
 });
+// Clicking the pill opens the same modal used from analytics.
+document.getElementById("excluded-pill")?.addEventListener("click", openExcludedModal);
 
 // Apply REF 2029 mode to a single card — used by both per-card chip and global button.
 function setCardRefMode(card, on) {
@@ -2181,6 +2199,8 @@ async function loadStaff() {
   });
 
   applyViewMode(initialUnit);
+  // Reflect any persisted exclusion toggles in the sort-bar pill.
+  updateExcludedPill();
 }
 
 // Toggle which picker is visible (Faculty triple vs UoA single) and re-render
