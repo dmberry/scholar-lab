@@ -1804,9 +1804,11 @@ document.addEventListener("click", async (e) => {
     const r = await fetch(`/api/scholar/${encodeURIComponent(id)}?refresh=1`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "fetch failed");
+    clearStale(id);
     slots.forEach(s => renderCardMetrics(s, id, d));
   } catch (err) {
     const msg = String(err.message || err);
+    markStale(id);
     slots.forEach(s => {
       s.innerHTML = `<span class="m-fail" title="${escapeAttr(msg)}">Retry failed <button class="m-retry" type="button" data-retry-id="${escapeAttr(id)}" title="Retry this person">↻</button></span>`;
     });
@@ -2384,7 +2386,10 @@ function renderPeople() {
     }
     const btn = document.createElement("button");
     const status = p.scholar_status || (p.scholar_id ? "set" : "unchecked");
-    btn.className = "person-card" + (status === "missing" ? " is-missing" : "");
+    const isStale = !!(p.scholar_id && STALE_IDS.has(p.scholar_id));
+    btn.className = "person-card"
+      + (status === "missing" ? " is-missing" : "")
+      + (isStale ? " is-stale" : "");
     btn.dataset.name = p.name;
     // No badge for "set" — the metrics chips and sparkline already say it.
     const badgeMap = {
@@ -2428,6 +2433,7 @@ function renderPeople() {
       ${unitTag}
       ${metricsSlot}
       ${badge}
+      ${isStale ? `<span class="stale-badge" title="Last refresh attempt failed — Scholar metrics may be older than the 7-day cache TTL or out of date.">⚠ stale</span>` : ""}
     `;
     btn.addEventListener("click", () => openPerson(p));
     grid.appendChild(btn);
@@ -2811,44 +2817,97 @@ function renderPerson(p, d) {
   `;
 }
 
+// Scholar IDs whose last refresh attempt failed. Cards rendered for any of
+// these IDs get a "⚠ stale" badge so the user can see at a glance which
+// numbers shouldn't be trusted. Cleared on a successful refresh.
+const STALE_IDS = new Set();
+function markStale(id) {
+  if (!id) return;
+  STALE_IDS.add(id);
+  // Apply immediately to any currently-rendered cards for this id.
+  document.querySelectorAll(`.card-metrics[data-id="${cssEscape(id)}"]`).forEach(slot => {
+    const card = slot.closest(".person-card");
+    if (!card) return;
+    card.classList.add("is-stale");
+    if (!card.querySelector(".stale-badge")) {
+      const b = document.createElement("span");
+      b.className = "stale-badge";
+      b.title = "Last refresh attempt failed — Scholar metrics may be older than the 7-day cache TTL or out of date.";
+      b.textContent = "⚠ stale";
+      card.appendChild(b);
+    }
+  });
+}
+function clearStale(id) {
+  STALE_IDS.delete(id);
+  document.querySelectorAll(`.card-metrics[data-id="${cssEscape(id)}"]`).forEach(slot => {
+    const card = slot.closest(".person-card");
+    card?.classList.remove("is-stale");
+    card?.querySelector(".stale-badge")?.remove();
+  });
+}
+
 // Force-refetch a single profile from Google Scholar (bypasses the cache).
-// Only reloads on success — on 429 / error we restore the button and tell
-// the user, otherwise a silent failure looks like "nothing happened".
+// Reloads on success; on 429 / error restores the button, alerts the user,
+// and marks the card stale. Cooldown 429s offer an explicit override.
 window.forceRefresh = async (id, btn) => {
   const original = btn.textContent;
-  btn.textContent = "refreshing…";
-  btn.disabled = true;
-  let d = {};
-  try {
-    const r = await fetch(`/api/scholar/${encodeURIComponent(id)}?refresh=1`);
-    try { d = await r.json(); } catch { d = {}; }
-    if (r.status === 429) {
-      const remaining = d.cooldown_remaining_seconds;
-      const mins = remaining ? Math.ceil(remaining / 60) : null;
+  const run = async (force) => {
+    btn.textContent = "refreshing…";
+    btn.disabled = true;
+    let d = {};
+    try {
+      const url = `/api/scholar/${encodeURIComponent(id)}?refresh=1${force ? "&force=1" : ""}`;
+      const r = await fetch(url);
+      try { d = await r.json(); } catch { d = {}; }
+      if (r.status === 429) {
+        btn.textContent = original;
+        btn.disabled = false;
+        const remaining = d.cooldown_remaining_seconds;
+        const mins = remaining ? Math.ceil(remaining / 60) : null;
+        if (!force && mins) {
+          // Server cooldown — offer the override.
+          const ok = confirm(
+            `Google Scholar 429 — server cooldown active (~${mins} min remaining).\n\n` +
+            "The cooldown protects the cache from getting worse with repeated retries. " +
+            "You can override it and try anyway, but Scholar's per-IP limit may still 429.\n\n" +
+            "Override and try anyway?"
+          );
+          if (ok) {
+            await run(true);
+          } else {
+            markStale(id);
+            window.open(`https://scholar.google.com/citations?user=${encodeURIComponent(id)}&hl=en`, "_blank", "noopener");
+          }
+        } else {
+          // Real Scholar 429 (or override failed) — mark stale, open profile.
+          markStale(id);
+          alert(
+            "Scholar is still rate-limiting your IP.\n\n" +
+            "The card has been marked ⚠ stale. Opening the Scholar profile in a new tab so you can check directly."
+          );
+          window.open(`https://scholar.google.com/citations?user=${encodeURIComponent(id)}&hl=en`, "_blank", "noopener");
+        }
+        return;
+      }
+      if (!r.ok) {
+        btn.textContent = original;
+        btn.disabled = false;
+        markStale(id);
+        alert(`Refresh failed: ${d.error || ("HTTP " + r.status)}\n\nThe card has been marked ⚠ stale.`);
+        return;
+      }
+      // Success — clear any stale flag and reload to pick up the new cache.
+      clearStale(id);
+      location.reload();
+    } catch (e) {
       btn.textContent = original;
       btn.disabled = false;
-      alert(
-        "Google Scholar is rate-limiting.\n\n" +
-        (mins ? `Server cooldown active — ~${mins} min remaining.\n\n` : "") +
-        "Try again later (the 10-min cooldown protects the cache from getting worse). " +
-        "The Scholar profile is open in a new tab if you want to check directly."
-      );
-      window.open(`https://scholar.google.com/citations?user=${encodeURIComponent(id)}&hl=en`, "_blank", "noopener");
-      return;
+      markStale(id);
+      alert("Refresh failed: " + (e.message || e) + "\n\nThe card has been marked ⚠ stale.");
     }
-    if (!r.ok) {
-      btn.textContent = original;
-      btn.disabled = false;
-      alert(`Refresh failed: ${d.error || ("HTTP " + r.status)}`);
-      return;
-    }
-    // Success — the cache file was rewritten. Reload to pick it up.
-    location.reload();
-  } catch (e) {
-    btn.textContent = original;
-    btn.disabled = false;
-    alert("Refresh failed: " + (e.message || e));
-  }
+  };
+  await run(false);
 };
 
 function renderPubs(pubs) {

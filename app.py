@@ -34,7 +34,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.4"
+__version__ = "0.2.5"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -806,10 +806,12 @@ def api_scholar(scholar_id: str):
 
     # About to hit Scholar — bail early if we're inside the cooldown window
     # from a recent 429. The cooldown protects us from making the rate-limit
-    # worse with repeated requests.
+    # worse with repeated requests. `force=1` explicitly opts out (user
+    # accepts the risk that Scholar may still 429).
     global _scholar_rl_until
+    force = request.args.get("force") == "1"
     now = time.time()
-    if now < _scholar_rl_until:
+    if not force and now < _scholar_rl_until:
         remaining = int(_scholar_rl_until - now)
         return jsonify({
             "error": f"Scholar rate-limit cooldown active ({remaining}s remaining)",
