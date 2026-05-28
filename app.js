@@ -2811,10 +2811,44 @@ function renderPerson(p, d) {
   `;
 }
 
-window.forceRefresh = async (id, link) => {
-  link.textContent = "refreshing…";
-  await fetch(`/api/scholar/${id}?refresh=1`);
-  location.reload();
+// Force-refetch a single profile from Google Scholar (bypasses the cache).
+// Only reloads on success — on 429 / error we restore the button and tell
+// the user, otherwise a silent failure looks like "nothing happened".
+window.forceRefresh = async (id, btn) => {
+  const original = btn.textContent;
+  btn.textContent = "refreshing…";
+  btn.disabled = true;
+  let d = {};
+  try {
+    const r = await fetch(`/api/scholar/${encodeURIComponent(id)}?refresh=1`);
+    try { d = await r.json(); } catch { d = {}; }
+    if (r.status === 429) {
+      const remaining = d.cooldown_remaining_seconds;
+      const mins = remaining ? Math.ceil(remaining / 60) : null;
+      btn.textContent = original;
+      btn.disabled = false;
+      alert(
+        "Google Scholar is rate-limiting.\n\n" +
+        (mins ? `Server cooldown active — ~${mins} min remaining.\n\n` : "") +
+        "Try again later (the 10-min cooldown protects the cache from getting worse). " +
+        "The Scholar profile is open in a new tab if you want to check directly."
+      );
+      window.open(`https://scholar.google.com/citations?user=${encodeURIComponent(id)}&hl=en`, "_blank", "noopener");
+      return;
+    }
+    if (!r.ok) {
+      btn.textContent = original;
+      btn.disabled = false;
+      alert(`Refresh failed: ${d.error || ("HTTP " + r.status)}`);
+      return;
+    }
+    // Success — the cache file was rewritten. Reload to pick it up.
+    location.reload();
+  } catch (e) {
+    btn.textContent = original;
+    btn.disabled = false;
+    alert("Refresh failed: " + (e.message || e));
+  }
 };
 
 function renderPubs(pubs) {

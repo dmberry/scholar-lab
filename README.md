@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.3 · proof-of-concept.
+**Version:** 0.2.4 · proof-of-concept.
 
 ## What it does
 
