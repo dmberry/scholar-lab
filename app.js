@@ -795,19 +795,39 @@ function renderCitationTotals(aggList) {
   const maxTotal = Math.max(...sorted.map(a => a.citedbySum), 1);
   const maxPC = Math.max(...sorted.map(a => a.perCapita), 1);
   const rows = sorted.map(a => `<tr>
-    <th>${escapeHTML(a.name)}<small>${escapeHTML(a.faculty)}</small></th>
-    <td><div class="abar"><span style="width:${(a.citedbySum/maxTotal)*100}%"></span></div><b>${a.citedbySum.toLocaleString()}</b></td>
-    <td><div class="abar"><span style="width:${(a.perCapita/maxPC)*100}%"></span></div><b>${Math.round(a.perCapita).toLocaleString()}</b></td>
+    <th scope="row">${escapeHTML(a.name)}<small>${escapeHTML(a.faculty)}</small></th>
+    <td>
+      <div class="abar-cell" title="Total citations: ${a.citedbySum.toLocaleString()} (across ${a.set} active Scholar profiles)">
+        <div class="abar abar-total"><span style="width:${(a.citedbySum/maxTotal)*100}%"></span></div>
+        <b>${a.citedbySum.toLocaleString()}</b>
+      </div>
+    </td>
+    <td>
+      <div class="abar-cell" title="Per active staff: ${Math.round(a.perCapita).toLocaleString()} citations (${a.citedbySum.toLocaleString()} ÷ ${a.set})">
+        <div class="abar abar-pc"><span style="width:${(a.perCapita/maxPC)*100}%"></span></div>
+        <b>${Math.round(a.perCapita).toLocaleString()}</b>
+      </div>
+    </td>
   </tr>`).join("");
   return `<section class="analytics-section">
     <h4>2. Citation totals & per-capita</h4>
-    <p class="analytics-q">Which unit pulls the most citation weight — absolutely and per researcher?</p>
+    <p class="analytics-q">Which unit pulls the most citation weight — absolutely (left) and per researcher (right)?</p>
     <table class="abar-table">
-      <thead><tr><th></th><th>Total citations</th><th>Per active staff</th></tr></thead>
+      <thead>
+        <tr>
+          <th class="abar-col-unit"></th>
+          <th class="abar-col-total"><span class="abar-sw abar-sw-total"></span> Total citations</th>
+          <th class="abar-col-pc"><span class="abar-sw abar-sw-pc"></span> Per active staff</th>
+        </tr>
+      </thead>
       <tbody>${rows}</tbody>
     </table>
-    <p class="analytics-note">Absolute totals can be dominated by one mega-cited individual (Andy Clark in Philosophy).
-    Per-capita normalises and reveals broadly strong units vs one-star units.</p>
+    <p class="analytics-note">
+      <b>Total</b> bars are scaled against the largest absolute total, <b>Per active</b> bars
+      against the largest per-capita value — so a unit can have a short Total bar but a long
+      Per-active bar (or vice versa). Absolute totals can be dominated by one mega-cited
+      individual; per-capita reveals broadly strong units versus one-star units.
+    </p>
   </section>`;
 }
 
