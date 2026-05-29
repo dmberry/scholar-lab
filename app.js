@@ -2426,14 +2426,14 @@ function renderPeople() {
     const cornerChips = (refChip || uoaTag)
       ? `<span class="card-corner">${refChip}${uoaTag}</span>`
       : ``;
+    const staleTip = isStale ? staleDotTitle(p.scholar_id) : "";
     btn.innerHTML = `
       ${cornerChips}
-      <span class="name">${escapeHTML(p.name)}</span>
+      <span class="name">${escapeHTML(p.name)}${isStale ? `<span class="stale-dot" title="${escapeAttr(staleTip)}"></span>` : ""}</span>
       <span class="title">${escapeHTML(p.title)}</span>
       ${unitTag}
       ${metricsSlot}
       ${badge}
-      ${isStale ? `<span class="stale-badge" title="Last refresh attempt failed — Scholar metrics may be older than the 7-day cache TTL or out of date.">⚠ stale</span>` : ""}
     `;
     btn.addEventListener("click", () => openPerson(p));
     grid.appendChild(btn);
@@ -2573,6 +2573,7 @@ function renderCardMetrics(slot, id, d) {
     i10index: d.i10index, citedby5y: d.citedby5y,
     cites_per_year: d.cites_per_year,
     ref_eligible_count: d.ref_eligible_count,
+    fetched_iso: d._fetched_iso,
   });
   const pair = (all, recent, label) => `
     <span class="m">
@@ -2781,8 +2782,14 @@ function renderPerson(p, d) {
   const uoaChip = uoaCode
     ? `<span class="modal-uoa-chip" title="${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
     : ``;
+  // Surface the stale state in the modal too — same dot the card carries.
+  // (METRICS has been updated by this point, so the tooltip has the real
+  // last-fetched timestamp.)
+  const staleDotHTML = STALE_IDS.has(p.scholar_id)
+    ? `<span class="stale-dot" title="${escapeAttr(staleDotTitle(p.scholar_id))}"></span>`
+    : "";
   modalBody.innerHTML = `
-    <h3>${escapeHTML(d.name || p.name)}</h3>
+    <h3>${escapeHTML(d.name || p.name)}${staleDotHTML}</h3>
     <div class="affil">${escapeHTML(d.affiliation || p.title)}</div>
     ${uoaChip}
 
@@ -2821,20 +2828,33 @@ function renderPerson(p, d) {
 // these IDs get a "⚠ stale" badge so the user can see at a glance which
 // numbers shouldn't be trusted. Cleared on a successful refresh.
 const STALE_IDS = new Set();
+// Human-readable tooltip for the stale dot — surfaces when the cached data
+// was last successfully fetched, if known.
+function staleDotTitle(id) {
+  const m = id && METRICS.get(id);
+  if (m?.fetched_iso) {
+    const when = new Date(m.fetched_iso).toLocaleString();
+    return `Last refresh attempt failed.\nLast successful Scholar fetch: ${when}.`;
+  }
+  return "Last refresh attempt failed — data may be out of date.";
+}
+
 function markStale(id) {
   if (!id) return;
   STALE_IDS.add(id);
-  // Apply immediately to any currently-rendered cards for this id.
+  // The stale indicator is a tiny grey dot inserted at the right end of
+  // the name row (push-right via flex), with the last successful fetch
+  // time in its tooltip.
   document.querySelectorAll(`.card-metrics[data-id="${cssEscape(id)}"]`).forEach(slot => {
     const card = slot.closest(".person-card");
     if (!card) return;
     card.classList.add("is-stale");
-    if (!card.querySelector(".stale-badge")) {
-      const b = document.createElement("span");
-      b.className = "stale-badge";
-      b.title = "Last refresh attempt failed — Scholar metrics may be older than the 7-day cache TTL or out of date.";
-      b.textContent = "⚠ stale";
-      card.appendChild(b);
+    const nameEl = card.querySelector(".name");
+    if (nameEl && !nameEl.querySelector(".stale-dot")) {
+      const dot = document.createElement("span");
+      dot.className = "stale-dot";
+      dot.title = staleDotTitle(id);
+      nameEl.appendChild(dot);
     }
   });
 }
@@ -2843,7 +2863,7 @@ function clearStale(id) {
   document.querySelectorAll(`.card-metrics[data-id="${cssEscape(id)}"]`).forEach(slot => {
     const card = slot.closest(".person-card");
     card?.classList.remove("is-stale");
-    card?.querySelector(".stale-badge")?.remove();
+    card?.querySelector(".stale-dot")?.remove();
   });
 }
 

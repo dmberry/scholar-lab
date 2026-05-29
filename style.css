@@ -574,19 +574,33 @@ h2 {
 
 .person-card.is-missing { opacity: .75; background: #fafafa; }
 
-/* Stale state — last refresh attempt failed; data may be out of date. */
-.person-card.is-stale {
-  border-color: #d29a4a;
-  box-shadow: inset 0 0 0 1px #f0c992;
+/* Stale state — super-subtle: a tiny grey dot used to flag that data
+   may be out of date. Hover for the last successful fetch timestamp.
+   Used in both the card (right of name) and the person modal (right of H3). */
+.stale-dot {
+  display: inline-block;
+  width: .42em; height: .42em;
+  background: #c4bdb1;
+  border-radius: 50%;
+  cursor: help;
+  vertical-align: middle;
+  margin-left: .55em;
+  flex-shrink: 0;
 }
-.person-card .stale-badge {
-  align-self: flex-start;
-  font-size: .62em; font-weight: 600;
-  color: #8a4f10; background: #fdf2e0;
-  border: 1px solid #f0c992; border-radius: 3px;
-  padding: .1em .45em; margin-top: .25em;
-  letter-spacing: .02em;
+.stale-dot:hover { background: #8a8278; }
+
+.person-card.is-stale { /* no border / shadow change — keep it quiet */ }
+.person-card.is-stale .name {
+  display: flex; align-items: center; gap: .35em;
+  /* Reserve room on the right for the REF + UoA chip stack so the dot
+     sits at the visible right edge of the name area, not under the chips. */
+  padding-right: 4em;
 }
+.person-card .stale-dot { margin-left: auto; }
+
+/* In the person modal, dot sits inline next to the H3 — bigger context, so
+   match it to the heading's font size visually. */
+.modal-card h3 .stale-dot { width: .35em; height: .35em; vertical-align: .35em; }
 
 .card-metrics {
   display: flex; gap: .55em; margin-top: .45em; flex-wrap: wrap;
