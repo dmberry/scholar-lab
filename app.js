@@ -3221,6 +3221,28 @@ function miniSparkline(cpy, opts = {}) {
     `</span>`;
 }
 
+// Pick a "nice" round step for axis gridlines. Targets ~4 gridlines and
+// snaps to 1 / 2 / 2.5 / 5 × 10ⁿ — same logic Google Scholar's citation
+// chart uses (0, 160, 320, 480, 640 = step 160).
+function niceAxisStep(maxVal, targetTicks = 4) {
+  if (maxVal <= 0) return 1;
+  const raw = maxVal / targetTicks;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  let step;
+  if (norm < 1.5)      step = 1   * mag;
+  else if (norm < 3)   step = 2   * mag;
+  else if (norm < 3.5) step = 2.5 * mag;
+  else if (norm < 7.5) step = 5   * mag;
+  else                 step = 10  * mag;
+  return step;
+}
+
+// Full-size citation history chart shown in the person modal. Modelled on
+// Google Scholar's profile chart: full 4-digit year labels along the
+// bottom, right-side y-axis with nice-round gridlines, light horizontal
+// rules behind the bars. REF window (2021–2028) bars stay navy; current
+// partial year stays grey.
 function sparkline(cpy) {
   const cy = (new Date()).getFullYear();
   const cpy2 = { ...(cpy || {}) };
@@ -3228,15 +3250,33 @@ function sparkline(cpy) {
   const years = Object.keys(cpy2).map(Number).sort((a, b) => a - b);
   if (!years.length) return "";
   const vals = years.map(y => cpy2[y]);
-  const maxV = Math.max(...vals, 1);
-  const W = 700, H = 80, pad = 18;
-  const bw = (W - pad * 2) / years.length;
+  const rawMax = Math.max(...vals, 1);
+  // Axis ceiling: round rawMax up to the next nice-step boundary so the
+  // top gridline sits cleanly above the tallest bar.
+  const step = niceAxisStep(rawMax);
+  const axisMax = Math.ceil(rawMax / step) * step;
+  const ticks = [];
+  for (let v = 0; v <= axisMax; v += step) ticks.push(v);
+
+  const W = 700, H = 140;
+  const padL = 6, padR = 44, padT = 12, padB = 22;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
+  const bw = plotW / years.length;
+
+  // Horizontal gridlines + right-axis labels.
+  const grid = ticks.map(t => {
+    const y = padT + plotH - (t / axisMax) * plotH;
+    return `<line class="grid" x1="${padL}" x2="${padL + plotW}" y1="${y}" y2="${y}"/>` +
+           `<text class="axis" x="${padL + plotW + 6}" y="${y + 3}" text-anchor="start">${t}</text>`;
+  }).join("");
+
+  // Bars + bottom-axis year labels.
   const bars = years.map((y, i) => {
     const v = vals[i];
-    const h = (v / maxV) * (H - pad * 2);
-    const x = pad + i * bw;
-    const yy = H - pad - h;
-    // Navy = REF 2029 window (2021–2028); current partial year stays grey.
+    const h = (v / axisMax) * plotH;
+    const x = padL + i * bw;
+    const yy = padT + plotH - h;
     let cls = "";
     if (y === cy)                                       cls = "current";
     else if (y >= REF_START_YEAR && y <= REF_END_YEAR)  cls = "recent";
@@ -3244,11 +3284,11 @@ function sparkline(cpy) {
       ? `${y}: ${v} citations (partial year)`
       : `${y}: ${v} citations`;
     const yearLabelCls = (y === cy) ? ' class="year-current"' : '';
-    return `<rect class="${cls}" x="${x + 1}" y="${yy}" width="${bw - 2}" height="${h}"><title>${tip}</title></rect>
-            <text${yearLabelCls} x="${x + bw/2}" y="${H - 4}" text-anchor="middle">${y % 100}</text>
-            <text x="${x + bw/2}" y="${yy - 2}" text-anchor="middle">${v}</text>`;
+    return `<rect class="${cls}" x="${x + 1.5}" y="${yy}" width="${Math.max(bw - 3, 0.5)}" height="${h}"><title>${tip}</title></rect>` +
+           `<text${yearLabelCls} x="${x + bw/2}" y="${H - 6}" text-anchor="middle">${y}</text>`;
   }).join("");
-  return `<svg class="sparkline" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+
+  return `<svg class="sparkline" viewBox="0 0 ${W} ${H}">${grid}${bars}</svg>`;
 }
 
 function fmt(n) { return (n === null || n === undefined) ? "—" : n; }

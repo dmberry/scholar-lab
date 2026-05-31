@@ -1080,12 +1080,14 @@ h2 {
 .metric .vr-tag { font-size: .55rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-left: 2px; }
 .metric .k { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
 
-.sparkline { width: 100%; height: 90px; margin: .6rem 0 1.2rem; }
+.sparkline { width: 100%; height: 160px; margin: .6rem 0 1.2rem; display: block; }
 .sparkline rect { fill: var(--accent); opacity: .55; cursor: default; }
 .sparkline rect.recent { fill: #0b2f5e; opacity: 1; }            /* completed last 5y */
 .sparkline rect.current { fill: #9a9a9a; opacity: 1; }           /* current year — partial, grey */
-.sparkline text { font-size: 9px; fill: var(--muted); }
+.sparkline text { font-size: 10px; fill: var(--muted); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .sparkline text.year-current { fill: var(--warn); font-weight: 700; }
+.sparkline text.axis { font-size: 10px; fill: #9a9a9a; }
+.sparkline line.grid { stroke: #e6e2d8; stroke-width: 1; shape-rendering: crispEdges; }
 
 .pub { padding: .55rem 0; border-bottom: 1px dashed var(--border); }
 .pub:last-child { border-bottom: 0; }
