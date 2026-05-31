@@ -3206,20 +3206,19 @@ function miniSparkline(cpy, opts = {}) {
       : `${y}: ${v} citations`;
     return `<rect class="${cls}" x="${x + 0.5}" y="${H - h}" width="${Math.max(bw - 1, 0.5)}" height="${h}"><title>${tip}</title></rect>`;
   }).join("");
-  // Tiny quantitative labels reinforcing what the bar heights say:
-  //   • peak-year value floats at the top-right (anchors the y-axis)
-  //   • 10-year sum sits at the bottom-right (overall productivity)
-  // Only drawn in normal mode; REF mode already has its own framing.
-  let labels = "";
-  if (!opts.ref && sumV > 0) {
-    const peakV = Math.max(...vals);
-    labels = `
-      <text class="ms-peak" x="${W - 1}" y="7" text-anchor="end">${peakV}</text>
-      <text class="ms-sum"  x="${W - 1}" y="${H - 1}" text-anchor="end" title="10-year citation total">Σ ${sumV}</text>
-    `;
-  }
   const cls = "mini-spark" + (opts.ref ? " ref-mode" : "");
-  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}${labels}</svg>`;
+  const svg = `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+  // Two tiny chips reinforcing what the bar heights say, styled to match
+  // the REF / UoA chips: peak-year value (top-right) and 10-year sum
+  // (bottom-right). Only in normal mode — REF has its own framing.
+  if (opts.ref || sumV <= 0) {
+    return `<span class="mini-spark-wrap">${svg}</span>`;
+  }
+  const peakV = Math.max(...vals);
+  return `<span class="mini-spark-wrap">${svg}` +
+    `<span class="ms-chip ms-peak" title="Peak year in window">${peakV}</span>` +
+    `<span class="ms-chip ms-sum" title="10-year citation total">&Sigma; ${sumV}</span>` +
+    `</span>`;
 }
 
 function sparkline(cpy) {
