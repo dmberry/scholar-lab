@@ -71,6 +71,8 @@ ROOT = STATIC_ROOT
 CACHE_DIR = USER_ROOT / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = USER_ROOT / "data"   # one Markdown file per unit lives here
+REF_FLAGS_FILE   = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: True}}
+REF_TARGETS_FILE = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
 
 # First-run seed: if the user has no data/ yet, copy the bundled
 # data.example/ so they see a working dashboard immediately rather than
@@ -83,7 +85,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.31"
+__version__ = "0.2.32"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -676,10 +678,14 @@ def _fetch_scholar(scholar_id: str) -> dict:
             year = _int_or_none(year_el.get_text(strip=True)) if year_el else None
             cite_el = row.select_one(".gsc_a_c .gsc_a_ac")
             num_citations = _int_or_none(cite_el.get_text(strip=True)) if cite_el else 0
-            rows.append({
+            row_data = {
                 "title": title, "authors": authors, "venue": venue,
                 "year": year, "num_citations": num_citations or 0,
-            })
+            }
+            # Stable key used by the REF-flag store. Derived from title +
+            # year; survives Scholar re-scrapes so flag state persists.
+            row_data["pub_key"] = pub_key(row_data)
+            rows.append(row_data)
         return rows
 
     pubs = _parse_pub_rows(soup)
@@ -736,6 +742,112 @@ def index():
 @app.route("/<path:fname>")
 def static_files(fname: str):
     return send_from_directory(ROOT, fname)
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# REF 2029 flagging.
+#
+# Each publication can be ticked as "include in our REF 2029 submission".
+# Flags persist in USER_ROOT/ref_flags.json, keyed by scholar_id then by
+# a stable pub_key (year + title-slug). The Scholar cache is rebuilt
+# periodically, so flags can't live inside the cached payload — they live
+# in their own file and the frontend overlays them at render time.
+#
+# Per-UoA targets (multiplier, min/max per person) live in
+# USER_ROOT/ref_targets.json. Defaults to REF 2029's published rules:
+# 2.5 × FTE outputs per UoA, with each submitted person contributing
+# between 1 and 5 outputs.
+# ──────────────────────────────────────────────────────────────────────────
+
+_DEFAULT_REF_TARGETS = {
+    "default": {"multiplier": 2.5, "min_per_person": 1, "max_per_person": 5},
+}
+
+
+def pub_key(pub: dict) -> str:
+    """A stable identifier for a publication, derived from year + a slug
+    of the title. Survives Scholar re-scrapes (title strings come back
+    consistent). Returns '' if there's nothing to key on."""
+    title = (pub.get("title") or "").lower().strip()
+    title = re.sub(r"[^a-z0-9]+", "-", title).strip("-")[:80]
+    if not title:
+        return ""
+    year = pub.get("year") or "n.d."
+    return f"{year}-{title}"
+
+
+def _load_ref_flags() -> dict:
+    try:
+        with REF_FLAGS_FILE.open() as f:
+            return json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_ref_flags(flags: dict) -> None:
+    REF_FLAGS_FILE.write_text(json.dumps(flags, indent=2, sort_keys=True))
+
+
+def _load_ref_targets() -> dict:
+    try:
+        with REF_TARGETS_FILE.open() as f:
+            data = json.load(f) or {}
+            # Ensure 'default' is always present so the client never has
+            # to fall back to hard-coded values.
+            if "default" not in data:
+                data["default"] = dict(_DEFAULT_REF_TARGETS["default"])
+            return data
+    except (OSError, json.JSONDecodeError):
+        return dict(_DEFAULT_REF_TARGETS)
+
+
+def _save_ref_targets(targets: dict) -> None:
+    REF_TARGETS_FILE.write_text(json.dumps(targets, indent=2, sort_keys=True))
+
+
+@app.route("/api/ref-flags", methods=["GET"])
+def api_ref_flags_get():
+    """Return the full flag map. Small file; one GET per session is fine.
+    Shape: {scholar_id: {pub_key: true, ...}, ...}"""
+    return jsonify(_load_ref_flags())
+
+
+@app.route("/api/ref-flag", methods=["POST"])
+def api_ref_flag_set():
+    """Toggle a single flag. Body: {scholar_id, pub_key, flagged: bool}."""
+    body = request.get_json(force=True, silent=True) or {}
+    sid = body.get("scholar_id")
+    key = body.get("pub_key")
+    on  = bool(body.get("flagged"))
+    if not sid or not key:
+        return jsonify({"error": "scholar_id and pub_key are required"}), 400
+    flags = _load_ref_flags()
+    person = flags.setdefault(sid, {})
+    if on:
+        person[key] = True
+    else:
+        person.pop(key, None)
+        if not person:
+            flags.pop(sid, None)
+    _save_ref_flags(flags)
+    return jsonify({"ok": True, "scholar_id": sid, "pub_key": key, "flagged": on})
+
+
+@app.route("/api/ref-targets", methods=["GET", "POST"])
+def api_ref_targets():
+    if request.method == "GET":
+        return jsonify(_load_ref_targets())
+    body = request.get_json(force=True, silent=True) or {}
+    uoa  = str(body.get("uoa") or "default")
+    rec  = {
+        "multiplier":      float(body.get("multiplier", 2.5)),
+        "min_per_person":  int(body.get("min_per_person", 1)),
+        "max_per_person":  int(body.get("max_per_person", 5)),
+    }
+    targets = _load_ref_targets()
+    targets[uoa] = rec
+    _save_ref_targets(targets)
+    return jsonify({"ok": True, "uoa": uoa, "target": rec})
 
 
 @app.route("/api/version")

@@ -2127,6 +2127,9 @@ async function loadStaff() {
   // UoA via the Data editor) is picked up on the next reload, not served from
   // browser cache. Was previously biting us during dev: the in-memory UNITS
   // array was missing fields the API now returned.
+  // Load REF flags in parallel with the staff payload so per-card REF
+  // chips render with the correct count on first paint.
+  loadRefFlags();
   let data;
   try {
     const r = await fetch("/api/staff", { cache: "no-store" });
@@ -2604,10 +2607,15 @@ function renderPeople() {
     const refChip = (status === "set")
       ? `<button class="ref-chip" type="button" data-ref-toggle title="Toggle REF 2029 publication window (2021–2028)">REF 2029</button>`
       : ``;
-    // Stack REF chip + UoA chip in the top-right corner so the name has full
-    // width again. UoA sits directly under REF, both right-aligned.
-    const cornerChips = (refChip || uoaTag)
-      ? `<span class="card-corner">${refChip}${uoaTag}</span>`
+    // REF-flag count chip — shows N publications ticked for REF
+    // submission. Click-through to the modal where the ticking happens.
+    const refCount = (status === "set" && p.scholar_id) ? refFlagCount(p.scholar_id) : 0;
+    const refCountChip = (status === "set" && p.scholar_id)
+      ? `<span class="ref-count-chip${refCount === 0 ? " is-zero" : ""}" data-ref-chip-id="${escapeAttr(p.scholar_id)}" title="${refCount} publication${refCount === 1 ? "" : "s"} flagged for REF 2029. Open the card to tick more.">REF: ${refCount}</span>`
+      : ``;
+    // Stack REF toggle + REF count + UoA chip in the top-right corner.
+    const cornerChips = (refChip || refCountChip || uoaTag)
+      ? `<span class="card-corner">${refChip}${refCountChip}${uoaTag}</span>`
       : ``;
     const staleTip = isStale ? staleDotTitle(p.scholar_id) : "";
     btn.innerHTML = `
@@ -2881,6 +2889,9 @@ async function hydrateCardMetrics() {
 
 async function openPerson(p) {
   openModal();
+  // Ensure REF-flag map is loaded so the modal renders checkboxes in
+  // the right state on first open.
+  await loadRefFlags();
   // Effective UoA — surfaced in every modal branch so it's visible whether
   // the person is set / missing / unchecked / static-mode.
   const uoaCode = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
@@ -3007,8 +3018,11 @@ function renderPerson(p, d) {
 
     ${sparkline(cpy)}
 
-    <h4 style="margin:1rem 0 .4rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">Recent publications (REF 2029 window, from 2021)</h4>
-    ${renderPubs(d.recent_publications || [])}
+    <h4 style="margin:1rem 0 .4rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
+      Recent publications (REF 2029 window, from 2021)
+      <span class="ref-summary" id="ref-summary-${escapeAttr(p.scholar_id)}">${refFlagCount(p.scholar_id)} flagged for REF</span>
+    </h4>
+    ${renderPubs(d.recent_publications || [], { scholarId: p.scholar_id, flags: refFlagsFor(p.scholar_id) })}
 
     <details class="deep">
       <summary>Deep dive: raw Scholar payload</summary>
@@ -3150,15 +3164,104 @@ window.forceRefresh = async (id, btn) => {
   await run(false);
 };
 
-function renderPubs(pubs) {
+function renderPubs(pubs, opts = {}) {
   if (!pubs.length) return `<p class="affil">No publications in the last two years on Scholar.</p>`;
-  return pubs.map(p => `
-    <div class="pub">
-      <div class="pt">${escapeHTML(p.title || "Untitled")}</div>
-      <div class="pm">${escapeHTML(String(p.year || "n.d."))} · ${escapeHTML(p.venue || "")} · cited by ${fmt(p.num_citations)}</div>
-    </div>
-  `).join("");
+  // `opts.scholarId` + `opts.flags` enable per-pub REF tick-boxes. Pubs
+  // outside the REF 2029 window are still listed but not tickable.
+  const scholarId = opts.scholarId;
+  const flags = opts.flags || {};
+  return pubs.map(p => {
+    const y = p.year || 0;
+    const inWindow = y >= REF_START_YEAR && y <= REF_END_YEAR;
+    const key = p.pub_key || "";
+    const flagged = !!(scholarId && key && flags[key]);
+    const cb = (scholarId && inWindow && key)
+      ? `<label class="pub-ref" title="Tick to include this output in the REF 2029 submission for this person">
+           <input type="checkbox" class="pub-ref-cb"
+                  data-scholar-id="${escapeAttr(scholarId)}"
+                  data-pub-key="${escapeAttr(key)}"
+                  ${flagged ? "checked" : ""}>
+           <span class="pub-ref-tag">REF</span>
+         </label>`
+      : `<span class="pub-ref-spacer" aria-hidden="true"></span>`;
+    return `
+      <div class="pub${flagged ? " pub-flagged" : ""}">
+        ${cb}
+        <div class="pub-body">
+          <div class="pt">${escapeHTML(p.title || "Untitled")}</div>
+          <div class="pm">${escapeHTML(String(p.year || "n.d."))} · ${escapeHTML(p.venue || "")} · cited by ${fmt(p.num_citations)}</div>
+        </div>
+      </div>
+    `;
+  }).join("");
 }
+
+// Cache of REF flags from /api/ref-flags. Keyed by scholar_id → {pub_key: true}.
+// Loaded once per session, updated optimistically on click.
+const REF_FLAGS = new Map();
+let _refFlagsLoaded = null;
+async function loadRefFlags() {
+  if (_refFlagsLoaded) return _refFlagsLoaded;
+  _refFlagsLoaded = (async () => {
+    try {
+      const r = await fetch("/api/ref-flags");
+      if (!r.ok) return;
+      const data = await r.json();
+      for (const sid in data) REF_FLAGS.set(sid, data[sid] || {});
+    } catch (_) { /* offline / static mode — leave empty */ }
+  })();
+  return _refFlagsLoaded;
+}
+function refFlagsFor(scholarId) {
+  return REF_FLAGS.get(scholarId) || {};
+}
+function refFlagCount(scholarId) {
+  return Object.keys(refFlagsFor(scholarId)).length;
+}
+
+// Toggle a single REF flag. Optimistic local update; rolls back on
+// server error so the card chip + checkbox stay consistent.
+async function toggleRefFlag(scholarId, key, flagged) {
+  const map = REF_FLAGS.get(scholarId) || {};
+  if (flagged) map[key] = true; else delete map[key];
+  REF_FLAGS.set(scholarId, map);
+  try {
+    const r = await fetch("/api/ref-flag", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({scholar_id: scholarId, pub_key: key, flagged}),
+    });
+    if (!r.ok) throw new Error("server " + r.status);
+  } catch (e) {
+    // Roll back local state on failure.
+    if (flagged) delete map[key]; else map[key] = true;
+    REF_FLAGS.set(scholarId, map);
+    alert("Couldn't save REF flag: " + (e.message || e));
+  }
+}
+
+// Wire up checkbox clicks anywhere in the document (modal pubs list).
+document.addEventListener("change", (e) => {
+  const cb = e.target.closest(".pub-ref-cb");
+  if (!cb) return;
+  const sid = cb.dataset.scholarId;
+  const key = cb.dataset.pubKey;
+  const on  = cb.checked;
+  if (!sid || !key) return;
+  toggleRefFlag(sid, key, on);
+  // Reflect the row class immediately for the visual highlight.
+  cb.closest(".pub")?.classList.toggle("pub-flagged", on);
+  // Update the per-card REF chip if the card is currently rendered.
+  const n = refFlagCount(sid);
+  const chip = document.querySelector(`[data-ref-chip-id="${CSS.escape(sid)}"]`);
+  if (chip) {
+    chip.textContent = `REF: ${n}`;
+    chip.classList.toggle("is-zero", n === 0);
+  }
+  // Update the modal-header running total.
+  const sum = document.getElementById(`ref-summary-${sid}`);
+  if (sum) sum.textContent = `${n} flagged for REF`;
+});
 
 // REF 2029 publication window: 1 January 2021 – 31 December 2028.
 const REF_START_YEAR = 2021;
