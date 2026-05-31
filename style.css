@@ -1119,10 +1119,16 @@ h2 {
   margin: .6rem 0 1.2rem;
   overflow-x: auto;
   overflow-y: hidden;
-  /* Avoid vertical scrollbar nudging the chart up. */
+  /* Right-justify the chart: short careers hug the right edge of the
+     modal (so the most-recent year sits under the modal's close button
+     column rather than floating in the middle of empty space); long
+     careers overflow and scroll, with the latest years still anchored
+     to the right via scrollLeft = scrollWidth on open. */
+  display: flex;
+  justify-content: flex-end;
   scrollbar-width: thin;
 }
-.sparkline { display: block; height: auto; }
+.sparkline { display: block; height: auto; flex: 0 0 auto; }
 .sparkline rect { fill: var(--accent); opacity: .55; cursor: default; }
 .sparkline rect.recent { fill: #0b2f5e; opacity: 1; }            /* completed last 5y */
 .sparkline rect.current { fill: #9a9a9a; opacity: 1; }           /* current year — partial, grey */
