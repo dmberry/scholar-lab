@@ -164,6 +164,21 @@ h2 {
   cursor: not-allowed;
   background: #fff; color: var(--ink); border-color: var(--border);
 }
+/* Scale-by toggle mirrors the .sort-btn group so the two read as siblings. */
+.scale-btn {
+  font: inherit; font-size: .75rem; cursor: pointer;
+  background: #fff; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: .2rem .55rem;
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+.scale-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.scale-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+/* Thin vertical divider between sort-by and scale-by groups. */
+.sort-divider {
+  display: inline-block; width: 1px; height: 1.1em;
+  background: var(--border); margin: 0 .35rem;
+}
 .sort-btn:disabled:hover,
 .sort-btn[disabled]:hover {
   background: #fff; color: var(--ink); border-color: var(--border);

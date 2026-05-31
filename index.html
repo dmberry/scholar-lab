@@ -11,7 +11,7 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.26</span>
+    <span class="tb-sub" id="tb-version">v0.2.27</span>
   </div>
   <div class="tb-actions">
     <div class="tb-group tb-zoom" title="Adjust card font size">
@@ -20,7 +20,6 @@
     </div>
     <div class="tb-group">
       <button class="tb-btn" id="tb-ref-all" title="Toggle REF 2029 window (2021–2028) on every card at once">REF 2029</button>
-      <button class="tb-btn" id="tb-scale-mode" title="Switch between cohort scale (every card uses the same y-axis, so productivity is comparable) and per-card scale (each card normalised to its own peak, so individual shape is readable even next to a 74k-cite outlier)">Cohort scale</button>
       <button class="tb-btn" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">📊 Analytics</button>
     </div>
     <div class="tb-group" role="group" aria-label="Data management">
@@ -91,6 +90,10 @@
         <input type="checkbox" id="exclude-visiting"> Hide visiting
       </label>
       <button class="excluded-pill hidden" id="excluded-pill" type="button" title="See the staff currently hidden by these toggles"></button>
+      <span class="sort-divider" aria-hidden="true"></span>
+      <span class="sort-label">Scale by</span>
+      <button class="scale-btn active" data-scale="cohort" title="Shared y-axis across every card in the current view, so productivity is comparable. Compressed by x^0.7 so outliers don't fully crush the others.">Cohort</button>
+      <button class="scale-btn" data-scale="per-card" title="Each card normalises to its own peak. Shape of one career is readable even next to a 74k-cite outlier, but the cards aren't comparable to each other any more.">Per-card</button>
     </div>
     <div id="people-grid" class="people-grid"></div>
   </section>

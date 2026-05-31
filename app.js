@@ -1990,10 +1990,9 @@ document.addEventListener("click", (e) => {
 function applySparkMode(mode) {
   const norm = mode === "per-card" ? "per-card" : "cohort";
   localStorage.setItem("sd-spark-mode", norm);
-  const btn = document.getElementById("tb-scale-mode");
-  if (btn) {
-    btn.textContent = norm === "per-card" ? "Per-card scale" : "Cohort scale";
-    btn.classList.toggle("active", norm === "per-card");
+  // Reflect the active button in the sort bar's Scale-by group.
+  for (const btn of document.querySelectorAll(".scale-btn")) {
+    btn.classList.toggle("active", btn.dataset.scale === norm);
   }
   // Redraw all currently-rendered sparklines from the in-memory METRICS
   // cache. No network round-trip.
@@ -2004,10 +2003,9 @@ function applySparkMode(mode) {
   }
 }
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest("#tb-scale-mode");
+  const btn = e.target.closest(".scale-btn");
   if (!btn) return;
-  const now = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
-  applySparkMode(now === "per-card" ? "cohort" : "per-card");
+  applySparkMode(btn.dataset.scale);
 });
 
 // Toolbar: card font-size zoom. Persist between sessions so it sticks.
