@@ -3185,8 +3185,8 @@ function miniSparkline(cpy, opts = {}) {
   const sumV = vals.reduce((a, b) => a + b, 0);
   // Compact Google-Scholar-style framing: bottom year axis + right axis
   // with nice-step gridlines. Scaled-down version of the modal chart.
-  const W = 220, H = 64;
-  const padL = 2, padR = 22, padT = 6, padB = 10;
+  const W = 240, H = 64;
+  const padL = 0, padR = 18, padT = 6, padB = 10;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   // In REF mode cap bar width so a single 2026 bar doesn't stretch across
@@ -3234,14 +3234,7 @@ function miniSparkline(cpy, opts = {}) {
   }).join("");
   const cls = "mini-spark" + (opts.ref ? " ref-mode" : "");
   const svg = `<svg class="${cls}" viewBox="0 0 ${W} ${H}">${gridSVG}${bars}</svg>`;
-  // Σ chip kept (10-year total) — the right-axis already shows the peak,
-  // but the running total isn't visible from axis alone.
-  if (opts.ref || sumV <= 0) {
-    return `<span class="mini-spark-wrap">${svg}</span>`;
-  }
-  return `<span class="mini-spark-wrap">${svg}` +
-    `<span class="ms-chip ms-sum" title="10-year citation total">&Sigma; ${sumV}</span>` +
-    `</span>`;
+  return `<span class="mini-spark-wrap">${svg}</span>`;
 }
 
 // Pick a "nice" round step for axis gridlines. Targets ~4 gridlines and
