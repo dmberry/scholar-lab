@@ -15,6 +15,9 @@ staff.bak.*.json
 scholar-dashboard-*.json
 scholar-export-*.json
 
+# .app launcher log
+.scholar-dashboard.log
+
 # ── Python ─────────────────────────────────────────────────
 .venv/
 __pycache__/

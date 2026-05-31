@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.7 · proof-of-concept.
+**Version:** 0.2.8 · proof-of-concept.
 
 ## What it does
 
@@ -96,12 +96,27 @@ Each person has a `status`:
 
 ### Easy path (macOS — double-click)
 
-Double-click **`start.command`** in Finder. On first run it creates a Python
-venv, installs the dependencies, seeds `data/` from `data.example/`,
-starts the server, and opens the browser to <http://localhost:5057>.
+Two options, both included in the repo.
 
-When you're done, double-click **`stop.command`** to make sure the server
-is shut down. Closing the launcher's terminal window also stops it.
+**Option 1: Scholar Dashboard.app** (no Terminal window)
+
+Double-click **`Scholar Dashboard.app`** in Finder. It silently bootstraps
+the venv on first run, starts the server in the background, and opens the
+browser to <http://localhost:5057>. The .app icon goes away after launch
+— the server runs detached. Drag the .app to **Applications** or your
+**Dock** if you'd like it elsewhere; it still finds the project files
+because it lives inside the repo folder.
+
+To stop the server later, double-click **`stop.command`**.
+
+**Option 2: start.command** (shows a Terminal window with live logs)
+
+Double-click **`start.command`** in Finder. Same bootstrap as above, but
+Flask runs in the foreground so you can see logs in the Terminal window.
+Ctrl-C in that window stops the server.
+
+Either way, the first launch may show macOS's *"unidentified developer"*
+warning — right-click → **Open** clears it permanently.
 
 ### Manual path (any platform)
 

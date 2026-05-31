@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Scholar Dashboard — macOS .app launcher.
+#
+# This script is the executable of Scholar Dashboard.app. On double-click
+# it bootstraps the venv if needed, seeds data/ on first run, starts
+# Flask detached, then opens http://localhost:5057 in the default browser
+# and exits. The Flask server keeps running in the background — quit it
+# via stop.command (or Activity Monitor).
+#
+# The .app expects to live inside the repo root, i.e. at:
+#   <repo>/Scholar Dashboard.app
+# so it can locate the project files two levels up from this script.
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+REPO_ROOT="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+cd "${REPO_ROOT}"
+
+PORT="${PORT:-5057}"
+URL="http://localhost:${PORT}"
+LOG="${REPO_ROOT}/.scholar-dashboard.log"
+
+dialog_error() {
+  osascript \
+    -e "display dialog \"$1\" buttons {\"OK\"} default button \"OK\" with icon caution with title \"Scholar Dashboard\"" \
+    2>/dev/null || true
+}
+notify() {
+  osascript \
+    -e "display notification \"$1\" with title \"Scholar Dashboard\"" \
+    2>/dev/null || true
+}
+
+# 1. Python check.
+if ! command -v python3 >/dev/null 2>&1; then
+  dialog_error "Python 3 is not installed.\n\nInstall it from https://www.python.org/downloads/ and try again."
+  exit 1
+fi
+
+# 2. Bootstrap venv on first run.
+if [ ! -d ".venv" ]; then
+  notify "First run — installing dependencies (~10s)…"
+  python3 -m venv .venv
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+  python -m pip install --quiet --upgrade pip
+  python -m pip install --quiet -r requirements.txt
+fi
+
+# 3. Seed data/ from data.example/ on first run.
+if { [ ! -d "data" ] || [ -z "$(ls -A data 2>/dev/null || true)" ]; } && [ -d "data.example" ]; then
+  mkdir -p data
+  cp -R data.example/* data/
+fi
+
+# 4. If a server is already up, just open the browser and exit.
+if curl -s -o /dev/null "${URL}/api/version" 2>/dev/null; then
+  open "${URL}"
+  exit 0
+fi
+
+# 5. Start Flask detached. Log to .scholar-dashboard.log in the repo root.
+# shellcheck disable=SC1091
+source .venv/bin/activate
+nohup python app.py > "${LOG}" 2>&1 &
+disown
+
+# 6. Wait up to ~20s for the server to come up, then open the browser.
+for _ in $(seq 1 40); do
+  if curl -s -o /dev/null "${URL}/api/version" 2>/dev/null; then
+    open "${URL}"
+    exit 0
+  fi
+  sleep 0.5
+done
+
+dialog_error "Scholar Dashboard didn't start within 20 seconds.\n\nCheck the log at:\n${LOG}"
+exit 1
