@@ -11,7 +11,7 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.8</span>
+    <span class="tb-sub" id="tb-version">v0.2.9</span>
   </div>
   <div class="tb-actions">
     <div class="tb-group tb-zoom" title="Adjust card font size">
@@ -34,6 +34,9 @@
     <div class="tb-group" role="group" aria-label="Export">
       <a href="/api/export.json" class="tb-btn" title="Download the full unit + every cached Scholar payload as one JSON file">⤓ JSON</a>
       <button class="tb-btn primary" onclick="window.print()" title="Open browser print dialog — choose 'Save as PDF' for a clean printable report">⤓ PDF</button>
+    </div>
+    <div class="tb-group">
+      <button class="tb-btn tb-quit" id="tb-quit" title="Stop the local Scholar Dashboard server">⏻ Quit</button>
     </div>
   </div>
 </nav>
@@ -116,6 +119,23 @@
   <div class="modal-card staff-detail-card">
     <button class="close" aria-label="Close" data-staff-detail-close>×</button>
     <div id="staff-detail-body"></div>
+  </div>
+</div>
+
+<!-- Refresh-progress modal — shown while "↻ Refresh" walks the current
+     view's Scholar IDs. Updated in place; auto-closes on completion. -->
+<div id="refresh-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card refresh-card">
+    <h3>Refreshing Scholar profiles</h3>
+    <p class="refresh-hint">Throttled to 2 concurrent workers × 600 ms between hits, to stay under Google Scholar's rate-limit. Closing this window won't stop the queue — click <em>Cancel</em>.</p>
+    <div class="refresh-bar-wrap">
+      <div class="refresh-bar"><div class="refresh-bar-fill" id="refresh-bar-fill"></div></div>
+    </div>
+    <p class="refresh-count" id="refresh-count">0 / 0</p>
+    <p class="refresh-eta" id="refresh-eta">Starting…</p>
+    <div class="refresh-actions">
+      <button class="tb-btn" id="refresh-cancel">Cancel</button>
+    </div>
   </div>
 </div>
 

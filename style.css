@@ -81,6 +81,8 @@ body {
 .tb-btn[disabled] { opacity: .55; pointer-events: none; }
 .tb-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 .tb-btn.active:hover { background: #163d70; color: #fff; }
+.tb-btn.tb-quit { color: #a31818; border-color: #e0c4c4; }
+.tb-btn.tb-quit:hover { background: #fef0f0; color: #a31818; border-color: #a31818; }
 @media (max-width: 900px) {
   .tb-btn { font-size: .72rem; padding: .25rem .5rem; }
   .tb-actions { gap: .35rem .65rem; }
@@ -921,6 +923,35 @@ h2 {
   padding: 2rem; z-index: 50;
 }
 .modal.hidden { display: none; }
+
+/* Refresh-progress modal. */
+.modal-card.refresh-card { max-width: 460px; }
+.refresh-card h3 { margin: 0 0 .4rem; font-size: 1.1rem; }
+.refresh-hint {
+  margin: 0 0 1rem; font-size: .75rem; color: var(--muted); line-height: 1.5;
+}
+.refresh-bar-wrap { margin: .6rem 0 .4rem; }
+.refresh-bar {
+  height: 10px; background: #f0eee8; border-radius: 6px; overflow: hidden;
+}
+.refresh-bar-fill {
+  height: 100%; background: var(--accent); border-radius: 6px;
+  transition: width .25s ease;
+  width: 0%;
+}
+.refresh-count {
+  margin: 0; font-size: .85rem; font-weight: 600;
+  font-variant-numeric: tabular-nums; color: var(--ink);
+  text-align: center;
+}
+.refresh-eta {
+  margin: .15rem 0 0; font-size: .72rem; color: var(--muted);
+  text-align: center; min-height: 1.2em;
+}
+.refresh-actions {
+  display: flex; justify-content: flex-end; gap: .5rem;
+  margin-top: 1rem;
+}
 .unit-picker.hidden { display: none; }
 
 /* View-mode tabs above the picker — By Faculty / By UoA */

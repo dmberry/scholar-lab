@@ -1674,7 +1674,37 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-save-unit")) saveCurrentUnit();
   if (e.target.closest("#tb-new-unit")) newUnitFlow();
   if (e.target.closest("#a-excl-open")) openExcludedModal();
+  if (e.target.closest("#tb-quit")) quitServer();
 });
+
+// Toolbar Quit — gracefully stop the local Flask server. Replaces the page
+// with a "Server stopped" message so the user can't accidentally keep
+// poking at a dead dashboard.
+async function quitServer() {
+  if (!confirm("Stop the local Scholar Dashboard server?\n\nYou can re-launch by double-clicking Scholar-Dashboard.app.")) return;
+  try {
+    await fetch("/api/shutdown", { method: "POST" });
+  } catch (_) { /* the server killed itself, the fetch may error — fine */ }
+  document.documentElement.innerHTML = `
+    <head><meta charset="utf-8"><title>Scholar Dashboard — stopped</title>
+    <style>
+      body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+             color: #1a1a1a; background: #faf8f4; margin: 0;
+             display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+      .card { background: #fff; border: 1px solid #e0ddd6; border-radius: 12px;
+              padding: 2rem 2.5rem; max-width: 32rem; text-align: center;
+              box-shadow: 0 4px 20px rgba(0,0,0,.06); }
+      h1 { color: #1d4f91; margin: 0 0 .5rem; font-size: 1.4rem; }
+      p  { color: #6b6b6b; line-height: 1.5; }
+      code { background: #f0eee8; padding: .1em .35em; border-radius: 3px; font-size: .9em; }
+    </style></head>
+    <body><div class="card">
+      <h1>◐ Scholar Dashboard — stopped</h1>
+      <p>The local server is no longer running.</p>
+      <p>To restart, double-click <code>Scholar-Dashboard.app</code> in the project folder.</p>
+      <p>You can close this tab.</p>
+    </div></body>`;
+}
 
 // Toolbar "Save unit" — download the currently-selected unit's Markdown file.
 function saveCurrentUnit() {
@@ -1913,28 +1943,96 @@ document.addEventListener("click", (e) => {
   applyZoom();
 });
 
-// Toolbar: refresh-all button — force-refreshes every set staff member's
-// Scholar cache in parallel (capped concurrency), then reloads cards.
-document.getElementById("tb-refresh")?.addEventListener("click", async (e) => {
-  const btn = e.currentTarget;
+// Toolbar: refresh-all button. Force-refreshes every set staff member's
+// Scholar cache through a modal with progress + ETA + cancel. Cancelling
+// drains the remaining queue without firing more requests so we don't make
+// Scholar's rate-limit worse.
+let _refreshAborted = false;
+
+function fmtETA(seconds) {
+  if (!isFinite(seconds) || seconds <= 0) return "";
+  if (seconds < 60) return `~${Math.ceil(seconds)} s`;
+  const m = Math.floor(seconds / 60);
+  const s = Math.ceil(seconds % 60);
+  return `~${m} min ${s ? s + " s" : ""}`.trim();
+}
+
+function openRefreshModal(total) {
+  _refreshAborted = false;
+  const modal = document.getElementById("refresh-modal");
+  document.getElementById("refresh-bar-fill").style.width = "0%";
+  document.getElementById("refresh-count").textContent = `0 / ${total}`;
+  document.getElementById("refresh-eta").textContent = "Starting…";
+  const cancelBtn = document.getElementById("refresh-cancel");
+  cancelBtn.disabled = false;
+  cancelBtn.textContent = "Cancel";
+  cancelBtn.onclick = () => {
+    _refreshAborted = true;
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = "Cancelling…";
+  };
+  modal.classList.remove("hidden");
+}
+
+function updateRefreshModal(done, total, startedAt, lastStatus) {
+  const pct = total ? (done / total) * 100 : 0;
+  document.getElementById("refresh-bar-fill").style.width = pct.toFixed(1) + "%";
+  document.getElementById("refresh-count").textContent = `${done} / ${total}`;
+  const elapsed = (Date.now() - startedAt) / 1000;
+  const rate = done / Math.max(elapsed, 0.001);
+  const remaining = (total - done) / Math.max(rate, 0.001);
+  const eta = fmtETA(remaining);
+  document.getElementById("refresh-eta").textContent =
+    (lastStatus ? lastStatus + " · " : "") + (eta ? `ETA ${eta}` : "");
+}
+
+function closeRefreshModal() {
+  document.getElementById("refresh-modal").classList.add("hidden");
+}
+
+document.getElementById("tb-refresh")?.addEventListener("click", async () => {
   const ids = STAFF.filter(p => p.scholar_id && (p.scholar_status || "set") === "set")
                    .map(p => p.scholar_id);
   if (!ids.length) return;
-  if (!confirm(`Force-refresh ${ids.length} Scholar profiles? This will hit Google Scholar once per person and may take ~30–60 seconds.`)) return;
-  const original = btn.textContent;
-  btn.disabled = true;
+  if (!confirm(`Force-refresh ${ids.length} Scholar profiles?\n\nThis hits Google Scholar once per person and takes roughly ${Math.ceil(ids.length * 0.6 / 2)}s at the polite throttle.`)) return;
+
+  openRefreshModal(ids.length);
+  const startedAt = Date.now();
   let done = 0;
-  const update = () => { btn.textContent = `↻ Refreshing ${done}/${ids.length}…`; };
-  update();
+  let lastStatus = "";
   const q = ids.slice();
-  await Promise.all(Array.from({length: 4}, async () => {
+  // 2 workers × 600ms — same polite throttle as card hydration on misses.
+  await Promise.all(Array.from({length: 2}, async () => {
     while (q.length) {
+      if (_refreshAborted) return;
       const id = q.shift();
-      try { await fetch(`/api/scholar/${encodeURIComponent(id)}?refresh=1`); } catch {}
-      done++; update();
+      try {
+        const r = await fetch(`/api/scholar/${encodeURIComponent(id)}?refresh=1`);
+        if (r.status === 429) {
+          // Scholar (or our cooldown) is rate-limiting — stop hammering.
+          _refreshAborted = true;
+          lastStatus = "Scholar rate-limited — stopped";
+          updateRefreshModal(done, ids.length, startedAt, lastStatus);
+          return;
+        }
+        if (r.ok) clearStale(id);
+      } catch { /* network blip; continue */ }
+      done++;
+      updateRefreshModal(done, ids.length, startedAt, lastStatus);
+      // Polite gap between worker requests.
+      await new Promise(rs => setTimeout(rs, 600));
     }
   }));
-  btn.textContent = "↻ Done — reloading";
+
+  // Wrap up. If aborted, leave the modal open briefly with the final state.
+  if (_refreshAborted) {
+    document.getElementById("refresh-eta").textContent = lastStatus || "Cancelled";
+    document.getElementById("refresh-cancel").textContent = "Close";
+    document.getElementById("refresh-cancel").disabled = false;
+    document.getElementById("refresh-cancel").onclick = closeRefreshModal;
+    return;
+  }
+  document.getElementById("refresh-eta").textContent = "Done — reloading…";
   setTimeout(() => location.reload(), 600);
 });
 

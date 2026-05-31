@@ -34,14 +34,34 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.8"
+__version__ = "0.2.9"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
 # are short-circuited for this many seconds. Stops the dashboard from making
-# the rate-limit worse with a flurry of retries.
+# the rate-limit worse with a flurry of retries. The expiry timestamp is
+# persisted to disk so a server restart doesn't clear it and reset us into
+# hammering Scholar again.
 SCHOLAR_COOLDOWN_SECONDS = 60 * 10  # 10 minutes
-_scholar_rl_until = 0.0
+_COOLDOWN_FILE = CACHE_DIR / "_cooldown.json"
+
+
+def _load_cooldown() -> float:
+    """Read the persisted cooldown expiry (epoch seconds). 0 if none."""
+    try:
+        return float(json.loads(_COOLDOWN_FILE.read_text()).get("until", 0))
+    except (OSError, ValueError, json.JSONDecodeError):
+        return 0.0
+
+
+def _save_cooldown(until: float) -> None:
+    try:
+        _COOLDOWN_FILE.write_text(json.dumps({"until": until}))
+    except OSError:
+        pass
+
+
+_scholar_rl_until = _load_cooldown()
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
       "AppleWebKit/537.36 (KHTML, like Gecko) "
       "Chrome/120.0.0.0 Safari/537.36")
@@ -591,6 +611,19 @@ def api_version():
     return jsonify({"version": __version__})
 
 
+@app.route("/api/shutdown", methods=["POST"])
+def api_shutdown():
+    """Gracefully stop the server. Triggered by the Quit button in the
+    toolbar. Schedules SIGTERM to self ~300ms after the response goes out
+    so the browser sees a clean reply before the socket closes."""
+    import threading, signal
+    def _stop():
+        time.sleep(0.3)
+        os.kill(os.getpid(), signal.SIGTERM)
+    threading.Thread(target=_stop, daemon=True).start()
+    return jsonify({"ok": True, "shutting_down": True})
+
+
 @app.route("/api/staff", methods=["GET", "POST"])
 def api_staff():
     if request.method == "POST":
@@ -825,6 +858,7 @@ def api_scholar(scholar_id: str):
         # Detect 429 / captcha and trip the cooldown.
         if "429" in msg or "rate-limit" in msg.lower() or "captcha" in msg.lower() or "unusual traffic" in msg.lower():
             _scholar_rl_until = time.time() + SCHOLAR_COOLDOWN_SECONDS
+            _save_cooldown(_scholar_rl_until)
             return jsonify({
                 "error": f"Scholar rate-limited; cooldown engaged for {SCHOLAR_COOLDOWN_SECONDS // 60} min",
                 "cooldown_remaining_seconds": SCHOLAR_COOLDOWN_SECONDS,
