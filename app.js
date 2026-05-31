@@ -3350,9 +3350,12 @@ function miniSparkline(cpy, opts = {}) {
   const padL = 0, padR = 14, padT = 6, padB = 10;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
-  // In REF mode cap bar width so a single 2026 bar doesn't stretch across
-  // the whole chart and read as a giant rectangle.
-  const bw = opts.ref ? Math.min(plotW / Math.max(years.length, 1), 18) : plotW / years.length;
+  // Let bars fill the plot width in both modes. (Previously REF mode
+  // capped bar width at 18px to protect against a 1-year edge case, but
+  // with the full 8-year REF window that cap left ~⅓ of the chart blank
+  // on the right — read as "broken layout".) Soft cap at 40px instead so
+  // a degenerate 1-year payload doesn't blow into a single huge slab.
+  const bw = Math.min(plotW / Math.max(years.length, 1), 40);
 
   // Gridlines + right-axis ticks. Under sqrt-scale, picking nice axis
   // ticks on the raw value gives gridlines that land at sqrt-positions
