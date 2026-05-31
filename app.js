@@ -3101,9 +3101,16 @@ window.forceRefresh = async (id, btn) => {
         alert(`Refresh failed: ${d.error || ("HTTP " + r.status)}\n\nThe card has been marked ⚠ stale.`);
         return;
       }
-      // Success — clear any stale flag and reload to pick up the new cache.
+      // Success — clear any stale flag, then re-render the modal in
+      // place from the fresh payload (page reload would close the modal
+      // and look like "nothing happened" from the user's point of view).
       clearStale(id);
-      location.reload();
+      const p = (STAFF || []).find(s => s.scholar_id === id);
+      if (p && typeof openPerson === "function") {
+        await openPerson(p);
+      } else {
+        location.reload();
+      }
     } catch (e) {
       btn.textContent = original;
       btn.disabled = false;
@@ -3277,20 +3284,18 @@ function niceAxisStep(maxVal, targetTicks = 4) {
 function sparkline(cpy) {
   const cy = (new Date()).getFullYear();
   const cpy2 = { ...(cpy || {}) };
-  const present = Object.keys(cpy2).map(Number);
-  if (!present.length) return "";
-  // Scholar only returns years with citations > 0, so a quiet year shows
-  // up as a gap and the x-axis silently skips it. Fill every year from
-  // the first cited year through the current year with 0s so the time
-  // axis is continuous.
-  const minY = Math.min(...present);
+  const presentSet = new Set(Object.keys(cpy2).map(Number));
+  if (!presentSet.size) return "";
+  // Build a continuous year axis from the first known year through the
+  // current year so quiet years stay visible. Track which years were in
+  // the Scholar payload (real data — value may legitimately be 0) vs
+  // back-filled (no data — render as a faint N/A marker, not a 0 bar).
+  const minY = Math.min(...presentSet);
   const maxY = cy;
   const years = [];
-  for (let y = minY; y <= maxY; y++) {
-    years.push(y);
-    if (!(y in cpy2)) cpy2[y] = 0;
-  }
-  const vals = years.map(y => cpy2[y]);
+  for (let y = minY; y <= maxY; y++) years.push(y);
+  const vals = years.map(y => cpy2[y] ?? 0);
+  const hasData = years.map(y => presentSet.has(y));
   const rawMax = Math.max(...vals, 1);
   // Axis ceiling: round rawMax up to the next nice-step boundary so the
   // top gridline sits cleanly above the tallest bar.
@@ -3317,11 +3322,22 @@ function sparkline(cpy) {
            `<text class="axis" x="${padL + plotW + 6}" y="${y + 3}" text-anchor="start">${t}</text>`;
   }).join("");
 
-  // Bars + bottom-axis year labels.
+  // Bars + bottom-axis year labels. Years not in the Scholar payload
+  // render as a small "N/A" tick at the baseline rather than a 0-height
+  // bar, so users can see the difference between "Scholar didn't return
+  // a value" and "the researcher had zero citations that year".
   const bars = years.map((y, i) => {
+    const x = padL + i * bw;
+    const yearLabelCls = (y === cy) ? ' class="year-current"' : '';
+    const yearLabel = `<text${yearLabelCls} x="${x + bw/2}" y="${H - 6}" text-anchor="middle">${y}</text>`;
+    if (!hasData[i]) {
+      const baseY = padT + plotH;
+      return `<line class="na-tick" x1="${x + bw/2 - 3}" x2="${x + bw/2 + 3}" y1="${baseY}" y2="${baseY}"><title>${y}: no data from Scholar (N/A)</title></line>` +
+             `<text class="na-label" x="${x + bw/2}" y="${baseY - 4}" text-anchor="middle">N/A</text>` +
+             yearLabel;
+    }
     const v = vals[i];
     const h = (v / axisMax) * plotH;
-    const x = padL + i * bw;
     const yy = padT + plotH - h;
     let cls = "";
     if (y === cy)                                       cls = "current";
@@ -3329,9 +3345,8 @@ function sparkline(cpy) {
     const tip = (y === cy)
       ? `${y}: ${v} citations (partial year)`
       : `${y}: ${v} citations`;
-    const yearLabelCls = (y === cy) ? ' class="year-current"' : '';
     return `<rect class="${cls}" x="${x + 1.5}" y="${yy}" width="${Math.max(bw - 3, 0.5)}" height="${h}"><title>${tip}</title></rect>` +
-           `<text${yearLabelCls} x="${x + bw/2}" y="${H - 6}" text-anchor="middle">${y}</text>`;
+           yearLabel;
   }).join("");
 
   // Wrap in a scroller so wide charts (long careers) scroll horizontally

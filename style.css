@@ -1115,6 +1115,11 @@ h2 {
 .sparkline text.year-current { fill: var(--warn); font-weight: 700; }
 .sparkline text.axis { font-size: 10px; fill: #9a9a9a; }
 .sparkline line.grid { stroke: #e6e2d8; stroke-width: 1; shape-rendering: crispEdges; }
+/* "N/A" marker for years Scholar didn't return data for. A faint dashed
+   baseline tick + a small "N/A" label — visually distinct from a real 0
+   (which is just no bar but no marker either). */
+.sparkline line.na-tick { stroke: #c4bdb1; stroke-width: 2; stroke-dasharray: 2 1; }
+.sparkline text.na-label { font-size: 9px; fill: #b5ad9f; font-style: italic; }
 
 .pub { padding: .55rem 0; border-bottom: 1px dashed var(--border); }
 .pub:last-child { border-bottom: 0; }
