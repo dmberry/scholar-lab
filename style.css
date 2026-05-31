@@ -1105,6 +1105,16 @@ h2 {
   padding: .25em .7em; border-radius: 999px;
   letter-spacing: .02em;
   margin: -.5rem 0 1rem;
+  cursor: pointer;
+  transition: filter .12s ease, background .12s ease;
+}
+.modal-uoa-chip:hover { filter: brightness(.95); }
+.modal-uoa-chip.is-none {
+  color: var(--muted); background: #eee;
+  border: 1px dashed #ccc; font-weight: 500;
+}
+.modal-uoa-chip.is-none:hover {
+  color: var(--accent); border-color: var(--accent); background: var(--accent-soft);
 }
 
 .metric-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 1rem 0 1.4rem; }

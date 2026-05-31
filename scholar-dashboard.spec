@@ -69,12 +69,12 @@ app = BUNDLE(
     name="Scholar Dashboard.app",
     icon=None,
     bundle_identifier="com.scholar-dashboard.launcher",
-    version="0.2.32",
+    version="0.2.33",
     info_plist={
         "CFBundleName": "Scholar Dashboard",
         "CFBundleDisplayName": "Scholar Dashboard",
-        "CFBundleShortVersionString": "0.2.32",
-        "CFBundleVersion": "0.2.32",
+        "CFBundleShortVersionString": "0.2.33",
+        "CFBundleVersion": "0.2.33",
         "LSMinimumSystemVersion": "10.13",
         "NSHighResolutionCapable": True,
         # We want a Dock icon + window while the app is running so the

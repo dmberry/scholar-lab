@@ -589,13 +589,16 @@ function setCardRefMode(card, on) {
   if (!data?.cites_per_year) return;
   chip?.classList.toggle("active", on);
   card.classList.toggle("ref-mode", on);     // drives CSS pub-chip swap
-  const spark = card.querySelector(".mini-spark");
-  if (!spark) return;
+  // The chart is wrapped in .mini-spark-wrap since 0.2.15. Target the
+  // wrap (not the inner SVG) so we don't end up with nested wraps each
+  // time the user toggles.
+  const wrap = card.querySelector(".mini-spark-wrap");
+  if (!wrap) return;
   const sourceCpy = on ? refFilter(data.cites_per_year) : data.cites_per_year;
   const newHTML = miniSparkline(sourceCpy, { ref: on });
   const tmp = document.createElement("div");
   tmp.innerHTML = newHTML;
-  spark.replaceWith(tmp.firstElementChild);
+  wrap.replaceWith(tmp.firstElementChild);
 }
 
 // Per-card chip — capture-phase so card-level click (modal) doesn't fire.
@@ -2896,8 +2899,8 @@ async function openPerson(p) {
   // the person is set / missing / unchecked / static-mode.
   const uoaCode = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
   const uoaChip = uoaCode
-    ? `<span class="modal-uoa-chip" title="${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
-    : ``;
+    ? `<span class="modal-uoa-chip" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="${uoaCode}" title="Click to change UoA (currently ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')})">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
+    : `<span class="modal-uoa-chip is-none" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="0" title="Click to assign a UoA">No UoA — click to assign</span>`;
   modalBody.innerHTML = `
     <h3>${escapeHTML(p.name)}</h3>
     <div class="affil">${escapeHTML(p.title)}</div>
@@ -2997,8 +3000,8 @@ function renderPerson(p, d) {
   const cpy = d.cites_per_year || {};
   const uoaCode = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
   const uoaChip = uoaCode
-    ? `<span class="modal-uoa-chip" title="${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
-    : ``;
+    ? `<span class="modal-uoa-chip" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="${uoaCode}" title="Click to change UoA (currently ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')})">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
+    : `<span class="modal-uoa-chip is-none" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="0" title="Click to assign a UoA">No UoA — click to assign</span>`;
   // Surface the stale state in the modal too — same dot the card carries.
   // (METRICS has been updated by this point, so the tooltip has the real
   // last-fetched timestamp.)
