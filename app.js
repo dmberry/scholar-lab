@@ -3172,15 +3172,17 @@ function miniSparkline(cpy, opts = {}) {
   const rawMax = (!opts.ref && GLOBAL_MINI_SPARK_MAX > 0)
     ? GLOBAL_MINI_SPARK_MAX
     : localMax;
-  // Square-root compression on the shared y-axis. Linear scaling crushed
-  // smaller-N cohorts to invisibility next to a 6946-cite outlier; sqrt
-  // keeps the outlier clearly tallest (√6946 ≈ 83 vs √284 ≈ 17, a ~5×
-  // ratio) while still leaving readable shape on the small-N cards.
+  // Power compression on the shared y-axis. Pure linear crushed small-N
+  // cohorts to invisibility next to a 6946-cite outlier (24× ratio); pure
+  // sqrt over-flattered them (5× ratio reads as "everyone's about the
+  // same"). x^0.7 splits the difference — 6946^0.7 / 284^0.7 ≈ 7.8×,
+  // honest about who's most cited without crushing the lower-N cards.
   // REF mode and the per-card fallback stay linear — they're already
   // single-card framings.
-  const useSqrt = !opts.ref && GLOBAL_MINI_SPARK_MAX > 0;
-  const scaleY = useSqrt
-    ? (v => (v > 0 ? Math.sqrt(v) / Math.sqrt(rawMax) : 0))
+  const SHARED_EXP = 0.7;
+  const useShared = !opts.ref && GLOBAL_MINI_SPARK_MAX > 0;
+  const scaleY = useShared
+    ? (v => (v > 0 ? Math.pow(v, SHARED_EXP) / Math.pow(rawMax, SHARED_EXP) : 0))
     : (v => v / rawMax);
   const sumV = vals.reduce((a, b) => a + b, 0);
   // Compact Google-Scholar-style framing: bottom year axis + right axis
