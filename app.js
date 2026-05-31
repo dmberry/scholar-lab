@@ -3169,9 +3169,19 @@ function miniSparkline(cpy, opts = {}) {
   // Local max as a safety fallback (and the default for REF mode, which has
   // a different x-axis from the normal-mode shared scale).
   const localMax = Math.max(...vals, 1);
-  const maxV = (!opts.ref && GLOBAL_MINI_SPARK_MAX > 0)
+  const rawMax = (!opts.ref && GLOBAL_MINI_SPARK_MAX > 0)
     ? GLOBAL_MINI_SPARK_MAX
     : localMax;
+  // Square-root compression on the shared y-axis. Linear scaling crushed
+  // smaller-N cohorts to invisibility next to a 6946-cite outlier; sqrt
+  // keeps the outlier clearly tallest (√6946 ≈ 83 vs √284 ≈ 17, a ~5×
+  // ratio) while still leaving readable shape on the small-N cards.
+  // REF mode and the per-card fallback stay linear — they're already
+  // single-card framings.
+  const useSqrt = !opts.ref && GLOBAL_MINI_SPARK_MAX > 0;
+  const scaleY = useSqrt
+    ? (v => (v > 0 ? Math.sqrt(v) / Math.sqrt(rawMax) : 0))
+    : (v => v / rawMax);
   const sumV = vals.reduce((a, b) => a + b, 0);
   const W = 180, H = 28;
   // In REF mode cap bar width so a single 2026 bar doesn't stretch across
@@ -3182,7 +3192,7 @@ function miniSparkline(cpy, opts = {}) {
     // Minimum bar height for the current year so a zero/low value still appears
     // as a visible grey marker rather than disappearing entirely.
     const isCurrent = (y === cy);
-    const rawH = (v / maxV) * H;
+    const rawH = scaleY(v) * H;
     const h = isCurrent ? Math.max(rawH, 2.5) : rawH;
     const x = i * bw;
     // Navy = REF 2029 window (2021–2028). Current partial year overrides
