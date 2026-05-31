@@ -1981,6 +1981,35 @@ document.addEventListener("click", (e) => {
   applyGlobalRefMode(!btn.classList.contains("active"));
 });
 
+// Toolbar: spark scale mode toggle. "cohort" = every card shares one
+// y-axis (productivity is comparable, but a 74k-cite outlier crushes
+// everyone else); "per-card" = each card normalises to its own peak
+// (shape is readable but cards aren't comparable). Persist across
+// reloads. Re-call the card metrics renderer to redraw without a full
+// page reload.
+function applySparkMode(mode) {
+  const norm = mode === "per-card" ? "per-card" : "cohort";
+  localStorage.setItem("sd-spark-mode", norm);
+  const btn = document.getElementById("tb-scale-mode");
+  if (btn) {
+    btn.textContent = norm === "per-card" ? "Per-card scale" : "Cohort scale";
+    btn.classList.toggle("active", norm === "per-card");
+  }
+  // Redraw all currently-rendered sparklines from the in-memory METRICS
+  // cache. No network round-trip.
+  for (const slot of document.querySelectorAll(".card-metrics")) {
+    const id = slot.dataset.id;
+    const d = id && METRICS.get(id);
+    if (d) renderCardMetrics(slot, id, d);
+  }
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("#tb-scale-mode");
+  if (!btn) return;
+  const now = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
+  applySparkMode(now === "per-card" ? "cohort" : "per-card");
+});
+
 // Toolbar: card font-size zoom. Persist between sessions so it sticks.
 const ZOOM_STEPS = [0.75, 0.85, 0.95, 1.0, 1.1, 1.25, 1.4];
 let zoomIdx = (() => {
@@ -2848,6 +2877,8 @@ async function hydrateCardMetrics() {
   if (localStorage.getItem("sd-ref-all") === "1") {
     applyGlobalRefMode(true);
   }
+  // Reflect the saved spark-scale mode in the toolbar button label.
+  applySparkMode(localStorage.getItem("sd-spark-mode") || "cohort");
 }
 
 async function openPerson(p) {
@@ -3186,10 +3217,14 @@ function miniSparkline(cpy, opts = {}) {
     for (let y = startY; y <= cy; y++) years.push(y);
   }
   const vals = years.map(y => cpy2[y] || 0);
+  // Per-card mode: each card normalises to its own peak instead of the
+  // cohort max. Stops a single 74k-cite outlier (e.g. Andy Clark) from
+  // flattening every other card in the cohort to invisibility.
+  const perCardMode = localStorage.getItem("sd-spark-mode") === "per-card";
   // Local max as a safety fallback (and the default for REF mode, which has
   // a different x-axis from the normal-mode shared scale).
   const localMax = Math.max(...vals, 1);
-  const rawMax = (!opts.ref && GLOBAL_MINI_SPARK_MAX > 0)
+  const rawMax = (!opts.ref && !perCardMode && GLOBAL_MINI_SPARK_MAX > 0)
     ? GLOBAL_MINI_SPARK_MAX
     : localMax;
   // Power compression on the shared y-axis. Pure linear crushed small-N
@@ -3200,7 +3235,7 @@ function miniSparkline(cpy, opts = {}) {
   // REF mode and the per-card fallback stay linear — they're already
   // single-card framings.
   const SHARED_EXP = 0.7;
-  const useShared = !opts.ref && GLOBAL_MINI_SPARK_MAX > 0;
+  const useShared = !opts.ref && !perCardMode && GLOBAL_MINI_SPARK_MAX > 0;
   const scaleY = useShared
     ? (v => (v > 0 ? Math.pow(v, SHARED_EXP) / Math.pow(rawMax, SHARED_EXP) : 0))
     : (v => v / rawMax);
