@@ -3068,20 +3068,31 @@ function refFilter(cpy) {
   return out;
 }
 
+// Fixed window for card mini-sparklines: current year + 9 prior = 10 years.
+// All cards plot the same X-axis so they're visually comparable; missing
+// years are zero-filled. REF mode keeps its own (2021–2028) window.
+const MINI_SPARK_WINDOW_YEARS = 10;
+
 function miniSparkline(cpy, opts = {}) {
   const cy = (new Date()).getFullYear();
-  // Ensure the current year is always represented in the chart — even with 0
-  // citations — so the grey "partial year" marker always appears and people
-  // can read "no citations yet in YYYY" rather than mistaking 2025 for now.
-  const cpy2 = { ...(cpy || {}) };
-  if (!(cy in cpy2) && Object.keys(cpy2).length) cpy2[cy] = 0;
-  const years = Object.keys(cpy2).map(Number).sort((a, b) => a - b);
-  if (!years.length) return "";
-  const vals = years.map(y => cpy2[y]);
+  const cpy2 = cpy || {};
+  // Build the year axis. REF mode uses the REF 2029 window; normal mode
+  // uses a fixed 10-year tail so every card lines up regardless of how
+  // long the researcher's career has been on Scholar.
+  let years;
+  if (opts.ref) {
+    years = [];
+    for (let y = REF_START_YEAR; y <= REF_END_YEAR; y++) years.push(y);
+  } else {
+    years = [];
+    const startY = cy - MINI_SPARK_WINDOW_YEARS + 1;
+    for (let y = startY; y <= cy; y++) years.push(y);
+  }
+  const vals = years.map(y => cpy2[y] || 0);
   const maxV = Math.max(...vals, 1);
   const W = 180, H = 28;
-  // In REF mode (few years), cap bar width so a single 2026 bar doesn't
-  // stretch across the whole chart and read as a giant rectangle.
+  // In REF mode cap bar width so a single 2026 bar doesn't stretch across
+  // the whole chart and read as a giant rectangle.
   const bw = opts.ref ? Math.min(W / Math.max(years.length, 1), 18) : W / years.length;
   const bars = years.map((y, i) => {
     const v = vals[i];
