@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.27 · proof-of-concept.
+**Version:** 0.2.28 · proof-of-concept.
 
 ## What it does
 
@@ -94,29 +94,38 @@ Each person has a `status`:
 
 ## Run it
 
-### Easy path (macOS — double-click)
+### Easiest path — download the packaged app (macOS)
 
-Two options, both included in the repo.
+Grab the latest `Scholar-Dashboard-<version>-macos.zip` from the
+[GitHub Releases](https://github.com/dmberry/scholar-lab/releases) page.
+Unzip, drag **Scholar Dashboard.app** to your Applications folder, and
+double-click. No Python install required.
 
-**Option 1: Scholar Dashboard.app** (no Terminal window)
+On first launch it seeds an example faculty into
+`~/Library/Application Support/Scholar Dashboard/data/` and opens the
+browser at <http://localhost:5057>. Use the in-app **Data** editor or
+**＋ Unit** to add your own people; everything you add lives in that
+Application Support folder and persists across app upgrades.
 
-Double-click **`Scholar Dashboard.app`** in Finder. It silently bootstraps
-the venv on first run, starts the server in the background, and opens the
-browser to <http://localhost:5057>. The .app icon goes away after launch
-— the server runs detached. Drag the .app to **Applications** or your
-**Dock** if you'd like it elsewhere; it still finds the project files
-because it lives inside the repo folder.
+The first launch may show macOS's *"unidentified developer"* warning —
+right-click → **Open** clears it permanently.
 
-To stop the server later, double-click **`stop.command`**.
+### Source-tree path (if you cloned the repo)
+
+Two options, both included in the source tree.
+
+**Option 1: Scholar-Dashboard.app** in the repo root (no Terminal window)
+
+Double-click **`Scholar-Dashboard.app`** in Finder. It silently bootstraps
+a venv on first run, starts the server in the background, and opens the
+browser. The repo's data folder is used, not Application Support.
 
 **Option 2: start.command** (shows a Terminal window with live logs)
 
 Double-click **`start.command`** in Finder. Same bootstrap as above, but
-Flask runs in the foreground so you can see logs in the Terminal window.
-Ctrl-C in that window stops the server.
+Flask runs in the foreground so you can see logs. Ctrl-C stops the server.
 
-Either way, the first launch may show macOS's *"unidentified developer"*
-warning — right-click → **Open** clears it permanently.
+To stop a backgrounded server, double-click **`stop.command`**.
 
 ### Manual path (any platform)
 
@@ -129,6 +138,19 @@ cp -r data.example data        # first run only
 python app.py
 # open http://localhost:5057
 ```
+
+### Building the release package
+
+To produce a fresh **Scholar Dashboard.app** + zip for distribution:
+
+```bash
+./build.sh                     # writes dist/Scholar Dashboard.app + zip
+./build.sh --no-zip            # skip the zip step (faster iteration)
+```
+
+PyInstaller bundles Python + Flask + BeautifulSoup + requests + the
+frontend assets into a self-contained `.app`. The build uses a
+separate `.venv-build/` so it doesn't pollute your dev venv.
 
 ## PDF print
 

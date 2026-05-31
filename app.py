@@ -20,6 +20,7 @@ import json
 import os
 import re
 import shutil
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,13 +29,61 @@ import requests
 from bs4 import BeautifulSoup
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-ROOT = Path(__file__).parent
-CACHE_DIR = ROOT / ".cache"
+
+# ──────────────────────────────────────────────────────────────────────────
+# Paths.
+#
+# Two distinct roots, one read-only and one writable:
+#
+#   STATIC_ROOT  resources packaged with the app: index.html, app.js,
+#                style.css, data.example/. When running from source this
+#                is the repo folder; when bundled by PyInstaller it's
+#                sys._MEIPASS (the temp dir PyInstaller unpacks into).
+#
+#   USER_ROOT    persistent per-user state: data/, .cache/. When running
+#                from source it sits next to app.py so the dev workflow
+#                stays unchanged. When packaged it lives in the platform-
+#                standard application-support directory so it survives
+#                .app upgrades and isn't lost if the .app is replaced.
+# ──────────────────────────────────────────────────────────────────────────
+
+_FROZEN = bool(getattr(sys, "frozen", False))
+
+if _FROZEN:
+    # PyInstaller unpacks bundled resources into sys._MEIPASS at runtime.
+    STATIC_ROOT = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
+    if sys.platform == "darwin":
+        USER_ROOT = Path.home() / "Library" / "Application Support" / "Scholar Dashboard"
+    elif sys.platform == "win32":
+        USER_ROOT = Path(os.environ.get("APPDATA", Path.home())) / "Scholar Dashboard"
+    else:
+        USER_ROOT = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "scholar-dashboard"
+else:
+    STATIC_ROOT = Path(__file__).parent
+    USER_ROOT   = Path(__file__).parent
+
+USER_ROOT.mkdir(parents=True, exist_ok=True)
+
+# Back-compat alias — most of the existing code references ROOT for static
+# files (index.html, app.js, style.css).
+ROOT = STATIC_ROOT
+
+CACHE_DIR = USER_ROOT / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
-DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
+DATA_DIR = USER_ROOT / "data"   # one Markdown file per unit lives here
+
+# First-run seed: if the user has no data/ yet, copy the bundled
+# data.example/ so they see a working dashboard immediately rather than
+# an empty grid.
+if not DATA_DIR.exists():
+    seed = STATIC_ROOT / "data.example"
+    if seed.is_dir():
+        shutil.copytree(seed, DATA_DIR)
+    else:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.27"
+__version__ = "0.2.28"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -969,11 +1018,31 @@ def api_scholar(scholar_id: str):
     return jsonify(data)
 
 
+def _open_browser_when_ready(port: int, delay: float = 0.8) -> None:
+    """Background thread that waits for the server to start, then opens
+    the default browser. Only used when running as a packaged .app — the
+    dev workflow already prints the URL to the terminal."""
+    import threading
+    import webbrowser
+    def _go():
+        time.sleep(delay)
+        try:
+            webbrowser.open(f"http://localhost:{port}")
+        except Exception:
+            pass
+    threading.Thread(target=_go, daemon=True).start()
+
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5057"))
-    # debug=True would run the reloader and spawn two watchdog threads,
-    # one of which would idle-kill the parent. Disable the reloader.
     _start_idle_watchdog()
-    # use_reloader=False: the reloader would spawn a parent + child process
-    # and the parent would idle-kill itself, leaving an orphaned child.
-    app.run(debug=True, port=port, use_reloader=False)
+    if _FROZEN:
+        # Packaged .app double-click flow: open the browser after a beat
+        # and run Flask in plain production mode (no debug, no reloader).
+        _open_browser_when_ready(port)
+        app.run(debug=False, port=port, use_reloader=False)
+    else:
+        # Dev flow: leave debug on for the friendlier tracebacks, but
+        # keep use_reloader=False so the idle watchdog doesn't kill the
+        # reloader's parent process.
+        app.run(debug=True, port=port, use_reloader=False)

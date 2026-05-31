@@ -20,8 +20,13 @@ scholar-export-*.json
 
 # ── Python ─────────────────────────────────────────────────
 .venv/
+.venv-build/
 __pycache__/
 *.pyc
+
+# ── PyInstaller build artefacts ────────────────────────────
+build/
+dist/
 
 # ── OS / editor ────────────────────────────────────────────
 .DS_Store
