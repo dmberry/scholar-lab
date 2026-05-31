@@ -3323,11 +3323,21 @@ function sparkline(cpy) {
   // current year so quiet years stay visible. Track which years were in
   // the Scholar payload (real data — value may legitimately be 0) vs
   // back-filled (no data — render as a faint N/A marker, not a 0 bar).
-  const minY = Math.min(...presentSet);
+  // Always span at least MODAL_MIN_YEARS so short careers don't sit as
+  // a narrow strip hugging the right edge of the modal. Years that
+  // predate the first cited year render as N/A markers (faint dashed
+  // baseline + small italic "N/A"), distinct from real-zero years.
+  const MODAL_MIN_YEARS = 20;
+  const earliestCited = Math.min(...presentSet);
+  const minY = Math.min(earliestCited, cy - MODAL_MIN_YEARS + 1);
   const maxY = cy;
   const years = [];
   for (let y = minY; y <= maxY; y++) years.push(y);
   const vals = years.map(y => cpy2[y] ?? 0);
+  // hasData[i] = true only for years Scholar actually returned. Years
+  // before the researcher's first cited year (back-filled to widen the
+  // chart) and years between cited years that Scholar didn't return
+  // both read as N/A.
   const hasData = years.map(y => presentSet.has(y));
   const rawMax = Math.max(...vals, 1);
   // Axis ceiling: round rawMax up to the next nice-step boundary so the
