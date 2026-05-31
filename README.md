@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.6 · proof-of-concept.
+**Version:** 0.2.7 · proof-of-concept.
 
 ## What it does
 
@@ -93,6 +93,17 @@ Each person has a `status`:
 | `unchecked` | Not yet verified. |
 
 ## Run it
+
+### Easy path (macOS — double-click)
+
+Double-click **`start.command`** in Finder. On first run it creates a Python
+venv, installs the dependencies, seeds `data/` from `data.example/`,
+starts the server, and opens the browser to <http://localhost:5057>.
+
+When you're done, double-click **`stop.command`** to make sure the server
+is shut down. Closing the launcher's terminal window also stops it.
+
+### Manual path (any platform)
 
 ```bash
 cd scholar-dashboard
