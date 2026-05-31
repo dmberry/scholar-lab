@@ -3385,11 +3385,12 @@ function sparkline(cpy) {
   // Wrap in a scroller so wide charts (long careers) scroll horizontally
   // rather than crush the year labels into each other.
   // Wrap in a scroller so wide charts (long careers) scroll horizontally
-  // rather than crush the year labels into each other. The SVG floors at
-  // its natural pixel width (so labels never compress) and stretches
-  // upwards to fill the container when there's room.
+  // rather than crush the year labels into each other. The SVG renders
+  // at its natural pixel size (W × H = years × 32px wide, 200px tall);
+  // short careers stay compact on the left rather than stretching to
+  // fill the modal and reading as cartoon-huge.
   return `<div class="sparkline-scroll">` +
-    `<svg class="sparkline" style="min-width:${W}px" width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMid meet">${grid}${bars}</svg>` +
+    `<svg class="sparkline" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">${grid}${bars}</svg>` +
     `</div>`;
 }
 
