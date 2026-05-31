@@ -1474,7 +1474,7 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
       <div class="data-detail-head">
         <div>
           <strong>${escapeHTML(d.name || name)}</strong>
-          <span class="affil">${escapeHTML(d.affiliation || "")}</span>
+          <span class="affil">${escapeHTML(cleanAffil(d.affiliation) || "")}</span>
         </div>
         <div class="data-detail-actions">
           <a href="https://scholar.google.com/citations?user=${encodeURIComponent(scholarId)}"
@@ -1508,6 +1508,12 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
         <pre>${escapeHTML(JSON.stringify(d, null, 2))}</pre>
       </details>
     `;
+    // Pin the citation chart to its right edge so the latest years show
+    // first; older years are reachable by scrolling/swiping left.
+    requestAnimationFrame(() => {
+      const sc = pane.querySelector(".sparkline-scroll");
+      if (sc) sc.scrollLeft = sc.scrollWidth;
+    });
 
     pane.querySelector(".data-detail-refresh").onclick = async (e) => {
       const btn = e.currentTarget;
@@ -2993,6 +2999,13 @@ function renderPerson(p, d) {
       ? `Scraped from Google Scholar on ${escapeHTML(new Date(d._fetched_iso).toLocaleString())}`
       : `Scrape time unknown`}</p>
   `;
+  // Scroll the citation chart to the right edge so the most recent years
+  // are visible by default. Users can swipe / drag back for older years.
+  // requestAnimationFrame so layout has settled before we measure.
+  requestAnimationFrame(() => {
+    const scroller = modalBody.querySelector(".sparkline-scroll");
+    if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+  });
 }
 
 // Scholar IDs whose last refresh attempt failed. Cards rendered for any of
