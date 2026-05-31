@@ -687,6 +687,16 @@ h2 {
 .mini-spark.ref-mode rect         { fill: var(--accent); opacity: .6; }
 .mini-spark.ref-mode rect.recent  { fill: #0b2f5e; opacity: 1; }
 .mini-spark.ref-mode rect.current { fill: #9a9a9a; }
+/* Card-level REF mode (toggled by the per-card REF 2029 chip): keep the
+   full 10-year chart but fade everything outside the REF 2021–2028
+   window so the REF bars pop. The "recent" class already marks the REF
+   years on every bar in default mode, so we just need to dim the
+   un-classed bars + their year labels. */
+.person-card.ref-mode .mini-spark rect          { opacity: .12; }
+.person-card.ref-mode .mini-spark rect.recent   { opacity: 1; }
+.person-card.ref-mode .mini-spark rect.current  { opacity: .35; }
+.person-card.ref-mode .mini-spark .ms-year      { opacity: .35; }
+.person-card.ref-mode .mini-spark .ms-year.current { opacity: 1; }
 .mini-spark .grid { stroke: #e6e2d8; stroke-width: 1; shape-rendering: crispEdges; }
 .mini-spark .axis   { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .mini-spark .ms-year         { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }

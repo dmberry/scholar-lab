@@ -582,23 +582,14 @@ function updateExcludedPill() {
 document.getElementById("excluded-pill")?.addEventListener("click", openExcludedModal);
 
 // Apply REF 2029 mode to a single card — used by both per-card chip and global button.
+// The chart already tags REF-window bars (2021–2028) with class="recent";
+// REF mode just adds a class to the card so CSS can fade everything else.
+// No chart rebuild — keep the full 10-year context, just emphasise the
+// REF years.
 function setCardRefMode(card, on) {
   const chip = card.querySelector(".ref-chip");
-  const id   = card.querySelector(".card-metrics")?.dataset.id;
-  const data = id && METRICS.get(id);
-  if (!data?.cites_per_year) return;
   chip?.classList.toggle("active", on);
-  card.classList.toggle("ref-mode", on);     // drives CSS pub-chip swap
-  // The chart is wrapped in .mini-spark-wrap since 0.2.15. Target the
-  // wrap (not the inner SVG) so we don't end up with nested wraps each
-  // time the user toggles.
-  const wrap = card.querySelector(".mini-spark-wrap");
-  if (!wrap) return;
-  const sourceCpy = on ? refFilter(data.cites_per_year) : data.cites_per_year;
-  const newHTML = miniSparkline(sourceCpy, { ref: on });
-  const tmp = document.createElement("div");
-  tmp.innerHTML = newHTML;
-  wrap.replaceWith(tmp.firstElementChild);
+  card.classList.toggle("ref-mode", on);
 }
 
 // Per-card chip — capture-phase so card-level click (modal) doesn't fire.
