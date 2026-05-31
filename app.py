@@ -34,7 +34,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.23"
+__version__ = "0.2.24"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -583,9 +583,37 @@ def _fetch_scholar(scholar_id: str) -> dict:
     i10index   = _int_or_none(stat_cells[4] if len(stat_cells) > 4 else None)
     i10index5y = _int_or_none(stat_cells[5] if len(stat_cells) > 5 else None)
 
-    years = [_int_or_none(t.get_text(strip=True)) for t in soup.select(".gsc_g_t")]
-    vals  = [_int_or_none(t.get_text(strip=True)) for t in soup.select(".gsc_g_al")]
-    cites_per_year = {str(y): v for y, v in zip(years, vals) if y is not None and v is not None}
+    # Scholar's citation histogram has two layers, both absolutely
+    # positioned by a `right: Xpx` style attribute:
+    #   .gsc_g_t  — year tick label (ONE per year on the x-axis)
+    #   .gsc_g_a  — bar element (only present for years with >0 citations)
+    #
+    # Zipping the two lists by index used to silently misalign whenever a
+    # year had no bar (e.g. 2024/2025 for a quiet researcher): year[0]
+    # would get paired with bar[0]'s value even though bar[0] is for a
+    # much later year. Match by `right` position instead.
+    def _right_px(el):
+        m = re.search(r"right:\s*(\d+)", el.get("style") or "")
+        return int(m.group(1)) if m else None
+
+    years_with_pos = []
+    for el in soup.select(".gsc_g_t"):
+        y = _int_or_none(el.get_text(strip=True))
+        pos = _right_px(el)
+        if y is not None and pos is not None:
+            years_with_pos.append((pos, y))
+
+    cites_per_year = {}
+    for bar in soup.select(".gsc_g_a"):
+        pos = _right_px(bar)
+        val_el = bar.select_one(".gsc_g_al")
+        v = _int_or_none(val_el.get_text(strip=True)) if val_el else None
+        if pos is None or v is None or not years_with_pos:
+            continue
+        # Pair the bar with the year-label whose `right` is closest.
+        nearest = min(years_with_pos, key=lambda yp: abs(yp[0] - pos))
+        if abs(nearest[0] - pos) <= 12:   # within ~one bar-width
+            cites_per_year[str(nearest[1])] = v
 
     def _parse_pub_rows(parsed_soup):
         rows = []
