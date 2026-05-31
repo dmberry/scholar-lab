@@ -2961,7 +2961,7 @@ function renderPerson(p, d) {
     : "";
   modalBody.innerHTML = `
     <h3>${escapeHTML(d.name || p.name)}${staleDotHTML}</h3>
-    <div class="affil">${escapeHTML(d.affiliation || p.title)}</div>
+    <div class="affil">${escapeHTML(cleanAffil(d.affiliation) || p.title)}</div>
     ${uoaChip}
 
     <div class="metric-row">
@@ -3274,11 +3274,16 @@ function sparkline(cpy) {
   const ticks = [];
   for (let v = 0; v <= axisMax; v += step) ticks.push(v);
 
-  const W = 700, H = 140;
-  const padL = 6, padR = 44, padT = 12, padB = 22;
-  const plotW = W - padL - padR;
+  // Bar width is fixed so 4-digit year labels never overlap. If the
+  // resulting SVG is wider than the container, the wrapper scrolls
+  // horizontally rather than crushing every label into the next one.
+  const BAR_W = 32;
+  const H = 200;
+  const padL = 6, padR = 48, padT = 14, padB = 28;
+  const plotW = years.length * BAR_W;
+  const W = padL + plotW + padR;
   const plotH = H - padT - padB;
-  const bw = plotW / years.length;
+  const bw = BAR_W;
 
   // Horizontal gridlines + right-axis labels.
   const grid = ticks.map(t => {
@@ -3304,7 +3309,24 @@ function sparkline(cpy) {
            `<text${yearLabelCls} x="${x + bw/2}" y="${H - 6}" text-anchor="middle">${y}</text>`;
   }).join("");
 
-  return `<svg class="sparkline" viewBox="0 0 ${W} ${H}">${grid}${bars}</svg>`;
+  // Wrap in a scroller so wide charts (long careers) scroll horizontally
+  // rather than crush the year labels into each other.
+  // Wrap in a scroller so wide charts (long careers) scroll horizontally
+  // rather than crush the year labels into each other. The SVG floors at
+  // its natural pixel width (so labels never compress) and stretches
+  // upwards to fill the container when there's room.
+  return `<div class="sparkline-scroll">` +
+    `<svg class="sparkline" style="min-width:${W}px" width="100%" height="${H}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMinYMid meet">${grid}${bars}</svg>` +
+    `</div>`;
+}
+
+// Defensive fix for already-cached Scholar affiliation strings where
+// multi-span markup got concatenated with no separator
+// ("School of X,University of Y"). The backend parser has been fixed,
+// but cached payloads only get rewritten on next refresh.
+function cleanAffil(s) {
+  if (!s) return s;
+  return String(s).replace(/,([^\s])/g, ", $1").replace(/\s+/g, " ").trim();
 }
 
 function fmt(n) { return (n === null || n === undefined) ? "—" : n; }

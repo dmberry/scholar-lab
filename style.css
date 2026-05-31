@@ -1098,7 +1098,15 @@ h2 {
 .metric .vr-tag { font-size: .55rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-left: 2px; }
 .metric .k { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; margin-top: 3px; }
 
-.sparkline { width: 100%; height: 160px; margin: .6rem 0 1.2rem; display: block; }
+.sparkline-scroll {
+  width: 100%;
+  margin: .6rem 0 1.2rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* Avoid vertical scrollbar nudging the chart up. */
+  scrollbar-width: thin;
+}
+.sparkline { display: block; height: auto; }
 .sparkline rect { fill: var(--accent); opacity: .55; cursor: default; }
 .sparkline rect.recent { fill: #0b2f5e; opacity: 1; }            /* completed last 5y */
 .sparkline rect.current { fill: #9a9a9a; opacity: 1; }           /* current year — partial, grey */
@@ -1790,7 +1798,7 @@ h2 {
   font-size: .78rem; text-transform: uppercase; letter-spacing: .05em;
   color: var(--muted);
 }
-.staff-detail-pane .sparkline { width: 100%; height: 90px; }
+.staff-detail-pane .sparkline { height: auto; }
 .staff-detail-pane .pub { padding: .35rem 0; border-bottom: 1px dashed var(--border); }
 .staff-detail-pane .pub:last-child { border-bottom: 0; }
 .staff-detail-pane .deep { margin-top: .8rem; }

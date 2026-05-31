@@ -34,7 +34,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.19"
+__version__ = "0.2.20"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -145,6 +145,21 @@ REF_END_YEAR_PY   = 2028
 _UNIVERSITY = "University"
 
 _VALID_STATUS = ("set", "missing", "unchecked")
+
+
+def _clean_affil(el) -> str | None:
+    """Extract the affiliation string from a Scholar profile fragment with
+    sane whitespace. Scholar wraps the affiliation in multiple inline
+    elements (university, link, etc.) — get_text(strip=True) glues them
+    together with no separator, producing 'School of X,University of Y'.
+    Use a space separator instead, then collapse double whitespace and fix
+    the missing-space-after-comma artefact."""
+    if not el:
+        return None
+    s = el.get_text(" ", strip=True)
+    s = re.sub(r"\s+", " ", s)        # collapse runs of whitespace
+    s = re.sub(r"\s*,\s*", ", ", s)   # normalise ', ' spacing
+    return s or None
 
 
 def _slugify(name: str) -> str:
@@ -611,7 +626,11 @@ def _fetch_scholar(scholar_id: str) -> dict:
     return {
         "scholar_id": scholar_id,
         "name": name.get_text(strip=True) if name else None,
-        "affiliation": affil_div.get_text(strip=True) if affil_div else None,
+        # Use " " as the inter-tag separator so multi-span affiliations like
+        # "<span>School of …</span><span>University of Sussex</span>" don't
+        # squash into "School of …,University of Sussex". Then collapse any
+        # double spaces and tidy up the comma spacing.
+        "affiliation": _clean_affil(affil_div),
         "interests": interests,
         "url_picture": pic.get("src") if pic else None,
         "citedby": citedby,
