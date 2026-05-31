@@ -11,6 +11,12 @@ staff.bak.*.json
 # Cached Google Scholar payloads (per-profile, 7-day TTL)
 .cache/
 
+# REF 2029 per-publication flags + per-UoA targets (user state).
+# Generated at runtime; lives in ~/Library/Application Support/Scholar
+# Dashboard/ when running from the packaged .app.
+ref_flags.json
+ref_targets.json
+
 # Exports
 scholar-dashboard-*.json
 scholar-export-*.json
