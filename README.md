@@ -69,8 +69,8 @@ Active: yes
 #   uoa:NN  = optional; overrides this unit's UoA. uoa:0 = explicitly none.
 #   Lines starting with '#' are comments, ignored when the file is read.
 
-- Ada Example | Professor of Ethics | 000001 | https://scholar.google.com/citations?user=22sLFVoAAAAJ&hl=en | set | uoa:30
-- Bob Placeholder | Associate Professor | 000002 | | missing | uoa:34
+- Ada Example | Professor of Examples | 000001 | https://scholar.google.com/citations?user=22sLFVoAAAAJ&hl=en | set | uoa:30
+- Bob Placeholder | Lecturer in Placeholders | 000002 | | missing | uoa:28
 ```
 
 The app globs `data/*.md`, parses each file, and rebuilds the

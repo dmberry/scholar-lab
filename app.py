@@ -184,8 +184,8 @@ REF_END_YEAR_PY   = 2028
 #   UoA: 30
 #   Active: yes
 #
-#   - Ada Example | Professor of Ethics | 000001 | 22sLFVoAAAAJ | set | uoa:30
-#   - Bob Placeholder | Associate Professor | 000002 | | missing | uoa:34
+#   - Ada Example | Professor of Examples | 000001 | 22sLFVoAAAAJ | set | uoa:30
+#   - Bob Placeholder | Lecturer in Placeholders | 000002 | | missing | uoa:28
 #
 # Staff bullet fields, pipe-separated, fixed order, trailing fields optional:
 #   Name | Title | staff_id | scholar_id | status | uoa:NN
