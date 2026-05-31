@@ -2779,6 +2779,10 @@ async function hydrateCardMetrics() {
     if (r.ok) batch = await r.json();
   } catch { /* fall through — individual fetches will handle it */ }
 
+  // Set the shared sparkline y-axis from the batch BEFORE rendering any
+  // card, so all bars on the page are drawn at the same scale.
+  computeGlobalMiniSparkMax(batch);
+
   const misses = [];
   for (const id of ids) {
     const entry = batch[id];
@@ -3125,6 +3129,27 @@ function refFilter(cpy) {
 // years are zero-filled. REF mode keeps its own (2021–2028) window.
 const MINI_SPARK_WINDOW_YEARS = 10;
 
+// Shared y-axis scale across every card in the current view. Set by
+// hydrateCardMetrics once the batch payload is in, so a 6946-cite researcher
+// reads as visibly taller than a 300-cite researcher rather than each card
+// normalising to its own peak. 0 = unset, fall back to the per-card max.
+let GLOBAL_MINI_SPARK_MAX = 0;
+
+function computeGlobalMiniSparkMax(batch) {
+  const cy = (new Date()).getFullYear();
+  const startY = cy - MINI_SPARK_WINDOW_YEARS + 1;
+  let m = 0;
+  for (const id in batch) {
+    const cpy = batch[id]?.cites_per_year;
+    if (!cpy) continue;
+    for (let y = startY; y <= cy; y++) {
+      const v = cpy[y] || 0;
+      if (v > m) m = v;
+    }
+  }
+  GLOBAL_MINI_SPARK_MAX = m;
+}
+
 function miniSparkline(cpy, opts = {}) {
   const cy = (new Date()).getFullYear();
   const cpy2 = cpy || {};
@@ -3141,7 +3166,13 @@ function miniSparkline(cpy, opts = {}) {
     for (let y = startY; y <= cy; y++) years.push(y);
   }
   const vals = years.map(y => cpy2[y] || 0);
-  const maxV = Math.max(...vals, 1);
+  // Local max as a safety fallback (and the default for REF mode, which has
+  // a different x-axis from the normal-mode shared scale).
+  const localMax = Math.max(...vals, 1);
+  const maxV = (!opts.ref && GLOBAL_MINI_SPARK_MAX > 0)
+    ? GLOBAL_MINI_SPARK_MAX
+    : localMax;
+  const sumV = vals.reduce((a, b) => a + b, 0);
   const W = 180, H = 28;
   // In REF mode cap bar width so a single 2026 bar doesn't stretch across
   // the whole chart and read as a giant rectangle.
@@ -3165,9 +3196,20 @@ function miniSparkline(cpy, opts = {}) {
       : `${y}: ${v} citations`;
     return `<rect class="${cls}" x="${x + 0.5}" y="${H - h}" width="${Math.max(bw - 1, 0.5)}" height="${h}"><title>${tip}</title></rect>`;
   }).join("");
-  // Label tucked at the bottom-right, where bars rarely reach.
+  // Tiny quantitative labels reinforcing what the bar heights say:
+  //   • peak-year value floats at the top-right (anchors the y-axis)
+  //   • 10-year sum sits at the bottom-right (overall productivity)
+  // Only drawn in normal mode; REF mode already has its own framing.
+  let labels = "";
+  if (!opts.ref && sumV > 0) {
+    const peakV = Math.max(...vals);
+    labels = `
+      <text class="ms-peak" x="${W - 1}" y="7" text-anchor="end">${peakV}</text>
+      <text class="ms-sum"  x="${W - 1}" y="${H - 1}" text-anchor="end" title="10-year citation total">Σ ${sumV}</text>
+    `;
+  }
   const cls = "mini-spark" + (opts.ref ? " ref-mode" : "");
-  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
+  return `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}${labels}</svg>`;
 }
 
 function sparkline(cpy) {
