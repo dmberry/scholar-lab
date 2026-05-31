@@ -3277,9 +3277,19 @@ function niceAxisStep(maxVal, targetTicks = 4) {
 function sparkline(cpy) {
   const cy = (new Date()).getFullYear();
   const cpy2 = { ...(cpy || {}) };
-  if (!(cy in cpy2) && Object.keys(cpy2).length) cpy2[cy] = 0;
-  const years = Object.keys(cpy2).map(Number).sort((a, b) => a - b);
-  if (!years.length) return "";
+  const present = Object.keys(cpy2).map(Number);
+  if (!present.length) return "";
+  // Scholar only returns years with citations > 0, so a quiet year shows
+  // up as a gap and the x-axis silently skips it. Fill every year from
+  // the first cited year through the current year with 0s so the time
+  // axis is continuous.
+  const minY = Math.min(...present);
+  const maxY = cy;
+  const years = [];
+  for (let y = minY; y <= maxY; y++) {
+    years.push(y);
+    if (!(y in cpy2)) cpy2[y] = 0;
+  }
   const vals = years.map(y => cpy2[y]);
   const rawMax = Math.max(...vals, 1);
   // Axis ceiling: round rawMax up to the next nice-step boundary so the
