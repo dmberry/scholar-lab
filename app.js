@@ -2580,7 +2580,7 @@ function renderPeople() {
     btn.innerHTML = `
       ${cornerChips}
       <span class="name">${escapeHTML(p.name)}${isStale ? `<span class="stale-dot" title="${escapeAttr(staleTip)}"></span>` : ""}</span>
-      <span class="title">${escapeHTML(p.title)}</span>
+      <span class="title" title="${escapeAttr(p.title || "")}">${escapeHTML(p.title)}</span>
       ${unitTag}
       ${metricsSlot}
       ${badge}
@@ -3185,8 +3185,8 @@ function miniSparkline(cpy, opts = {}) {
   const sumV = vals.reduce((a, b) => a + b, 0);
   // Compact Google-Scholar-style framing: bottom year axis + right axis
   // with nice-step gridlines. Scaled-down version of the modal chart.
-  const W = 240, H = 64;
-  const padL = 0, padR = 18, padT = 6, padB = 10;
+  const W = 280, H = 64;
+  const padL = 0, padR = 14, padT = 6, padB = 10;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
   // In REF mode cap bar width so a single 2026 bar doesn't stretch across

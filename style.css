@@ -487,7 +487,17 @@ h2 {
 }
 .person-card:hover { border-color: var(--accent); transform: translateY(-1px); }
 .person-card .name { font-weight: 600; font-size: 1em; }
-.person-card .title { font-size: .8em; color: var(--muted); }
+.person-card .title {
+  font-size: .8em; color: var(--muted);
+  /* Clamp to 2 lines so cards line up regardless of how verbose Scholar /
+     HR have made the job title. Tooltip shows the full string. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 2.4em;   /* reserve the two lines even for short titles */
+}
 .person-card .badge {
   display: inline-block; font-size: .68em; padding: .15em .45em;
   border-radius: 4px; margin-top: .35em; align-self: flex-start;
