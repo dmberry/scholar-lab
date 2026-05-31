@@ -2853,20 +2853,37 @@ async function openPerson(p) {
   } catch (e) {
     const msg = String(e.message || e);
     const isRl = /429|rate-limit/i.test(msg);
+    // Fetch throws a TypeError when the local Flask server isn't responding
+    // at all (browser couldn't open a connection). Distinguish that from a
+    // Scholar-side problem so the user gets a useful next step.
+    const isServerDown = (e instanceof TypeError)
+      || /load failed|failed to fetch|networkerror|err_connection|fetch failed/i.test(msg);
     const url = `https://scholar.google.com/citations?user=${encodeURIComponent(p.scholar_id)}&hl=en`;
+    let title, hint, body;
+    if (isServerDown) {
+      title = "Local server isn't responding";
+      hint  = "The Scholar Dashboard server appears to have stopped. " +
+              "Re-launch Scholar-Dashboard.app (or run start.command) and refresh this page.";
+      body = `<p class="modal-err-detail">${escapeHTML(msg)}</p>
+              <p class="modal-err-actions"><span class="modal-err-hint">${escapeHTML(hint)}</span></p>
+              <p class="modal-err-actions"><button class="modal-err-retry" type="button" data-retry-id="${escapeAttr(p.scholar_id)}">↻ Try again</button></p>`;
+    } else {
+      title = isRl ? "Google Scholar is rate-limiting" : "Scholar fetch failed";
+      hint  = isRl ? "Scholar rate-limits aggressively; wait a minute and retry." : "Click Retry to fetch again.";
+      body = `<p class="modal-err-detail">${escapeHTML(msg)}</p>
+              <p class="modal-err-actions">
+                <a class="modal-err-link" href="${escapeAttr(url)}" target="_blank" rel="noopener">${escapeHTML(url)} ↗</a>
+              </p>
+              <p class="modal-err-actions">
+                <button class="modal-err-retry" type="button" data-retry-id="${escapeAttr(p.scholar_id)}">↻ Retry</button>
+                <span class="modal-err-hint">${escapeHTML(hint)}</span>
+              </p>`;
+    }
     modalBody.querySelector(".spinner").outerHTML = `
       <div class="modal-err">
-        <p class="modal-err-title">${isRl ? "Google Scholar is rate-limiting" : "Scholar fetch failed"}</p>
-        <p class="modal-err-detail">${escapeHTML(msg)}</p>
-        <p class="modal-err-actions">
-          <a class="modal-err-link" href="${escapeAttr(url)}" target="_blank" rel="noopener">${escapeHTML(url)} ↗</a>
-        </p>
-        <p class="modal-err-actions">
-          <button class="modal-err-retry" type="button" data-retry-id="${escapeAttr(p.scholar_id)}">↻ Retry</button>
-          <span class="modal-err-hint">${isRl ? "Scholar rate-limits aggressively; wait a minute and retry." : "Click Retry to fetch again."}</span>
-        </p>
+        <p class="modal-err-title">${escapeHTML(title)}</p>
+        ${body}
       </div>`;
-    // Wire the modal's retry button to re-trigger openPerson for this person.
     modalBody.querySelector(".modal-err-retry")?.addEventListener("click", (ev) => {
       ev.preventDefault();
       openPerson(p);
