@@ -83,6 +83,21 @@ body {
 .tb-btn.active:hover { background: #163d70; color: #fff; }
 .tb-btn.tb-quit { color: #a31818; border-color: #e0c4c4; }
 .tb-btn.tb-quit:hover { background: #fef0f0; color: #a31818; border-color: #a31818; }
+.tb-btn.tb-quit.tb-restart { color: #1d4f91; border-color: #c4d3e6; }
+.tb-btn.tb-quit.tb-restart:hover { background: #eef4fb; color: #1d4f91; border-color: #1d4f91; }
+
+/* Idle-shutdown banner — shown when /api/heartbeat fails (server has
+   exited after its 20-min idle timeout). */
+.server-down-banner {
+  position: sticky; top: 0; z-index: 1000;
+  background: #fff5e6; color: #6b4500;
+  border-bottom: 1px solid #e8d5a8;
+  padding: .45rem 1rem; font-size: .8rem; text-align: center;
+}
+.server-down-banner .link-btn {
+  background: none; border: none; color: #1d4f91;
+  cursor: pointer; padding: 0; font: inherit; text-decoration: underline;
+}
 @media (max-width: 900px) {
   .tb-btn { font-size: .72rem; padding: .25rem .5rem; }
   .tb-actions { gap: .35rem .65rem; }

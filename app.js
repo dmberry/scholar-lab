@@ -1674,8 +1674,60 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-save-unit")) saveCurrentUnit();
   if (e.target.closest("#tb-new-unit")) newUnitFlow();
   if (e.target.closest("#a-excl-open")) openExcludedModal();
-  if (e.target.closest("#tb-quit")) quitServer();
+  if (e.target.closest("#tb-quit")) {
+    if (SERVER_DOWN) showRestartInstructions();
+    else quitServer();
+  }
 });
+
+// ─── Server liveness ────────────────────────────────────────────────────
+// The backend kills itself after 20 minutes of no real requests, so we
+// poll /api/heartbeat every 60s. When it fails, the Quit button swaps to
+// Restart and a banner appears across the top of the page.
+let SERVER_DOWN = false;
+async function checkHeartbeat() {
+  try {
+    const r = await fetch("/api/heartbeat", { cache: "no-store" });
+    if (!r.ok) throw new Error("heartbeat " + r.status);
+    if (SERVER_DOWN) setServerDown(false);
+  } catch (_) {
+    if (!SERVER_DOWN) setServerDown(true);
+  }
+}
+function setServerDown(down) {
+  SERVER_DOWN = down;
+  const btn = document.getElementById("tb-quit");
+  if (btn) {
+    btn.textContent = down ? "↻ Restart" : "⏻ Quit";
+    btn.title = down
+      ? "Local server has stopped (idle timeout). Click for restart instructions."
+      : "Stop the local Scholar Dashboard server";
+    btn.classList.toggle("tb-restart", down);
+  }
+  let banner = document.getElementById("server-down-banner");
+  if (down) {
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "server-down-banner";
+      banner.className = "server-down-banner";
+      banner.innerHTML = `Local server has stopped (idle for 20 min). <button type="button" class="link-btn" id="server-down-restart">Show restart instructions</button>`;
+      document.body.prepend(banner);
+    }
+  } else if (banner) {
+    banner.remove();
+  }
+}
+function showRestartInstructions() {
+  alert("Scholar Dashboard server has stopped.\n\nTo restart:\n  • Double-click Scholar-Dashboard.app in the project folder, or\n  • Run start.command\n\nThen reload this tab.");
+}
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#server-down-restart")) showRestartInstructions();
+});
+// Kick off polling after first load, then every 60s. Heartbeat itself is
+// excluded from idle-tracking on the backend so this never keeps the server
+// awake.
+setTimeout(checkHeartbeat, 5000);
+setInterval(checkHeartbeat, 60000);
 
 // Toolbar Quit — gracefully stop the local Flask server. Replaces the page
 // with a "Server stopped" message so the user can't accidentally keep

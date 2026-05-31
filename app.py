@@ -34,7 +34,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.11"
+__version__ = "0.2.12"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -67,6 +67,42 @@ UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
       "Chrome/120.0.0.0 Safari/537.36")
 
 app = Flask(__name__, static_folder=None)
+
+# Idle auto-shutdown. The server kills itself after IDLE_TIMEOUT_SECONDS of
+# no real requests, so an abandoned tab doesn't leave a Python process
+# squatting on port 5057 forever. Heartbeat pings from the frontend do not
+# count as activity — they only ask "are you alive?" not "do something".
+IDLE_TIMEOUT_SECONDS = 60 * 20  # 20 minutes
+_last_request_at = time.time()
+_IDLE_EXCLUDED_PATHS = {"/api/heartbeat"}
+
+
+@app.before_request
+def _track_activity():
+    global _last_request_at
+    if request.path not in _IDLE_EXCLUDED_PATHS:
+        _last_request_at = time.time()
+
+
+def _idle_watchdog():
+    """Background thread. Every 30s, check whether we've been idle past
+    the timeout; if so, send SIGTERM to ourselves and let the normal
+    shutdown path run."""
+    import signal
+    while True:
+        time.sleep(30)
+        if time.time() - _last_request_at >= IDLE_TIMEOUT_SECONDS:
+            try:
+                os.kill(os.getpid(), signal.SIGTERM)
+            except OSError:
+                pass
+            return
+
+
+def _start_idle_watchdog():
+    import threading
+    t = threading.Thread(target=_idle_watchdog, daemon=True)
+    t.start()
 
 # REF 2029 publication window: 1 January 2021 – 31 December 2028.
 REF_START_YEAR_PY = 2021
@@ -611,6 +647,22 @@ def api_version():
     return jsonify({"version": __version__})
 
 
+@app.route("/api/heartbeat")
+def api_heartbeat():
+    """Lightweight liveness probe. The frontend polls this every 60s so it
+    can detect when the server has idled out and swap the Quit button for
+    Restart. Deliberately excluded from the idle-activity tracker so that
+    polling alone never keeps the server awake."""
+    idle = time.time() - _last_request_at
+    return jsonify({
+        "ok": True,
+        "version": __version__,
+        "idle_seconds": int(idle),
+        "idle_timeout_seconds": IDLE_TIMEOUT_SECONDS,
+        "expires_in_seconds": max(0, int(IDLE_TIMEOUT_SECONDS - idle)),
+    })
+
+
 @app.route("/api/shutdown", methods=["POST"])
 def api_shutdown():
     """Gracefully stop the server. Triggered by the Quit button in the
@@ -872,4 +924,9 @@ def api_scholar(scholar_id: str):
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5057"))
-    app.run(debug=True, port=port)
+    # debug=True would run the reloader and spawn two watchdog threads,
+    # one of which would idle-kill the parent. Disable the reloader.
+    _start_idle_watchdog()
+    # use_reloader=False: the reloader would spawn a parent + child process
+    # and the parent would idle-kill itself, leaving an orphaned child.
+    app.run(debug=True, port=port, use_reloader=False)
