@@ -34,7 +34,7 @@ CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = ROOT / "data"   # one Markdown file per unit lives here
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.16"
+__version__ = "0.2.17"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches

@@ -3183,20 +3183,43 @@ function miniSparkline(cpy, opts = {}) {
     ? (v => (v > 0 ? Math.sqrt(v) / Math.sqrt(rawMax) : 0))
     : (v => v / rawMax);
   const sumV = vals.reduce((a, b) => a + b, 0);
-  const W = 180, H = 28;
+  // Compact Google-Scholar-style framing: bottom year axis + right axis
+  // with nice-step gridlines. Scaled-down version of the modal chart.
+  const W = 220, H = 64;
+  const padL = 2, padR = 22, padT = 6, padB = 10;
+  const plotW = W - padL - padR;
+  const plotH = H - padT - padB;
   // In REF mode cap bar width so a single 2026 bar doesn't stretch across
   // the whole chart and read as a giant rectangle.
-  const bw = opts.ref ? Math.min(W / Math.max(years.length, 1), 18) : W / years.length;
+  const bw = opts.ref ? Math.min(plotW / Math.max(years.length, 1), 18) : plotW / years.length;
+
+  // Gridlines + right-axis ticks. Under sqrt-scale, picking nice axis
+  // ticks on the raw value gives gridlines that land at sqrt-positions
+  // visually — still readable because the right-axis labels show the
+  // real (raw) citation counts.
+  let gridSVG = "";
+  if (!opts.ref && sumV > 0) {
+    const step = niceAxisStep(rawMax, 2);
+    const axisMax = Math.ceil(rawMax / step) * step;
+    for (let t = 0; t <= axisMax; t += step) {
+      const yy = padT + plotH - scaleY(t) * plotH;
+      gridSVG += `<line class="grid" x1="${padL}" x2="${padL + plotW}" y1="${yy}" y2="${yy}"/>`;
+      if (t > 0) {
+        gridSVG += `<text class="axis" x="${padL + plotW + 2}" y="${yy + 3}" text-anchor="start">${t}</text>`;
+      }
+    }
+  }
+
+  // Bars + year labels. Year labels show a 2-digit suffix ('17, '18…) so
+  // ten of them fit comfortably under a narrow card.
+  const showYears = !opts.ref && sumV > 0;
   const bars = years.map((y, i) => {
     const v = vals[i];
-    // Minimum bar height for the current year so a zero/low value still appears
-    // as a visible grey marker rather than disappearing entirely.
     const isCurrent = (y === cy);
-    const rawH = scaleY(v) * H;
+    const rawH = scaleY(v) * plotH;
     const h = isCurrent ? Math.max(rawH, 2.5) : rawH;
-    const x = i * bw;
-    // Navy = REF 2029 window (2021–2028). Current partial year overrides
-    // to grey even inside the window — it's still in progress.
+    const x = padL + i * bw;
+    const yy = padT + plotH - h;
     let cls;
     if (isCurrent)                                            cls = "current";
     else if (y >= REF_START_YEAR && y <= REF_END_YEAR)        cls = "recent";
@@ -3204,19 +3227,19 @@ function miniSparkline(cpy, opts = {}) {
     const tip = isCurrent
       ? `${y}: ${v} citations (partial year — ${cy} still in progress)`
       : `${y}: ${v} citations`;
-    return `<rect class="${cls}" x="${x + 0.5}" y="${H - h}" width="${Math.max(bw - 1, 0.5)}" height="${h}"><title>${tip}</title></rect>`;
+    const yearLabel = showYears
+      ? `<text class="ms-year${isCurrent ? ' current' : ''}" x="${x + bw/2}" y="${H - 2}" text-anchor="middle">'${String(y).slice(-2)}</text>`
+      : "";
+    return `<rect class="${cls}" x="${x + 0.5}" y="${yy}" width="${Math.max(bw - 1, 0.5)}" height="${h}"><title>${tip}</title></rect>${yearLabel}`;
   }).join("");
   const cls = "mini-spark" + (opts.ref ? " ref-mode" : "");
-  const svg = `<svg class="${cls}" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${bars}</svg>`;
-  // Two tiny chips reinforcing what the bar heights say, styled to match
-  // the REF / UoA chips: peak-year value (top-right) and 10-year sum
-  // (bottom-right). Only in normal mode — REF has its own framing.
+  const svg = `<svg class="${cls}" viewBox="0 0 ${W} ${H}">${gridSVG}${bars}</svg>`;
+  // Σ chip kept (10-year total) — the right-axis already shows the peak,
+  // but the running total isn't visible from axis alone.
   if (opts.ref || sumV <= 0) {
     return `<span class="mini-spark-wrap">${svg}</span>`;
   }
-  const peakV = Math.max(...vals);
   return `<span class="mini-spark-wrap">${svg}` +
-    `<span class="ms-chip ms-peak" title="Peak year in window">${peakV}</span>` +
     `<span class="ms-chip ms-sum" title="10-year citation total">&Sigma; ${sumV}</span>` +
     `</span>`;
 }

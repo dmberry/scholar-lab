@@ -651,7 +651,7 @@ h2 {
 .card-metrics .m-retry:hover { background: #fef0f0; }
 
 .mini-spark {
-  display: block; width: 100%; height: 28px; margin-top: .35rem;
+  display: block; width: 100%; height: 64px;
   flex-basis: 100%;
 }
 .mini-spark { cursor: default; }
@@ -661,6 +661,10 @@ h2 {
 .mini-spark.ref-mode rect         { fill: var(--accent); opacity: .6; }
 .mini-spark.ref-mode rect.recent  { fill: #0b2f5e; opacity: 1; }
 .mini-spark.ref-mode rect.current { fill: #9a9a9a; }
+.mini-spark .grid { stroke: #e6e2d8; stroke-width: 1; shape-rendering: crispEdges; }
+.mini-spark .axis   { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.mini-spark .ms-year         { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+.mini-spark .ms-year.current { fill: var(--warn); font-weight: 700; }
 /* Wrapper that positions the chip overlays over the sparkline SVG. */
 .mini-spark-wrap {
   position: relative;
@@ -693,8 +697,12 @@ h2 {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 .mini-spark-wrap .ms-peak { top: -2px; }
+/* Σ chip sits top-left so it doesn't clash with the right-axis tick
+   labels (top-right) or the year axis along the bottom. */
 .mini-spark-wrap .ms-sum  {
-  bottom: -2px;
+  top: -2px;
+  left: 2px;
+  right: auto;
   background: var(--accent-soft);
   color: var(--accent);
 }
