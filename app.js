@@ -569,14 +569,18 @@ function updateExcludedPill() {
 // filter chip and the Sort/Scale button groups) rather than checkboxes,
 // so the whole sort bar reads as one consistent set of pill toggles.
 [
-  { id: "exclude-emeritus", key: "sd-exclude-emeritus", read: excludeEmeritus },
-  { id: "exclude-visiting", key: "sd-exclude-visiting", read: excludeVisiting },
-].forEach(({ id, key, read }) => {
+  { id: "exclude-emeritus", key: "sd-exclude-emeritus", read: excludeEmeritus, noun: "emeritus" },
+  { id: "exclude-visiting", key: "sd-exclude-visiting", read: excludeVisiting, noun: "visiting" },
+].forEach(({ id, key, read, noun }) => {
   const btn = document.getElementById(id);
   if (!btn) return;
+  // Label states the action the click performs: when the group is
+  // currently shown the chip offers "Hide …"; when hidden it offers
+  // "Show …". Active fill = the hide-filter is engaged.
   const sync = (on) => {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.textContent = (on ? "Show " : "Hide ") + noun;
   };
   sync(read());
   btn.addEventListener("click", () => {
@@ -1741,11 +1745,18 @@ function refreshExportMenu() {
       : `Export ${scope.noun} (.zip)…`;
   }
 }
+// Relabel the Data menu's Refresh item to the current scope.
+function refreshDataMenu() {
+  const scope = currentScope();
+  const lbl = document.getElementById("tb-refresh-label");
+  if (lbl) lbl.textContent = `Refresh ${scope.noun}…`;
+}
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".tb-menu-btn");
   if (btn) {
     e.preventDefault();
     if (btn.id === "tb-export-menu") refreshExportMenu();
+    if (btn.id === "tb-data-menu") refreshDataMenu();
     openToolbarMenu(btn.closest(".tb-menu"));
     return;
   }
@@ -2405,9 +2416,9 @@ async function runScopeRefresh() {
   document.getElementById("refresh-eta").textContent = "Done — reloading…";
   setTimeout(() => location.reload(), 600);
 }
-// Both scope pickers (Faculty + UoA) carry a ↻ Refresh button.
+// Refresh lives in the Data menu and refreshes the current view's scope.
 document.addEventListener("click", (e) => {
-  if (e.target.closest(".scope-refresh")) runScopeRefresh();
+  if (e.target.closest("#tb-refresh")) runScopeRefresh();
 });
 
 async function loadStaff() {

@@ -50,7 +50,8 @@ body {
   display: flex; align-items: baseline; gap: .5rem;
   min-width: 0; flex: 0 1 auto; overflow: hidden;
 }
-.tb-logo { color: var(--accent); font-size: 1.15rem; line-height: 1; flex-shrink: 0; }
+.tb-logo { color: var(--accent); line-height: 0; flex-shrink: 0; display: inline-flex; align-items: center; }
+.tb-logo svg { display: block; }
 .tb-name {
   font-weight: 600; color: var(--ink); white-space: nowrap;
   overflow: hidden; text-overflow: ellipsis;
@@ -167,7 +168,8 @@ body {
 /* About + Settings dialogs */
 .about-card, .settings-card { max-width: 34rem; }
 .about-head { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; }
-.about-logo { font-size: 2.2rem; color: var(--accent); line-height: 1; }
+.about-logo { color: var(--accent); line-height: 0; display: inline-flex; }
+.about-logo svg { display: block; }
 .about-head h3 { margin: 0; }
 .about-ver { margin: .1rem 0 0; color: var(--muted); font-size: .8rem; }
 .about-tag { color: var(--ink); font-size: .9rem; line-height: 1.5; }
