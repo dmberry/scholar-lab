@@ -333,7 +333,6 @@ shows them, untick "Headers and footers" in the print dialog.
 - Server-side Scholar rate-limit cooldown (`429` cooldown lasts 10 min).
 - Print: `break-inside: avoid` on cards; `@page { margin: 0 }` to hide the
   browser's URL/date header in saved PDFs.
-- De-branded to an institution-neutral codebase; `sussex_id` → `staff_id`.
 
 ## Caveats
 
