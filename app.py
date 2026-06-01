@@ -94,7 +94,9 @@ REF_FLAGS_FILE    = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: Tr
 REF_TARGETS_FILE  = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
 CASE_STUDIES_FILE = USER_ROOT / "case_studies.json"  # {id: {uoa, title, status, …, versions[]}}
 UOA_META_FILE     = USER_ROOT / "uoa_meta.json"      # {uoa_code: {narrative}}
-SCHOLAR_META_FILE = USER_ROOT / "scholar_meta.json"  # {person_key: {profile}}
+SCHOLAR_META_FILE = USER_ROOT / "scholar_meta.json"
+SCHOLAR_TRASH_FILE = USER_ROOT / "scholar_trash.json"  # soft-deleted people (30-day retention)
+TRASH_RETENTION_DAYS = 30  # {person_key: {profile}}
 
 # First-run seed: if the user has no data/ yet, copy the bundled
 # data.example/ so they see a working dashboard immediately rather than
@@ -107,7 +109,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.55"
+__version__ = "0.2.56"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -1553,6 +1555,46 @@ def api_delete_faculty():
     return jsonify({"ok": True, "faculty": name, "removed": removed})
 
 
+@app.route("/api/delete-school", methods=["POST"])
+def api_delete_school():
+    """Delete a whole school: every unit file under it. Body {name}."""
+    body = request.get_json(force=True, silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "school name required"}), 400
+    ctx = _unit_context_map()
+    slugs = [slug for slug, (_u, _fac, sch) in ctx.items() if sch and (sch.get("name") or "") == name]
+    if not slugs:
+        return jsonify({"error": f"no school named “{name}”"}), 404
+    removed = 0
+    bak = DATA_DIR / ".bak" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    for slug in slugs:
+        p = DATA_DIR / f"{slug}.md"
+        if p.exists():
+            bak.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(p, bak / p.name)
+            p.unlink()
+            removed += 1
+    return jsonify({"ok": True, "school": name, "removed": removed})
+
+
+@app.route("/api/delete-unit", methods=["POST"])
+def api_delete_unit():
+    """Delete a single unit file. Body {slug}."""
+    body = request.get_json(force=True, silent=True) or {}
+    slug = _slugify(body.get("slug") or "")
+    if not slug:
+        return jsonify({"error": "unit slug required"}), 400
+    p = DATA_DIR / f"{slug}.md"
+    if not p.exists():
+        return jsonify({"error": f"no unit “{slug}”"}), 404
+    bak = DATA_DIR / ".bak" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    bak.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(p, bak / p.name)
+    p.unlink()
+    return jsonify({"ok": True, "slug": slug})
+
+
 @app.route("/api/clear-uoa", methods=["POST"])
 def api_clear_uoa():
     """Clear a UoA's *relations* only — never the underlying staff/units. Drops
@@ -1630,6 +1672,147 @@ def api_shutdown():
     return jsonify({"ok": True, "shutting_down": True})
 
 
+# ── Scholar trash (soft delete with 30-day retention) ──────────────────────
+def _load_trash() -> list:
+    try:
+        data = json.loads(SCHOLAR_TRASH_FILE.read_text())
+        return data if isinstance(data, list) else []
+    except (OSError, ValueError):
+        return []
+
+
+def _save_trash(items: list) -> None:
+    try:
+        SCHOLAR_TRASH_FILE.write_text(json.dumps(items, indent=2, ensure_ascii=False))
+    except OSError:
+        pass
+
+
+def _purge_expired_trash(items: list) -> list:
+    """Drop trash older than the retention window. Best-effort on bad dates."""
+    cutoff = time.time() - TRASH_RETENTION_DAYS * 86400
+    kept = []
+    for it in items:
+        try:
+            ts = datetime.fromisoformat(it.get("deleted_at", "")).timestamp()
+        except (ValueError, TypeError):
+            ts = time.time()   # unknown → keep
+        if ts >= cutoff:
+            kept.append(it)
+    return kept
+
+
+def _person_key(p: dict) -> str:
+    return ((p.get("staff_id") or "").strip() or (p.get("scholar_id") or "").strip()
+            or (p.get("name") or "").strip())
+
+
+def _capture_deletions(payload: dict) -> int:
+    """Diff the incoming faculties tree against what's on disk; any person who
+    has vanished from a unit that still exists (and isn't simply moved to
+    another unit) is moved to the trash so the delete is recoverable."""
+    old = _load_staff()
+    old_index: dict = {}
+
+    def _walk_old(units):
+        for u in units:
+            slug = _slugify(u.get("slug", ""))
+            old_index[slug] = {"name": u.get("name", ""),
+                               "people": {_person_key(p): p for p in u.get("staff", []) if _person_key(p)}}
+
+    for fac in old.get("faculties", []):
+        for sch in fac.get("schools", []):
+            _walk_old(sch.get("units", []))
+        _walk_old(fac.get("units", []))
+    if isinstance(old.get("units"), list):
+        _walk_old(old["units"])
+
+    new_keys: dict = {}
+
+    def _walk_new(units):
+        for u in units:
+            slug = _slugify(u.get("slug", ""))
+            new_keys.setdefault(slug, set()).update(_person_key(p) for p in u.get("staff", []) if _person_key(p))
+
+    for fac in payload.get("faculties", []):
+        for sch in fac.get("schools", []):
+            _walk_new(sch.get("units", []))
+        _walk_new(fac.get("units", []))
+    if isinstance(payload.get("units"), list):
+        _walk_new(payload["units"])
+
+    all_new = set().union(*new_keys.values()) if new_keys else set()
+    now = datetime.now(timezone.utc).isoformat()
+    trash = _load_trash()
+    added = 0
+    for slug, info in old_index.items():
+        survivors = new_keys.get(slug)
+        if survivors is None:
+            continue   # unit absent from this save → don't trash (scoped save / unit delete handled elsewhere)
+        for key, person in info["people"].items():
+            if key not in survivors and key not in all_new:   # gone, and not moved elsewhere
+                trash.append({
+                    "id": "tr-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + str(added),
+                    "person": person, "unit_slug": slug, "unit_name": info["name"],
+                    "deleted_at": now,
+                })
+                added += 1
+    if added:
+        _save_trash(trash)
+    return added
+
+
+@app.route("/api/trash", methods=["GET", "POST"])
+def api_trash():
+    """GET → the current trash (expired entries purged first).
+    POST {action: restore|purge|empty, id?} — restore re-adds the person to
+    their origin unit; purge removes one; empty clears all."""
+    items = _purge_expired_trash(_load_trash())
+    if request.method == "GET":
+        _save_trash(items)
+        return jsonify({"trash": items, "retention_days": TRASH_RETENTION_DAYS})
+
+    body = request.get_json(force=True, silent=True) or {}
+    action = body.get("action")
+    if action == "empty":
+        _save_trash([])
+        return jsonify({"ok": True, "emptied": True})
+    tid = body.get("id")
+    item = next((it for it in items if it.get("id") == tid), None)
+    if not item:
+        return jsonify({"error": "trash item not found"}), 404
+    if action == "purge":
+        _save_trash([it for it in items if it.get("id") != tid])
+        return jsonify({"ok": True, "purged": tid})
+    if action == "restore":
+        staff = _load_staff()
+        slug = item.get("unit_slug")
+        target = None
+
+        def _find(units):
+            nonlocal target
+            for u in units:
+                if _slugify(u.get("slug", "")) == slug:
+                    target = u
+
+        for fac in staff.get("faculties", []):
+            for sch in fac.get("schools", []):
+                _find(sch.get("units", []))
+            _find(fac.get("units", []))
+        if isinstance(staff.get("units"), list):
+            _find(staff["units"])
+        if target is None:
+            return jsonify({"error": f"the original unit “{item.get('unit_name') or slug}” no longer exists; "
+                                     f"recreate it before restoring"}), 409
+        # Avoid a duplicate if they already exist there.
+        if not any(_person_key(p) == _person_key(item["person"]) for p in target.setdefault("staff", [])):
+            target["staff"].append(item["person"])
+        _write_staff_markdown(staff)
+        _save_trash([it for it in items if it.get("id") != tid])
+        return jsonify({"ok": True, "restored": tid, "unit": item.get("unit_name")})
+    return jsonify({"error": "unknown action"}), 400
+
+
 @app.route("/api/staff", methods=["GET", "POST"])
 def api_staff():
     if request.method == "POST":
@@ -1665,11 +1848,18 @@ def api_staff():
                 err = _check_unit(u)
                 if err:
                     return jsonify({"error": err}), 400
+        # Capture any people removed in this save into the trash (recoverable
+        # for 30 days) before overwriting the unit files.
+        trashed = 0
+        try:
+            trashed = _capture_deletions(payload)
+        except Exception:   # noqa: BLE001 — never block a save on trash bookkeeping
+            trashed = 0
         try:
             count = _write_staff_markdown(payload)
         except Exception as e:
             return jsonify({"error": f"Could not write data files: {e}"}), 500
-        return jsonify({"ok": True, "units": count})
+        return jsonify({"ok": True, "units": count, "trashed": trashed})
     return jsonify(_load_staff())
 
 

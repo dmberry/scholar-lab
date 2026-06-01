@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.55 · proof-of-concept.
+**Version:** 0.2.56 · proof-of-concept.
 
 ## What it does
 
@@ -65,9 +65,14 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 - **Help menu**: an in-app guide to the whole workflow.
 - **Analytics modal**: cross-unit visibility, citation totals, REF readiness,
   momentum, cross-listings, citation history.
-- **Data editor**: add / edit / remove faculties, schools, units, and staff.
-- **Native menu bar**: File · View · Data · REF · Export · Help, plus a
-  one-click Analytics button.
+- **Data editor**: add / edit staff & units. **Scholar trash** makes person
+  deletions recoverable — a 🗑 Trash button lists removed staff with Restore /
+  delete-forever, kept 30 days. Structural deletes (faculty / school / unit)
+  live only in the Settings **Danger Zone**.
+- **Native menu bar**: File · View · Data · REF · Export · Analytics · Help.
+  The REF menu shows only in By-UoA mode; Settings and About live on Help;
+  Analytics offers *Faculty analytics* (citation-first) and *UoA analytics*
+  (REF-readiness-first). Reports/PDFs print with real page margins.
 - Server-side Scholar cache (7-day TTL) in `.cache/`; force-refresh per card
   or the whole view. A **10-minute server cooldown** is auto-engaged after a
   Scholar 429 / captcha so repeated retries don't make things worse.

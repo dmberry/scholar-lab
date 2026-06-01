@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.55</span>
+    <span class="tb-sub" id="tb-version">v0.2.56</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -38,13 +38,6 @@
         <button class="tb-menu-item" id="tb-save-faculty" role="menuitem">
           <span class="tb-mi-label">Save Faculty bundle…</span>
           <span class="tb-mi-hint">Whole faculty as one bundle (units, pubs, case studies)</span>
-        </button>
-        <div class="tb-menu-sep" role="separator"></div>
-        <button class="tb-menu-item tb-menu-item-plain" id="tb-settings" role="menuitem">
-          <span class="tb-mi-label">Settings…</span>
-        </button>
-        <button class="tb-menu-item tb-menu-item-plain" id="tb-about" role="menuitem">
-          <span class="tb-mi-label">About Scholar Dashboard</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item tb-menu-item-plain" id="tb-quit" role="menuitem">
@@ -152,16 +145,29 @@
           <span class="tb-mi-hint">Views, scraping, REF flagging &amp; ratings, case studies, reports</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-help-settings" role="menuitem">
+          <span class="tb-mi-label">Settings…</span>
+        </button>
         <button class="tb-menu-item tb-menu-item-plain" id="tb-help-about" role="menuitem">
           <span class="tb-mi-label">About Scholar Dashboard</span>
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Primary action kept one-click on the right. -->
-  <div class="tb-actions">
-    <button class="tb-btn primary" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">Analytics</button>
+    <!-- Analytics: choose the lens. -->
+    <div class="tb-menu" data-menu="analytics">
+      <button class="tb-menu-btn" id="tb-analytics-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Analytics</button>
+      <div class="tb-menu-pop" role="menu" aria-label="Analytics" hidden>
+        <button class="tb-menu-item" id="tb-analytics-faculty" role="menuitem">
+          <span class="tb-mi-label">Faculty analytics…</span>
+          <span class="tb-mi-hint">Citation metrics + REF readiness cards, grouped by unit</span>
+        </button>
+        <button class="tb-menu-item" id="tb-analytics-uoa" role="menuitem">
+          <span class="tb-mi-label">UoA analytics…</span>
+          <span class="tb-mi-hint">REF ranking metrics + readiness cards, grouped by UoA</span>
+        </button>
+      </div>
+    </div>
   </div>
 </nav>
 
@@ -283,6 +289,7 @@
     <div id="data-editor"></div>
     <div class="data-actions">
       <button class="tb-btn" id="data-load-unit" title="Load a unit Markdown file from disk (adds or replaces that unit)">⬆ Load unit file</button>
+      <button class="tb-btn" id="data-trash" title="Restore people removed in a save (kept 30 days)">🗑 Trash</button>
       <input type="file" id="data-load-input" accept=".md,.json,text/markdown,text/plain,application/json" hidden>
       <span class="data-actions-spacer"></span>
       <button class="tb-btn" data-data-close>Cancel</button>
@@ -313,6 +320,14 @@
   <div class="modal-card ref-report-card">
     <button class="close" aria-label="Close" data-ref-report-close>×</button>
     <div id="ref-report-body"></div>
+  </div>
+</div>
+
+<!-- Scholar trash (restore recently-deleted people) -->
+<div id="trash-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card csm-card">
+    <button class="close" aria-label="Close" data-trash-close>×</button>
+    <div id="trash-body"></div>
   </div>
 </div>
 

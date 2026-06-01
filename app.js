@@ -744,7 +744,11 @@ function _allActiveUnitsForScope(scope) {
   return out;
 }
 
-async function openAnalytics() {
+async function openAnalytics(mode) {
+  // mode: "faculty" → group by unit, citation metrics first; "uoa" → group by
+  // UoA, REF readiness first. Defaults to whatever's already selected.
+  if (mode === "faculty") ANALYTICS_SCOPE = { ...ANALYTICS_SCOPE, groupBy: "unit" };
+  else if (mode === "uoa") ANALYTICS_SCOPE = { ...ANALYTICS_SCOPE, groupBy: "uoa" };
   const modal = document.getElementById("analytics-modal");
   const body = document.getElementById("analytics-body");
   modal.classList.remove("hidden");
@@ -905,14 +909,14 @@ async function renderAnalyticsForScope() {
   // Cross-listings doesn't fit UoA mode (a person belongs to one UoA at a time
   // in the model). Hide it there.
   const crossSection = groupBy === "uoa" ? "" : renderCrossListings();
+  // UoA analytics leads with REF ranking/readiness (the REF lens); Faculty
+  // analytics leads with citation metrics. Both carry the readiness cards.
+  const sections = groupBy === "uoa"
+    ? [renderRefReadiness(aggList, groupBy), renderVisibility(aggList), renderCitationTotals(aggList), renderMomentumQuadrant(aggList), renderHeatmap(aggList)]
+    : [renderVisibility(aggList), renderCitationTotals(aggList), renderRefReadiness(aggList, groupBy), renderMomentumQuadrant(aggList), crossSection, renderHeatmap(aggList)];
   body.innerHTML = `
     ${renderAnalyticsScopeBar()}
-    ${renderVisibility(aggList)}
-    ${renderCitationTotals(aggList)}
-    ${renderRefReadiness(aggList, groupBy)}
-    ${renderMomentumQuadrant(aggList)}
-    ${crossSection}
-    ${renderHeatmap(aggList)}
+    ${sections.join("\n")}
     <p class="analytics-foot">Computed from ${rows.length} hydrated Scholar profiles across ${aggList.length} ${bucketLabel}. ${activeExclusionLabel() ? `<span class="analytics-excl">· ${escapeHTML(activeExclusionLabel())}</span>` : ""}</p>
   `;
   bindAnalyticsScope();
@@ -1211,7 +1215,8 @@ function renderHeatmap(aggList) {
 }
 
 document.addEventListener("click", (e) => {
-  if (e.target.closest("#tb-analytics")) openAnalytics();
+  if (e.target.closest("#tb-analytics-faculty")) openAnalytics("faculty");
+  if (e.target.closest("#tb-analytics-uoa")) openAnalytics("uoa");
   if (e.target.closest("[data-analytics-close]")) document.getElementById("analytics-modal").classList.add("hidden");
 });
 document.getElementById("analytics-modal")?.addEventListener("click", (e) => {
@@ -1272,6 +1277,50 @@ function slugify(s) {
     .slice(0, 60) || "unit";
 }
 
+// Scholar trash — restore people removed in a save (30-day retention).
+async function openTrash() {
+  const modal = document.getElementById("trash-modal");
+  modal.classList.remove("hidden");
+  const body = document.getElementById("trash-body");
+  body.innerHTML = `<p class="spinner">Loading…</p>`;
+  let d = { trash: [], retention_days: 30 };
+  try { d = await (await fetch("/api/trash")).json(); } catch {}
+  const items = d.trash || [];
+  const rows = items.map(it => {
+    const p = it.person || {};
+    const when = it.deleted_at ? new Date(it.deleted_at).toLocaleDateString() : "";
+    return `<div class="csm-row">
+      <span class="csm-title">${escapeHTML(p.name || "(unnamed)")}</span>
+      <span class="csm-meta">${escapeHTML(p.title || "")} · from ${escapeHTML(it.unit_name || it.unit_slug || "?")} · deleted ${escapeHTML(when)}</span>
+      <button class="tb-btn" data-trash-restore="${escapeAttr(it.id)}">Restore</button>
+      <button class="tb-btn csm-del" data-trash-purge="${escapeAttr(it.id)}" title="Delete forever">🗑</button>
+    </div>`;
+  }).join("") || `<p class="cs-empty">Trash is empty.</p>`;
+  body.innerHTML = `
+    <div class="tr-top"><h3>Trash</h3>${items.length ? `<button class="tb-btn dz-btn" id="trash-empty">Empty trash</button>` : ""}</div>
+    <p class="csm-intro">People removed when you save the data editor are kept here for ${d.retention_days || 30} days, then deleted automatically. Restoring returns a person to their original unit and reloads.</p>
+    ${rows}`;
+  body.querySelectorAll("[data-trash-restore]").forEach(b => b.addEventListener("click", async () => {
+    try {
+      const r = await fetch("/api/trash", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "restore", id: b.dataset.trashRestore }) });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || "restore failed");
+      alert(`Restored to “${j.unit || "its unit"}”. Reloading…`);
+      location.reload();
+    } catch (e) { alert("Restore failed: " + e.message); }
+  }));
+  body.querySelectorAll("[data-trash-purge]").forEach(b => b.addEventListener("click", async () => {
+    if (!confirm("Delete this person permanently? This cannot be undone.")) return;
+    try { await fetch("/api/trash", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "purge", id: b.dataset.trashPurge }) }); openTrash(); }
+    catch (e) { alert("Failed: " + e.message); }
+  }));
+  body.querySelector("#trash-empty")?.addEventListener("click", async () => {
+    if (!confirm("Permanently empty the trash? This cannot be undone.")) return;
+    try { await fetch("/api/trash", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "empty" }) }); openTrash(); }
+    catch (e) { alert("Failed: " + e.message); }
+  });
+}
+
 function buildFacultyEditor(fac) {
   const block = document.createElement("section");
   block.className = "data-faculty";
@@ -1281,7 +1330,6 @@ function buildFacultyEditor(fac) {
       <input class="data-faculty-name" value="${escapeAttr(fac.name)}" placeholder="Faculty name">
       <input class="data-faculty-url"  value="${escapeAttr(fac.url || '')}" placeholder="https://…  (faculty homepage)" type="url">
       <span class="data-faculty-id" title="Internal identifier — derived from the faculty name when added.">id: <code>${escapeHTML(fac.slug)}</code></span>
-      <button class="data-faculty-del" title="Delete this faculty and everything in it">✕ faculty</button>
     </header>
     <div class="data-faculty-body"></div>
     <div class="data-faculty-actions">
@@ -1308,12 +1356,6 @@ function buildFacultyEditor(fac) {
     const slug = slugify(name);
     body.appendChild(buildUnitEditor({ slug, name, source: "(manually added)", last_scraped: "", staff: [] }));
   };
-  block.querySelector(".data-faculty-del").onclick = (e) => {
-    e.preventDefault();
-    if (confirm(`Delete "${fac.name}" and everything inside? (Backup saved automatically.)`)) {
-      block.remove();
-    }
-  };
   return block;
 }
 
@@ -1329,7 +1371,6 @@ function buildSchoolEditor(sch) {
       <input class="data-school-url"  value="${escapeAttr(sch.url || '')}" placeholder="https://…  (school page)" type="url">
       <span class="data-school-id" title="Internal identifier — derived from the school name when added.">id: <code>${escapeHTML(sch.slug)}</code></span>
       <span class="data-school-count">${unitCount} unit${unitCount===1?'':'s'}</span>
-      <button class="data-school-del" title="Delete this school and its units">✕ school</button>
     </summary>
     <div class="data-school-units"></div>
     <button class="data-add-unit-to-school">+ Add unit to this school</button>
@@ -1342,10 +1383,6 @@ function buildSchoolEditor(sch) {
     if (!name) return;
     const slug = slugify(name);
     unitsHost.appendChild(buildUnitEditor({ slug, name, source: "(manually added)", last_scraped: "", staff: [] }));
-  };
-  card.querySelector(".data-school-del").onclick = (e) => {
-    e.preventDefault();
-    if (confirm(`Delete "${sch.name}" and its ${unitCount} unit(s)?`)) card.remove();
   };
   // Clicking the inputs shouldn't toggle the accordion
   card.querySelectorAll("input, button").forEach(el => el.addEventListener("click", (e) => e.stopPropagation()));
@@ -1372,7 +1409,6 @@ function buildUnitEditor(unit) {
         <span class="data-unit-active-label">active</span>
       </label>
       <button class="data-unit-savemd" title="Download this unit as a Markdown file (the version currently saved to disk)">⤓ .md</button>
-      <button class="data-unit-del" title="Delete this entire unit">✕ unit</button>
     </summary>
     <table class="data-table">
       <thead>
@@ -1388,12 +1424,6 @@ function buildUnitEditor(unit) {
   unit.staff.forEach(p => tbody.appendChild(buildStaffRow(p)));
   card.querySelector(".data-add-row").onclick = () =>
     tbody.appendChild(buildStaffRow({name: "", title: "", staff_id: "", scholar_id: null, scholar_status: "unchecked"}));
-  card.querySelector(".data-unit-del").onclick = (e) => {
-    e.preventDefault();
-    if (confirm(`Delete the entire "${unit.name}" unit and its ${unit.staff.length} staff entries? (Backup saved automatically.)`)) {
-      card.remove();
-    }
-  };
   // Download this unit's Markdown file (the on-disk version).
   card.querySelector(".data-unit-savemd").onclick = (e) => {
     e.preventDefault();
@@ -1736,6 +1766,9 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("[data-data-close]")) document.getElementById("data-modal").classList.add("hidden");
   if (e.target.closest("[data-staff-detail-close]")) closeStaffDetailModal();
   if (e.target.closest("#data-save")) saveDataEditor();
+  if (e.target.closest("#data-trash")) openTrash();
+  if (e.target.closest("[data-trash-close]")) document.getElementById("trash-modal").classList.add("hidden");
+  if (e.target.id === "trash-modal") e.target.classList.add("hidden");
   if (e.target.closest("#data-load-unit")) document.getElementById("data-load-input")?.click();
   // Toolbar unit-file controls
   if (e.target.closest("#tb-load-unit")) document.getElementById("data-load-input")?.click();
@@ -1946,6 +1979,11 @@ async function openSettings() {
     .map(c => `<div class="dz-row"><span class="dz-name">UoA ${c}${UOA_BY_CODE[c]?.name ? " · " + escapeHTML(UOA_BY_CODE[c].name) : ""}</span>
       <button class="tb-btn dz-btn" data-clear-uoa="${c}">Clear relations</button></div>`).join("")
     || `<p class="set-help">No UoAs tagged.</p>`;
+  const allSchools = [...new Set((FACULTIES || []).flatMap(f => (f.schools || []).map(s => s.name)))].sort();
+  const dzSchoolOpts = allSchools.map(n => `<option value="${escapeAttr(n)}">${escapeHTML(n)}</option>`).join("");
+  const dzUnitOpts = (UNITS || []).filter(u => u.slug !== "all-staff")
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map(u => `<option value="${escapeAttr(u.slug)}">${escapeHTML(u.name)}</option>`).join("");
   const scale = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
   const sort  = localStorage.getItem("sd-sort") || "name";
   const sortOpts = [["name","Name"],["citations","Citations"],["hindex","h-index"],
@@ -2021,6 +2059,18 @@ async function openSettings() {
             <p>Permanently removes the faculty and every unit file under it. A copy is written to <code>data/.bak</code> first, but there is no in-app undo.</p></div>
         </div>
         ${dzFaculties}
+        <div class="dz-item dz-sep">
+          <div class="dz-desc"><strong>Delete a school</strong>
+            <p>Removes the school and every unit file under it (backed up to <code>data/.bak</code>).</p></div>
+        </div>
+        <div class="dz-row"><select class="csm-uoa" id="dz-school-sel">${dzSchoolOpts || `<option value="">— none —</option>`}</select>
+          <button class="tb-btn dz-btn" id="dz-del-school" ${allSchools.length ? "" : "disabled"}>Delete school</button></div>
+        <div class="dz-item dz-sep">
+          <div class="dz-desc"><strong>Delete a unit</strong>
+            <p>Removes a single unit file (backed up to <code>data/.bak</code>).</p></div>
+        </div>
+        <div class="dz-row"><select class="csm-uoa" id="dz-unit-sel">${dzUnitOpts}</select>
+          <button class="tb-btn dz-btn" id="dz-del-unit">Delete unit</button></div>
         <div class="dz-item dz-sep">
           <div class="dz-desc"><strong>Clear a UoA's relations</strong>
             <p>Removes the UoA tag from units and people and unassigns its impact case studies. Staff, units and case-study content are kept — only the “who is included” relations are cleared.</p></div>
@@ -2134,6 +2184,29 @@ async function openSettings() {
       location.reload();
     } catch (e) { alert("Delete failed: " + e.message); }
   }));
+  // Danger zone — delete a school.
+  body.querySelector("#dz-del-school")?.addEventListener("click", async () => {
+    const name = body.querySelector("#dz-school-sel")?.value;
+    if (!name) return;
+    if (!confirm(`Delete the school “${name}” and ALL its unit files?\n\nBacked up to data/.bak; no in-app undo.`)) return;
+    try {
+      const r = await fetch("/api/delete-school", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || "failed");
+      alert(`Deleted “${name}” — ${d.removed} unit file(s). Reloading…`); location.reload();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  });
+  // Danger zone — delete a single unit.
+  body.querySelector("#dz-del-unit")?.addEventListener("click", async () => {
+    const sel = body.querySelector("#dz-unit-sel");
+    const slug = sel?.value, label = sel?.selectedOptions[0]?.textContent || slug;
+    if (!slug) return;
+    if (!confirm(`Delete the unit “${label}” and all its staff entries?\n\nBacked up to data/.bak; no in-app undo.`)) return;
+    try {
+      const r = await fetch("/api/delete-unit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
+      const d = await r.json(); if (!r.ok) throw new Error(d.error || "failed");
+      alert(`Deleted “${label}”. Reloading…`); location.reload();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  });
   // Danger zone — clear a UoA's relations (keeps underlying data).
   body.querySelectorAll("[data-clear-uoa]").forEach(b => b.addEventListener("click", async () => {
     const code = b.dataset.clearUoa;
@@ -2207,13 +2280,12 @@ async function openSettings() {
 }
 
 document.addEventListener("click", (e) => {
-  if (e.target.closest("#tb-about"))    openAbout();
-  if (e.target.closest("#tb-settings")) openSettings();
+  if (e.target.closest("#tb-settings") || e.target.closest("#tb-help-settings")) openSettings();
   if (e.target.closest("#tb-ref-report")) openRefReport();
   if (e.target.closest("#tb-ref-targets")) openSettings();
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
   if (e.target.closest("#tb-help"))      openHelp();
-  if (e.target.closest("#tb-help-about")) openAbout();
+  if (e.target.closest("#tb-help-about") || e.target.closest("#tb-about")) openAbout();
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
   if (e.target.closest("[data-help-close]"))     document.getElementById("help-modal").classList.add("hidden");
   if (e.target.closest("[data-settings-close]")) document.getElementById("settings-modal").classList.add("hidden");
@@ -2551,7 +2623,7 @@ async function renderCaseStudies() {
     const updated = cs.updated_at ? new Date(cs.updated_at).toLocaleDateString() : "";
     const slot = cs.slot
       ? `<span class="cs-slot-badge" title="Slotted for inclusion">№${cs.slot}</span>`
-      : `<span class="cs-slot-badge cs-slot-draft" title="A candidate not yet slotted for inclusion">Draft</span>`;
+      : `<span class="cs-slot-badge cs-slot-draft" title="A candidate not yet slotted for inclusion">Candidate</span>`;
     return `<button class="cs-cardx" data-cs-edit="${escapeAttr(cs.id)}">
       <span class="cs-badges"><span class="cs-status ${st.cls}">${st.label}</span>${slot}</span>
       <span class="cs-title">${escapeHTML(cs.title || "Untitled case study")}</span>
@@ -2912,7 +2984,7 @@ function renderCaseStudyManager(items) {
     const st = CS_STATES.find(s => s.key === c.status) || CS_STATES[0];
     return `<div class="csm-row" data-id="${escapeAttr(c.id)}">
       <span class="cs-status ${st.cls}">${st.label}</span>
-      <span class="cs-slot-badge ${c.slot ? "" : "cs-slot-draft"}">${c.slot ? "№" + c.slot : "Draft"}</span>
+      <span class="cs-slot-badge ${c.slot ? "" : "cs-slot-draft"}">${c.slot ? "№" + c.slot : "Candidate"}</span>
       <span class="csm-title">${escapeHTML(c.title || "Untitled case study")}</span>
       <span class="csm-meta">${(c.references || []).length} out · ${(c.contributors || []).length} contrib</span>
       <select class="csm-uoa" data-id="${escapeAttr(c.id)}" title="Reassign this case study to a UoA">${uoaOptions(c.uoa)}</select>
@@ -3032,7 +3104,7 @@ async function buildUoaReport() {
     const st = CS_STATES.find(s => s.key === c.status) || CS_STATES[0];
     const slotTag = c.slot
       ? `<span class="ur-cs-slot">Case study ${c.slot}</span>`
-      : `<span class="ur-cs-slot ur-cs-slot-draft">Draft / candidate</span>`;
+      : `<span class="ur-cs-slot ur-cs-slot-draft">Candidate</span>`;
     const refs = (c.references || []).map(r => {
       const [sid, key] = r.split(/:(.+)/);
       const band = refRatingLabel(refFlagsFor(sid)[key]);
@@ -3095,6 +3167,7 @@ async function buildUoaReport() {
     <section class="ur-section">
       <h3>Narrative / environment <span class="wordcount" id="ur-narr-wc"></span></h3>
       <textarea id="ur-narrative" class="ur-narrative" rows="5" placeholder="Describe the UoA's research environment, strategy and vitality…">${escapeHTML(meta.narrative || "")}</textarea>
+      <div class="ur-narrative-print" id="ur-narrative-print">${escapeHTML(meta.narrative || "")}</div>
       <div class="ur-narrative-actions"><button class="tb-btn" id="ur-save-narrative">Save narrative</button><span class="set-saved" id="ur-narr-saved"></span></div>
     </section>
 
@@ -3110,6 +3183,11 @@ async function buildUoaReport() {
 
   // Indicative environment-statement guide (FTE-scaled in REF; 500 here).
   wireWordCount(body.querySelector("#ur-narrative"), body.querySelector("#ur-narr-wc"), 500);
+  // Keep the print-only narrative div in sync so the printed PDF shows the
+  // full text (a <textarea> won't expand to its content on paper).
+  const narrTa = body.querySelector("#ur-narrative");
+  const narrPrint = body.querySelector("#ur-narrative-print");
+  narrTa?.addEventListener("input", () => { narrPrint.textContent = narrTa.value; });
 
   body.querySelector("#ur-save-narrative")?.addEventListener("click", async () => {
     const saved = body.querySelector("#ur-narr-saved");
@@ -4096,6 +4174,10 @@ function applyFileMenuLabels() {
   // Faculty bundle save is meaningless in UoA mode (the UoA bundle covers it).
   const fac = document.getElementById("tb-save-faculty");
   if (fac) fac.hidden = uoa;
+  // The REF menu (window highlight, selection/UoA reports, targets) only makes
+  // sense in the By-UoA view, so hide it elsewhere.
+  const refMenu = document.querySelector('.tb-menu[data-menu="ref"]');
+  if (refMenu) refMenu.hidden = !uoa;
 }
 
 // Render the staff grid filtered to a single UoA code. Synthesises a unit-

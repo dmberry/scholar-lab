@@ -363,6 +363,7 @@ body {
 .ur-section > h3 { font-size: .95rem; text-transform: none; letter-spacing: 0; color: var(--ink); border-bottom: 2px solid var(--accent-soft); padding-bottom: .25rem; margin: 0 0 .6rem; }
 .ur-count { font-size: .72rem; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: .1em .5em; margin-left: .3rem; }
 .ur-narrative { width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.5; }
+.ur-narrative-print { display: none; }   /* shown only when printing */
 .ur-narrative-actions { margin-top: .4rem; display: flex; align-items: center; gap: .5rem; }
 .ur-scholar { margin: .5rem 0; }
 .ur-sc-name { font-weight: 600; font-size: .9rem; }
@@ -1193,13 +1194,13 @@ h2 {
        • If a report gains its own scroll container, reset it here too.
      When you touch a report's markup, eyeball its print preview. */
 
-  /* Zero @page margin → no room for the browser-injected header
-     (localhost URL on top, date/page on bottom). Internal body padding
-     restores a readable printable area. The user can also tick/untick
-     "Headers and footers" in their browser's print dialog. */
-  @page { margin: 0; size: A4; }
+  /* Real page margins — physical printers can't print to the sheet edge and
+     silently drop anything in the unprintable border, so give them room.
+     (The cost is the browser may inject its URL/date header; users can untick
+     "Headers and footers" in the print dialog if they don't want it.) */
+  @page { margin: 16mm 15mm; size: A4; }
   html { font-size: 11pt; }
-  body { background: #fff; color: #000; padding: 10mm 12mm; }
+  body { background: #fff; color: #000; padding: 0; }
 
   /* On screen the modal card is height-capped and scrolls (max-height:86vh;
      overflow:auto). On paper that clipped everything below the fold, so the
@@ -1260,11 +1261,14 @@ h2 {
   }
   body.printing-uoa-report .close,
   body.printing-uoa-report #ur-print,
+  body.printing-uoa-report #ur-text,
   body.printing-uoa-report .ur-narrative-actions { display: none !important; }
-  /* Show the narrative as plain text on paper, not an editable box. */
-  body.printing-uoa-report .ur-narrative {
-    border: 0 !important; padding: 0 !important; resize: none !important;
-    height: auto !important; overflow: visible !important;
+  /* Print the narrative as a plain-text block (full height) instead of the
+     editable textarea, which won't grow to its content on paper. */
+  body.printing-uoa-report .ur-narrative { display: none !important; }
+  body.printing-uoa-report .ur-narrative-print {
+    display: block !important; white-space: pre-wrap; line-height: 1.5;
+    break-inside: avoid-page; page-break-inside: avoid;
   }
   body.printing-uoa-report .ur-cs,
   body.printing-uoa-report .ur-scholar { break-inside: avoid; page-break-inside: avoid; }
