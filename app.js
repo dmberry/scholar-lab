@@ -595,15 +595,31 @@ function updateExcludedPill() {
 // Clicking the pill opens the same modal used from analytics.
 document.getElementById("excluded-pill")?.addEventListener("click", openExcludedModal);
 
-// Apply REF 2029 mode to a single card — used by both per-card chip and global button.
-// The chart already tags REF-window bars (2021–2028) with class="recent";
-// REF mode just adds a class to the card so CSS can fade everything else.
-// No chart rebuild — keep the full 10-year context, just emphasise the
-// REF years.
+// Apply REF mode to a single card. When ON, the mini-chart is rebuilt to
+// show ONLY the REF-window years that contain a publication the user has
+// SELECTED for REF on this scholar's card; years with no selected output
+// render as N/A. When OFF, the normal full citation chart is restored.
 function setCardRefMode(card, on) {
   const chip = card.querySelector(".ref-chip");
   chip?.classList.toggle("active", on);
   card.classList.toggle("ref-mode", on);
+  const id = card.querySelector(".card-metrics")?.dataset.id;
+  const data = id && METRICS.get(id);
+  const wrap = card.querySelector(".mini-spark-wrap");
+  if (!data || !data.cites_per_year || !wrap) return;
+  let html;
+  if (on) {
+    // Publication years of this scholar's REF-selected outputs.
+    const selectedYears = new Set(
+      Object.keys(refFlagsFor(id)).map(k => { const m = /^(\d{4})/.exec(k); return m ? +m[1] : null; }).filter(Boolean)
+    );
+    html = miniSparkline(data.cites_per_year, { ref: true, selectedYears });
+  } else {
+    html = miniSparkline(data.cites_per_year, {});
+  }
+  const tmp = document.createElement("div");
+  tmp.innerHTML = html;
+  wrap.replaceWith(tmp.firstElementChild);
 }
 
 // Per-card chip — capture-phase so card-level click (modal) doesn't fire.
@@ -1503,7 +1519,7 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
 
       ${sparkline(cpy)}
 
-      <h5>Recent publications (REF 2029 window, from 2021)</h5>
+      <h5>Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})</h5>
       ${renderPubs((d.recent_publications || []).filter(p => (p.year || 0) >= REF_START_YEAR))}
 
       <p class="cache-note">
@@ -1761,7 +1777,7 @@ document.addEventListener("click", (e) => {
     if (btn.id === "tb-ref-menu") {
       const on = localStorage.getItem("sd-ref-all") === "1";
       const lbl = document.getElementById("tb-ref-window-label");
-      if (lbl) lbl.textContent = on ? "Remove REF 2029 highlight" : "Highlight REF 2029 window";
+      if (lbl) lbl.textContent = on ? `Remove REF ${REF_YEAR} highlight` : `Highlight REF ${REF_YEAR} window`;
     }
     openToolbarMenu(btn.closest(".tb-menu"));
     return;
@@ -1834,7 +1850,21 @@ async function openSettings() {
     </section>
 
     <section class="set-sec">
-      <h4>REF 2029 targets <span class="set-sub">(default for all UoAs)</span></h4>
+      <h4>REF assessment</h4>
+      <p class="set-help">The exercise year names the “REF &lt;year&gt;” chip and reports;
+         the window bounds which publication years count as eligible.</p>
+      <div class="set-grid3">
+        <label>Exercise year <input type="number" id="set-ref-year" step="1" min="2000" max="2100" value="${fetchCfg.ref_year || 2029}"></label>
+        <label>Window start <input type="number" id="set-ref-start" step="1" min="1900" max="2100" value="${fetchCfg.ref_window_start || 2021}"></label>
+        <label>Window end <input type="number" id="set-ref-end" step="1" min="1900" max="2100" value="${fetchCfg.ref_window_end || 2028}"></label>
+      </div>
+      <button class="tb-btn" id="set-save-ref">Save REF settings</button>
+      <span class="set-saved" id="set-ref-saved"></span>
+      <p class="set-help">Changing the window re-evaluates which outputs are eligible. Reload to refresh all labels.</p>
+    </section>
+
+    <section class="set-sec">
+      <h4>REF ${REF_YEAR} targets <span class="set-sub">(default for all UoAs)</span></h4>
       <p class="set-help">Used by REF readiness analytics. A submission needs roughly
          (active FTE × multiplier) outputs, with each person contributing between
          the min and max.</p>
@@ -1884,6 +1914,23 @@ async function openSettings() {
   body.querySelector("#set-sort")?.addEventListener("change", (e) => applySort(e.target.value));
 
   // REF targets — save to backend.
+  body.querySelector("#set-save-ref")?.addEventListener("click", async () => {
+    const saved = body.querySelector("#set-ref-saved");
+    const payload = {
+      ref_year:         parseInt(body.querySelector("#set-ref-year").value, 10) || 2029,
+      ref_window_start: parseInt(body.querySelector("#set-ref-start").value, 10) || 2021,
+      ref_window_end:   parseInt(body.querySelector("#set-ref-end").value, 10) || 2028,
+    };
+    try {
+      const r = await fetch("/api/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const d = await r.json();
+      if (!r.ok) throw new Error();
+      REF_YEAR = d.ref_year; REF_START_YEAR = d.ref_window_start; REF_END_YEAR = d.ref_window_end;
+      applyRefLabels();
+      saved.textContent = "Saved ✓ — reload to refresh all labels"; setTimeout(() => saved.textContent = "", 4000);
+    } catch (e) { saved.textContent = "Save failed"; }
+  });
+
   body.querySelector("#set-save-targets")?.addEventListener("click", async () => {
     const payload = {
       uoa: "default",
@@ -1988,7 +2035,7 @@ async function openRefReport() {
       <h3>REF selection — ${escapeHTML(scope.label)}</h3>
       <p class="affil">No publications have been flagged for REF in this view yet.
       Open a person's card and tick the <strong>REF</strong> box on their
-      2021–2028 outputs.</p>`;
+      ${REF_START_YEAR}–${REF_END_YEAR} outputs.</p>`;
     return;
   }
 
@@ -2941,9 +2988,10 @@ async function loadStaff() {
   // UoA via the Data editor) is picked up on the next reload, not served from
   // browser cache. Was previously biting us during dev: the in-memory UNITS
   // array was missing fields the API now returned.
-  // Load REF flags in parallel with the staff payload so per-card REF
-  // chips render with the correct count on first paint.
+  // Load REF flags + the configured REF year/window in parallel with the
+  // staff payload so per-card chips and labels are correct on first paint.
   loadRefFlags();
+  loadRefConfig();
   let data;
   try {
     const r = await fetch("/api/staff", { cache: "no-store" });
@@ -3421,13 +3469,13 @@ function renderPeople() {
       : `<span class="uoa-tag is-none" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="0" title="Click to assign a UoA">No UoA</span>`;
     // Top-right REF 2029 toggle chip — only for cards with Scholar data.
     const refChip = (status === "set")
-      ? `<button class="ref-chip" type="button" data-ref-toggle title="Toggle REF 2029 publication window (2021–2028)">REF 2029</button>`
+      ? `<button class="ref-chip" type="button" data-ref-toggle title="Toggle REF ${REF_YEAR} publication window (${REF_START_YEAR}–${REF_END_YEAR})">REF ${REF_YEAR}</button>`
       : ``;
     // REF-flag count chip — shows N publications ticked for REF
     // submission. Click-through to the modal where the ticking happens.
     const refCount = (status === "set" && p.scholar_id) ? refFlagCount(p.scholar_id) : 0;
     const refCountChip = (status === "set" && p.scholar_id)
-      ? `<span class="ref-count-chip${refCount === 0 ? " is-zero" : ""}" data-ref-chip-id="${escapeAttr(p.scholar_id)}" title="${refCount} publication${refCount === 1 ? "" : "s"} flagged for REF 2029. Open the card to tick more.">REF: ${refCount}</span>`
+      ? `<span class="ref-count-chip${refCount === 0 ? " is-zero" : ""}" data-ref-chip-id="${escapeAttr(p.scholar_id)}" title="${refCount} publication${refCount === 1 ? "" : "s"} flagged for REF ${REF_YEAR}. Open the card to tick more.">REF: ${refCount}</span>`
       : ``;
     // Stack REF toggle + REF count + UoA chip in the top-right corner.
     const cornerChips = (refChip || refCountChip || uoaTag)
@@ -3843,7 +3891,7 @@ function renderPerson(p, d) {
     </div>
 
     <h4 style="margin:1rem 0 .4rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
-      Recent publications (REF 2029 window, from 2021)
+      Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})
       <span class="ref-summary" id="ref-summary-${escapeAttr(p.scholar_id)}">${refFlagCount(p.scholar_id)} flagged for REF</span>
     </h4>
     ${renderPubs(d.recent_publications || [], { scholarId: p.scholar_id, flags: refFlagsFor(p.scholar_id) })}
@@ -4023,19 +4071,20 @@ function renderPubs(pubs, opts = {}) {
     const y = p.year || 0;
     const inWindow = y >= REF_START_YEAR && y <= REF_END_YEAR;
     const key = p.pub_key || "";
-    const flagged = !!(scholarId && key && flags[key]);
-    const cb = (scholarId && inWindow && key)
-      ? `<label class="pub-ref" title="Tick to include this output in the REF 2029 submission for this person">
-           <input type="checkbox" class="pub-ref-cb"
-                  data-scholar-id="${escapeAttr(scholarId)}"
-                  data-pub-key="${escapeAttr(key)}"
-                  ${flagged ? "checked" : ""}>
-           <span class="pub-ref-tag">REF</span>
-         </label>`
+    const val = (scholarId && key) ? flags[key] : undefined;
+    const flagged = val != null && val !== false;
+    const isLegacy = val === true;   // flagged before ratings existed
+    const valStr = (typeof val === "number") ? String(val) : "";
+    const legacyOpt = isLegacy ? `<option value="keep" selected>Flagged ✓ (set ★)</option>` : "";
+    const sel = (scholarId && inWindow && key)
+      ? `<select class="pub-ref-rating" title="REF status / star rating for this output"
+                 data-scholar-id="${escapeAttr(scholarId)}" data-pub-key="${escapeAttr(key)}">
+           ${legacyOpt}${REF_RATING_OPTS.map(([v, l]) => `<option value="${v}" ${(!isLegacy && v === valStr) ? "selected" : ""}>${l}</option>`).join("")}
+         </select>`
       : `<span class="pub-ref-spacer" aria-hidden="true"></span>`;
     return `
       <div class="pub${flagged ? " pub-flagged" : ""}">
-        ${cb}
+        ${sel}
         <div class="pub-body">
           <div class="pt">${escapeHTML(p.title || "Untitled")}</div>
           <div class="pm">${escapeHTML(String(p.year || "n.d."))} · ${escapeHTML(p.venue || "")} · cited by ${fmt(p.num_citations)}</div>
@@ -4044,6 +4093,13 @@ function renderPubs(pubs, opts = {}) {
     `;
   }).join("");
 }
+
+// REF star ratings. Value is the number stored in ref_flags.json; the
+// X.5 values are the "X–Y*" bands. "" = Not REF (no rating → removed).
+const REF_RATING_OPTS = [
+  ["", "Not REF"], ["1", "1*"], ["2", "2*"], ["2.5", "2–3*"],
+  ["3", "3*"], ["3.5", "3–4*"], ["4", "4*"],
+];
 
 // Cache of REF flags from /api/ref-flags. Keyed by scholar_id → {pub_key: true}.
 // Loaded once per session, updated optimistically on click.
@@ -4068,53 +4124,90 @@ function refFlagCount(scholarId) {
   return Object.keys(refFlagsFor(scholarId)).length;
 }
 
-// Toggle a single REF flag. Optimistic local update; rolls back on
-// server error so the card chip + checkbox stay consistent.
-async function toggleRefFlag(scholarId, key, flagged) {
+// Set a publication's REF star rating (or remove it). rating is a number
+// (1, 2, 2.5, 3, 3.5, 4) to flag at that band, or null to mark Not REF.
+// Optimistic local update; rolls back on server error.
+async function setRefRating(scholarId, key, rating) {
   const map = REF_FLAGS.get(scholarId) || {};
-  if (flagged) map[key] = true; else delete map[key];
+  const prev = map[key];
+  if (rating == null) delete map[key]; else map[key] = rating;
   REF_FLAGS.set(scholarId, map);
   try {
     const r = await fetch("/api/ref-flag", {
       method: "POST",
       headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({scholar_id: scholarId, pub_key: key, flagged}),
+      body: JSON.stringify({scholar_id: scholarId, pub_key: key, rating: rating == null ? 0 : rating}),
     });
     if (!r.ok) throw new Error("server " + r.status);
   } catch (e) {
-    // Roll back local state on failure.
-    if (flagged) delete map[key]; else map[key] = true;
+    if (prev == null) delete map[key]; else map[key] = prev;   // roll back
     REF_FLAGS.set(scholarId, map);
-    alert("Couldn't save REF flag: " + (e.message || e));
+    alert("Couldn't save REF rating: " + (e.message || e));
   }
 }
 
-// Wire up checkbox clicks anywhere in the document (modal pubs list).
+// Wire up the per-pub rating selects anywhere in the document.
 document.addEventListener("change", (e) => {
-  const cb = e.target.closest(".pub-ref-cb");
-  if (!cb) return;
-  const sid = cb.dataset.scholarId;
-  const key = cb.dataset.pubKey;
-  const on  = cb.checked;
+  const sel = e.target.closest(".pub-ref-rating");
+  if (!sel) return;
+  const sid = sel.dataset.scholarId;
+  const key = sel.dataset.pubKey;
   if (!sid || !key) return;
-  toggleRefFlag(sid, key, on);
-  // Reflect the row class immediately for the visual highlight.
-  cb.closest(".pub")?.classList.toggle("pub-flagged", on);
-  // Update the per-card REF chip if the card is currently rendered.
+  if (sel.value === "keep") return;   // legacy flagged-unrated; leave as-is
+  const rating = sel.value === "" ? null : parseFloat(sel.value);
+  setRefRating(sid, key, rating);
+  // Reflect the row highlight immediately.
+  sel.closest(".pub")?.classList.toggle("pub-flagged", rating != null);
+  // Update the per-card REF chip + modal header running total.
   const n = refFlagCount(sid);
   const chip = document.querySelector(`[data-ref-chip-id="${CSS.escape(sid)}"]`);
   if (chip) {
     chip.textContent = `REF: ${n}`;
     chip.classList.toggle("is-zero", n === 0);
   }
-  // Update the modal-header running total.
   const sum = document.getElementById(`ref-summary-${sid}`);
   if (sum) sum.textContent = `${n} flagged for REF`;
 });
 
-// REF 2029 publication window: 1 January 2021 – 31 December 2028.
-const REF_START_YEAR = 2021;
-const REF_END_YEAR = 2028;
+// REF assessment year + publication window. Defaults to REF 2029
+// (window 2021–2028); overridden from /api/settings via loadRefConfig().
+let REF_YEAR = 2029;
+let REF_START_YEAR = 2021;
+let REF_END_YEAR = 2028;
+
+// Load the configured REF year/window from Settings and relabel the static
+// "REF 2029" UI bits. Called once at startup before the first render.
+async function loadRefConfig() {
+  try {
+    const s = await (await fetch("/api/settings")).json();
+    if (s.ref_year)         REF_YEAR = +s.ref_year;
+    if (s.ref_window_start) REF_START_YEAR = +s.ref_window_start;
+    if (s.ref_window_end)   REF_END_YEAR = +s.ref_window_end;
+  } catch { /* keep defaults */ }
+  applyRefLabels();
+}
+
+// Update the static DOM labels that name the REF year (chip + REF menu).
+function applyRefLabels() {
+  const chip = document.getElementById("tb-ref-all");
+  if (chip) {
+    chip.textContent = `REF ${REF_YEAR}`;
+    chip.title = `REF ${REF_YEAR} window (${REF_START_YEAR}–${REF_END_YEAR}): fade citation years outside the assessment window so the REF years stand out.`;
+  }
+  const winLbl = document.getElementById("tb-ref-window-label");
+  if (winLbl && localStorage.getItem("sd-ref-all") !== "1") winLbl.textContent = `Highlight REF ${REF_YEAR} window`;
+  const tgt = document.querySelector('#tb-ref-targets .tb-mi-label');
+  if (tgt) tgt.textContent = `REF ${REF_YEAR} targets…`;
+}
+
+function refFilter(cpy) {
+  const out = {};
+  for (const y in cpy || {}) {
+    const yn = +y;
+    if (yn >= REF_START_YEAR && yn <= REF_END_YEAR) out[y] = cpy[y];
+  }
+  return out;
+}
 
 function refFilter(cpy) {
   const out = {};
@@ -4220,15 +4313,28 @@ function miniSparkline(cpy, opts = {}) {
     }
   }
 
+  // selectedYears (REF mode only): restrict bars to years that hold a
+  // REF-selected publication; other window years render as N/A.
+  const selYears = opts.selectedYears || null;
   // Bars + year labels. Year labels show a 2-digit suffix ('17, '18…) so
-  // ten of them fit comfortably under a narrow card.
-  const showYears = !opts.ref && sumV > 0;
+  // ten of them fit comfortably under a narrow card. In REF+selection mode
+  // we always show the year labels so the N/A years are legible.
+  const showYears = (!opts.ref && sumV > 0) || (opts.ref && selYears);
   const bars = years.map((y, i) => {
+    const x = padL + i * bw;
+    const yearLabel = showYears
+      ? `<text class="ms-year${y === cy ? ' current' : ''}" x="${x + bw/2}" y="${H - 2}" text-anchor="middle">'${String(y).slice(-2)}</text>`
+      : "";
+    // REF+selection mode: a window year with no selected output → N/A.
+    if (selYears && !selYears.has(y)) {
+      const baseY = padT + plotH;
+      return `<line class="ms-na-tick" x1="${x + bw/2 - 3}" x2="${x + bw/2 + 3}" y1="${baseY}" y2="${baseY}"><title>${y}: no REF-selected output</title></line>` +
+             `<text class="ms-na" x="${x + bw/2}" y="${baseY - 3}" text-anchor="middle">N/A</text>${yearLabel}`;
+    }
     const v = vals[i];
     const isCurrent = (y === cy);
     const rawH = scaleY(v) * plotH;
     const h = isCurrent ? Math.max(rawH, 2.5) : rawH;
-    const x = padL + i * bw;
     const yy = padT + plotH - h;
     let cls;
     if (isCurrent)                                            cls = "current";
@@ -4237,9 +4343,6 @@ function miniSparkline(cpy, opts = {}) {
     const tip = isCurrent
       ? `${y}: ${v} citations (partial year — ${cy} still in progress)`
       : `${y}: ${v} citations`;
-    const yearLabel = showYears
-      ? `<text class="ms-year${isCurrent ? ' current' : ''}" x="${x + bw/2}" y="${H - 2}" text-anchor="middle">'${String(y).slice(-2)}</text>`
-      : "";
     return `<rect class="${cls}" x="${x + 0.5}" y="${yy}" width="${Math.max(bw - 1, 0.5)}" height="${h}"><title>${tip}</title></rect>${yearLabel}`;
   }).join("");
   const cls = "mini-spark" + (opts.ref ? " ref-mode" : "");

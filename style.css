@@ -946,6 +946,9 @@ h2 {
 .mini-spark .axis   { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .mini-spark .ms-year         { font-size: 6px; fill: #9a9a9a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 .mini-spark .ms-year.current { fill: var(--warn); font-weight: 700; }
+/* REF-mode N/A markers — years in the window with no selected output. */
+.mini-spark .ms-na-tick { stroke: #c4bdb1; stroke-width: 2; stroke-dasharray: 2 1; }
+.mini-spark .ms-na      { font-size: 6px; fill: #b5ad9f; font-style: italic; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
 /* Wrapper that positions the chip overlays over the sparkline SVG. */
 .mini-spark-wrap {
   position: relative;
@@ -1478,6 +1481,15 @@ h2 {
   border: 1px solid var(--border);
 }
 .pub-ref-spacer { display: inline-block; width: 0; }
+/* Per-pub REF rating selector (Not REF / 1* … 4*). */
+.pub-ref-rating {
+  flex: 0 0 auto; align-self: center;
+  font: inherit; font-size: .72rem; font-weight: 600;
+  padding: .2rem .35rem; border-radius: 6px;
+  border: 1px solid var(--border); background: #fff; color: var(--muted);
+  cursor: pointer; min-width: 5.2rem;
+}
+.pub.pub-flagged .pub-ref-rating { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 /* Header summary "N flagged for REF" next to the section title. */
 .ref-summary {
   display: inline-block; margin-left: .6rem;

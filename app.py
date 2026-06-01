@@ -88,7 +88,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.50"
+__version__ = "0.2.51"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -137,9 +137,17 @@ _IDLE_EXCLUDED_PATHS = {"/api/heartbeat"}
 # read at use-time (not captured), so changes take effect live.
 _SETTINGS_FILE = USER_ROOT / "settings.json"
 
+# REF assessment year + publication window. Configurable in Settings; the
+# label "REF <year>" and the window bounds derive from these. Defaults are
+# REF 2029 (window 1 Jan 2021 – 31 Dec 2028).
+REF_YEAR = 2029
+REF_START_YEAR_PY = 2021
+REF_END_YEAR_PY   = 2028
+
 
 def _load_settings_overrides():
     global SCHOLAR_COOLDOWN_SECONDS, IDLE_TIMEOUT_SECONDS, CACHE_TTL_SECONDS
+    global REF_YEAR, REF_START_YEAR_PY, REF_END_YEAR_PY
     try:
         s = json.loads(_SETTINGS_FILE.read_text())
     except (OSError, ValueError, json.JSONDecodeError):
@@ -150,6 +158,15 @@ def _load_settings_overrides():
         IDLE_TIMEOUT_SECONDS = max(0, int(float(s["idle_minutes"]) * 60))
     if "cache_ttl_days" in s:
         CACHE_TTL_SECONDS = max(3600, int(float(s["cache_ttl_days"]) * 86400))
+    if "ref_year" in s:
+        try: REF_YEAR = int(s["ref_year"])
+        except (TypeError, ValueError): pass
+    if "ref_window_start" in s:
+        try: REF_START_YEAR_PY = int(s["ref_window_start"])
+        except (TypeError, ValueError): pass
+    if "ref_window_end" in s:
+        try: REF_END_YEAR_PY = int(s["ref_window_end"])
+        except (TypeError, ValueError): pass
 
 
 _load_settings_overrides()
@@ -183,9 +200,7 @@ def _start_idle_watchdog():
     t = threading.Thread(target=_idle_watchdog, daemon=True)
     t.start()
 
-# REF 2029 publication window: 1 January 2021 – 31 December 2028.
-REF_START_YEAR_PY = 2021
-REF_END_YEAR_PY   = 2028
+# (REF year + window defined above, overridable via Settings.)
 
 
 # ---------- helpers ----------
@@ -835,30 +850,54 @@ def _save_ref_targets(targets: dict) -> None:
 
 @app.route("/api/ref-flags", methods=["GET"])
 def api_ref_flags_get():
-    """Return the full flag map. Small file; one GET per session is fine.
-    Shape: {scholar_id: {pub_key: true, ...}, ...}"""
+    """Return the full flag map. Values are the REF star rating for that
+    output: 1, 2, 2.5, 3, 3.5, 4 (in-between = the X-Y* bands), or `true`
+    for a legacy flag with no rating yet. Absent = Not REF.
+    Shape: {scholar_id: {pub_key: rating, ...}, ...}"""
     return jsonify(_load_ref_flags())
+
+
+# Allowed REF star ratings; the X.5 values are the "X–Y*" bands.
+_REF_RATINGS = (1, 2, 2.5, 3, 3.5, 4)
 
 
 @app.route("/api/ref-flag", methods=["POST"])
 def api_ref_flag_set():
-    """Toggle a single flag. Body: {scholar_id, pub_key, flagged: bool}."""
+    """Set a publication's REF status. Body: {scholar_id, pub_key, rating}.
+    rating ∈ {1,2,2.5,3,3.5,4} flags the output at that star band;
+    rating 0 / null (or {flagged:false}) means Not REF → removed. For
+    backward compat, {flagged:true} with no rating stores `true`."""
     body = request.get_json(force=True, silent=True) or {}
     sid = body.get("scholar_id")
     key = body.get("pub_key")
-    on  = bool(body.get("flagged"))
     if not sid or not key:
         return jsonify({"error": "scholar_id and pub_key are required"}), 400
+
+    has_rating = "rating" in body
+    rating = body.get("rating")
+    if has_rating:
+        try:
+            rating = float(rating)
+        except (TypeError, ValueError):
+            rating = 0
+        keep = rating in _REF_RATINGS
+        value = rating if keep else None
+    else:
+        # Legacy boolean path.
+        keep = bool(body.get("flagged"))
+        value = True
+
     flags = _load_ref_flags()
     person = flags.setdefault(sid, {})
-    if on:
-        person[key] = True
+    if keep:
+        person[key] = value
     else:
         person.pop(key, None)
         if not person:
             flags.pop(sid, None)
     _save_ref_flags(flags)
-    return jsonify({"ok": True, "scholar_id": sid, "pub_key": key, "flagged": on})
+    return jsonify({"ok": True, "scholar_id": sid, "pub_key": key,
+                    "flagged": keep, "rating": value if keep else None})
 
 
 @app.route("/api/ref-targets", methods=["GET", "POST"])
@@ -1179,15 +1218,20 @@ def api_about():
 
 @app.route("/api/settings", methods=["GET", "POST"])
 def api_settings():
-    """Get / set the Scholar fetch-tuning knobs (cooldown, idle-shutdown,
-    cache TTL). Persisted to settings.json; applied live to the module
-    globals (all three are read at use-time)."""
+    """Get / set app settings: Scholar fetch tuning (cooldown,
+    idle-shutdown, cache TTL) and the REF assessment year + window.
+    Persisted to settings.json (merged, not overwritten); applied live to
+    the module globals, which are read at use-time."""
     global SCHOLAR_COOLDOWN_SECONDS, IDLE_TIMEOUT_SECONDS, CACHE_TTL_SECONDS
+    global REF_YEAR, REF_START_YEAR_PY, REF_END_YEAR_PY
     if request.method == "GET":
         return jsonify({
             "cooldown_minutes": round(SCHOLAR_COOLDOWN_SECONDS / 60, 2),
             "idle_minutes":     round(IDLE_TIMEOUT_SECONDS / 60, 2),
             "cache_ttl_days":   round(CACHE_TTL_SECONDS / 86400, 2),
+            "ref_year":         REF_YEAR,
+            "ref_window_start": REF_START_YEAR_PY,
+            "ref_window_end":   REF_END_YEAR_PY,
         })
     body = request.get_json(force=True, silent=True) or {}
     def _clamp(v, lo, hi, default):
@@ -1195,18 +1239,37 @@ def api_settings():
             return max(lo, min(hi, float(v)))
         except (TypeError, ValueError):
             return default
+    def _int(v, lo, hi, default):
+        try:
+            return max(lo, min(hi, int(v)))
+        except (TypeError, ValueError):
+            return default
     cm = _clamp(body.get("cooldown_minutes"), 0, 180,  SCHOLAR_COOLDOWN_SECONDS / 60)
     im = _clamp(body.get("idle_minutes"),     0, 1440, IDLE_TIMEOUT_SECONDS / 60)
     td = _clamp(body.get("cache_ttl_days"),   0.04, 365, CACHE_TTL_SECONDS / 86400)
+    ry = _int(body.get("ref_year"),          2000, 2100, REF_YEAR)
+    ws = _int(body.get("ref_window_start"),  1900, 2100, REF_START_YEAR_PY)
+    we = _int(body.get("ref_window_end"),    1900, 2100, REF_END_YEAR_PY)
+    if we < ws:
+        ws, we = we, ws
     SCHOLAR_COOLDOWN_SECONDS = int(cm * 60)
     IDLE_TIMEOUT_SECONDS     = int(im * 60)
     CACHE_TTL_SECONDS        = int(td * 86400)
+    REF_YEAR, REF_START_YEAR_PY, REF_END_YEAR_PY = ry, ws, we
+    # Merge into whatever is already on disk so unrelated keys survive.
     try:
-        _SETTINGS_FILE.write_text(json.dumps(
-            {"cooldown_minutes": cm, "idle_minutes": im, "cache_ttl_days": td}, indent=2))
+        existing = json.loads(_SETTINGS_FILE.read_text())
+    except (OSError, ValueError, json.JSONDecodeError):
+        existing = {}
+    existing.update({"cooldown_minutes": cm, "idle_minutes": im, "cache_ttl_days": td,
+                     "ref_year": ry, "ref_window_start": ws, "ref_window_end": we})
+    try:
+        _SETTINGS_FILE.write_text(json.dumps(existing, indent=2))
     except OSError:
         pass
-    return jsonify({"ok": True, "cooldown_minutes": cm, "idle_minutes": im, "cache_ttl_days": td})
+    return jsonify({"ok": True, "cooldown_minutes": cm, "idle_minutes": im,
+                    "cache_ttl_days": td, "ref_year": ry,
+                    "ref_window_start": ws, "ref_window_end": we})
 
 
 @app.route("/api/clear-cache", methods=["POST"])
