@@ -31,6 +31,8 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
+**Author:** David M. Berry ([@dmberry](https://github.com/dmberry))
+
 **Version:** 3.4.1 · proof-of-concept.
 
 ## What it does
