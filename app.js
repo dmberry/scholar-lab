@@ -2117,12 +2117,56 @@ async function renderCaseStudies() {
       <h2>Impact case studies — UoA ${escapeHTML(code)}${uoaName ? " · " + escapeHTML(uoaName) : ""} <span class="cs-count">${items.length}</span></h2>
       <button class="tb-btn primary" id="cs-new">＋ New case study</button>
     </div>
-    <div class="cs-grid">${cards || `<p class="cs-empty">No case studies yet for this UoA. Click ＋ New case study to add one.</p>`}</div>`;
+    <div class="cs-grid">${cards || `<div class="cs-empty">
+      <p>No case studies yet for this UoA.</p>
+      <button class="tb-btn" id="cs-demo">✨ Start from a demo</button>
+      <span class="cs-empty-hint">creates an editable example REF3 case study you can adapt or delete</span>
+    </div>`}</div>`;
   document.getElementById("cs-new")?.addEventListener("click", () => openCaseStudyEditor(null, code));
+  document.getElementById("cs-demo")?.addEventListener("click", () => createDemoCaseStudy(code));
   panel.querySelectorAll("[data-cs-edit]").forEach(b => b.addEventListener("click", () => {
     const cs = items.find(c => c.id === b.dataset.csEdit);
     if (cs) openCaseStudyEditor(cs, code);
   }));
+}
+
+// Seed an editable demo case study (REF3-shaped placeholder) to help a
+// user start when a UoA has none. Persisted as a normal draft; opens the
+// editor so they can adapt it. Not auto-created — only on the demo button.
+async function createDemoCaseStudy(code) {
+  const uoaName = UOA_BY_CODE[code]?.name || "";
+  const demo = {
+    uoa: code,
+    title: `Demo: research from this UoA reshaping practice`,
+    status: "draft",
+    period: "2018–2024",
+    summary: "One paragraph (~100 words) stating the impact: what changed beyond academia, for whom, and its reach and significance. Replace this with your own.",
+    underpinning_research: "Summarise the key findings and the research that produced them (typically 2–6 outputs from this UoA, 2021–2028). Note who did it and when.",
+    details: "Narrate the impact: the pathway from research to effect, the beneficiaries, and evidence of reach and significance. Reference the corroborating sources below.",
+    corroborating_sources: ["e.g. testimonial from a stakeholder", "e.g. policy document / report URL", "e.g. press or usage figures"],
+    references: [], contributors: [],
+    note: "demo seed",
+  };
+  try {
+    const r = await fetch("/api/case-study", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(demo) });
+    const d = await r.json();
+    await renderCaseStudies();
+    if (d.case_study) openCaseStudyEditor(d.case_study, code);
+  } catch (e) { alert("Couldn't create demo: " + e.message); }
+}
+
+// Live word counter — shows "N / LIMIT words", red when over. REF gives
+// indicative limits (e.g. ~100 words for an impact summary); we surface
+// them as guides, not hard blocks.
+function wireWordCount(textarea, counter, limit) {
+  if (!textarea || !counter) return;
+  const upd = () => {
+    const n = (textarea.value.trim().match(/\S+/g) || []).length;
+    counter.textContent = `${n} / ${limit} words`;
+    counter.classList.toggle("over", n > limit);
+  };
+  textarea.addEventListener("input", upd);
+  upd();
 }
 
 // REF3-template editor for one case study.
@@ -2172,7 +2216,7 @@ async function openCaseStudyEditor(cs, uoaCode) {
         <label class="cs-f">Status<select id="cs-status">${statusOpts}</select></label>
         <label class="cs-f">Period of underpinning research<input id="cs-period" type="text" placeholder="e.g. 2018–2024" value="${escapeAttr(cs.period || "")}"></label>
       </div>
-      <label class="cs-f">Summary of the impact<textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
+      <label class="cs-f">Summary of the impact <span class="wordcount" id="cs-summary-wc"></span><textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
       <label class="cs-f">Underpinning research<textarea id="cs-underpinning" rows="4">${escapeHTML(cs.underpinning_research || "")}</textarea></label>
       <div class="cs-f"><span class="cs-f-label">References to the research (REF-flagged outputs)</span>
         <div class="cs-checklist">${refRows.join("") || '<p class="cs-empty">No REF-flagged outputs in this UoA yet — tick the REF box on people\'s cards first.</p>'}</div></div>
@@ -2189,6 +2233,9 @@ async function openCaseStudyEditor(cs, uoaCode) {
       <button class="tb-btn" data-cs-close>Cancel</button>
       <button class="tb-btn primary" id="cs-save">Save</button>
     </div>`;
+
+  // REF gives an indicative ~100-word limit for the impact summary.
+  wireWordCount(body.querySelector("#cs-summary"), body.querySelector("#cs-summary-wc"), 100);
 
   body.querySelector("#cs-save").addEventListener("click", async () => {
     const payload = {
@@ -2307,7 +2354,7 @@ async function buildUoaReport() {
     </div>
 
     <section class="ur-section">
-      <h3>Narrative / environment</h3>
+      <h3>Narrative / environment <span class="wordcount" id="ur-narr-wc"></span></h3>
       <textarea id="ur-narrative" class="ur-narrative" rows="5" placeholder="Describe the UoA's research environment, strategy and vitality…">${escapeHTML(meta.narrative || "")}</textarea>
       <div class="ur-narrative-actions"><button class="tb-btn" id="ur-save-narrative">Save narrative</button><span class="set-saved" id="ur-narr-saved"></span></div>
     </section>
@@ -2321,6 +2368,9 @@ async function buildUoaReport() {
       <h3>Impact case studies <span class="ur-count">${cases.length}</span></h3>
       ${casesHtml}
     </section>`;
+
+  // Indicative environment-statement guide (FTE-scaled in REF; 500 here).
+  wireWordCount(body.querySelector("#ur-narrative"), body.querySelector("#ur-narr-wc"), 500);
 
   body.querySelector("#ur-save-narrative")?.addEventListener("click", async () => {
     const saved = body.querySelector("#ur-narr-saved");

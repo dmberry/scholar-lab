@@ -231,6 +231,11 @@ body {
 .cs-title { font-weight: 600; font-size: .9rem; line-height: 1.25; }
 .cs-meta { font-size: .72rem; color: var(--muted); }
 .cs-empty { color: var(--muted); font-size: .85rem; }
+.cs-empty p { margin: 0 0 .5rem; }
+.cs-empty-hint { display: block; margin-top: .3rem; font-size: .72rem; color: var(--muted); }
+/* Live word counter (REF indicative limits). Red when over. */
+.wordcount { font-size: .7rem; font-weight: 400; color: var(--muted); margin-left: .4rem; }
+.wordcount.over { color: #a31818; font-weight: 700; }
 .cs-status {
   align-self: flex-start; font-size: .62rem; font-weight: 700; letter-spacing: .03em;
   text-transform: uppercase; padding: .2em .55em; border-radius: 999px;
