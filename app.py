@@ -107,7 +107,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.54"
+__version__ = "0.2.55"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -1075,13 +1075,34 @@ def api_case_study_write():
     prev_status = rec.get("status")
     status = body.get("status") if body.get("status") in _CASE_STUDY_STATES else (prev_status or "not_started")
 
-    rec["uoa"] = str(body.get("uoa") or rec.get("uoa") or "")
+    # uoa "" / "none" → unassigned (tracked separately so it can be reassigned).
+    if "uoa" in body:
+        rec["uoa"] = "" if str(body.get("uoa") or "").lower() in ("", "none", "0") else str(body["uoa"])
+    else:
+        rec["uoa"] = rec.get("uoa", "")
     for f in _CASE_STUDY_FIELDS:
         if f in body:
             rec[f] = body[f]
     for f in _CASE_STUDY_LISTS:
         if f in body and isinstance(body[f], list):
             rec[f] = body[f]
+    # Inclusion slot: an integer "№N of required", unique within the UoA, or
+    # None = a draft/candidate not slotted for inclusion. Assigning a slot held
+    # by another case study in the same UoA bumps that one back to draft.
+    if "slot" in body:
+        raw = body.get("slot")
+        if raw in (None, "", "draft", 0, "0"):
+            rec["slot"] = None
+        else:
+            try:
+                n = int(raw)
+            except (TypeError, ValueError):
+                n = 0
+            rec["slot"] = n if n > 0 else None
+        if rec["slot"] is not None:
+            for oid, other in data.items():
+                if oid != cid and str(other.get("uoa")) == rec["uoa"] and other.get("slot") == rec["slot"]:
+                    other["slot"] = None
     rec["status"] = status
     rec["updated_at"] = now
     # Stamp the version log on creation or any status transition.
@@ -1240,9 +1261,10 @@ def api_case_study_import():
 
 @app.route("/api/uoa-meta", methods=["GET", "POST"])
 def api_uoa_meta():
-    """Per-UoA narrative / environment text for the UoA report.
-      GET ?uoa=NN → {narrative}
-      POST {uoa, narrative} → save."""
+    """Per-UoA narrative / environment text + case-study target for the UoA
+    report.
+      GET ?uoa=NN → {narrative, case_studies_required}
+      POST {uoa, narrative?, case_studies_required?} → save (merge)."""
     try:
         with UOA_META_FILE.open() as f:
             meta = json.load(f) or {}
@@ -1250,17 +1272,27 @@ def api_uoa_meta():
         meta = {}
     if request.method == "GET":
         uoa = str(request.args.get("uoa") or "")
-        return jsonify(meta.get(uoa, {"narrative": ""}))
+        rec = meta.get(uoa, {})
+        return jsonify({"narrative": rec.get("narrative", ""),
+                        "case_studies_required": rec.get("case_studies_required")})
     body = request.get_json(force=True, silent=True) or {}
     uoa = str(body.get("uoa") or "")
     if not uoa:
         return jsonify({"error": "uoa required"}), 400
-    meta[uoa] = {"narrative": (body.get("narrative") or "")}
+    rec = dict(meta.get(uoa, {}))
+    if "narrative" in body:
+        rec["narrative"] = body.get("narrative") or ""
+    if "case_studies_required" in body:
+        try:
+            rec["case_studies_required"] = max(0, int(body["case_studies_required"]))
+        except (TypeError, ValueError):
+            pass
+    meta[uoa] = rec
     try:
         UOA_META_FILE.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
     except OSError:
         pass
-    return jsonify({"ok": True, "uoa": uoa, **meta[uoa]})
+    return jsonify({"ok": True, "uoa": uoa, **rec})
 
 
 @app.route("/api/scholar-meta", methods=["GET", "POST"])
@@ -1493,6 +1525,80 @@ def api_open_folder():
     except Exception as e:   # noqa: BLE001
         return jsonify({"error": str(e)}), 500
     return jsonify({"ok": True})
+
+
+# ── Danger zone: destructive structural edits ──────────────────────────────
+@app.route("/api/delete-faculty", methods=["POST"])
+def api_delete_faculty():
+    """Permanently delete a whole faculty: every unit Markdown file under it.
+    Files are backed up to data/.bak first. Body {name} must exactly match the
+    faculty name (the client makes the user type it to confirm)."""
+    body = request.get_json(force=True, silent=True) or {}
+    name = (body.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "faculty name required"}), 400
+    ctx = _unit_context_map()
+    slugs = [slug for slug, (_u, fac, _sch) in ctx.items() if (fac.get("name") or "") == name]
+    if not slugs:
+        return jsonify({"error": f"no faculty named “{name}”"}), 404
+    removed = 0
+    bak = DATA_DIR / ".bak" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    for slug in slugs:
+        p = DATA_DIR / f"{slug}.md"
+        if p.exists():
+            bak.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(p, bak / p.name)
+            p.unlink()
+            removed += 1
+    return jsonify({"ok": True, "faculty": name, "removed": removed})
+
+
+@app.route("/api/clear-uoa", methods=["POST"])
+def api_clear_uoa():
+    """Clear a UoA's *relations* only — never the underlying staff/units. Drops
+    the UoA default from any unit, the per-person override from anyone tagged to
+    it, and unassigns (does not delete) that UoA's impact case studies. Body
+    {code}."""
+    body = request.get_json(force=True, silent=True) or {}
+    try:
+        code = int(re.sub(r"\D", "", str(body.get("code") or "")) or 0)
+    except ValueError:
+        code = 0
+    if not code:
+        return jsonify({"error": "valid UoA code required"}), 400
+
+    staff = _load_staff()
+    units_cleared = people_cleared = 0
+
+    def _walk(units):
+        nonlocal units_cleared, people_cleared
+        for u in units:
+            if u.get("uoa") == code:
+                u.pop("uoa", None); units_cleared += 1
+            for p in u.get("staff", []):
+                if p.get("uoa") == code:
+                    p.pop("uoa", None); people_cleared += 1
+
+    for fac in staff.get("faculties", []):
+        for sch in fac.get("schools", []):
+            _walk(sch.get("units", []))
+        _walk(fac.get("units", []))
+    if isinstance(staff.get("units"), list):
+        _walk(staff["units"])
+    # Re-serialise the whole tree (backs up data/ first).
+    _write_staff_markdown(staff)
+
+    # Unassign — not delete — the UoA's case studies.
+    cs = _load_case_studies()
+    cs_cleared = 0
+    for c in cs.values():
+        if str(c.get("uoa")) == str(code):
+            c["uoa"] = ""; cs_cleared += 1
+    if cs_cleared:
+        _save_case_studies(cs)
+
+    return jsonify({"ok": True, "code": code, "units_cleared": units_cleared,
+                    "people_cleared": people_cleared, "case_studies_unassigned": cs_cleared})
 
 
 @app.route("/api/heartbeat")
@@ -1888,7 +1994,35 @@ def api_bundle_import():
     w = _format_warning(meta.get("format_version"))
     if w:
         warnings.append(w)
-    summary = {"units": 0, "scholars": 0, "case_studies": 0, "ref_flags": 0, "narratives": 0}
+    summary = {"units": 0, "scholars": 0, "case_studies": 0, "ref_flags": 0, "narratives": 0, "removed": 0}
+    scope = bundle.get("scope") or {}
+    overwrite = bool(bundle.get("overwrite") or request.args.get("overwrite"))
+
+    # 0. Overwrite mode — clear the existing scope first so a re-import leaves
+    #    no stray data behind. Faculty: drop the faculty's current unit files
+    #    (the bundle re-supplies the full set). UoA: drop that UoA's existing
+    #    case studies (the bundle re-supplies them); units/relations are left
+    #    alone since a UoA's units can carry other-UoA staff.
+    if overwrite:
+        if scope.get("kind") == "faculty" and scope.get("name"):
+            ctx = _unit_context_map()
+            for slug, (_u, fac, _sch) in ctx.items():
+                if (fac.get("name") or "") == scope["name"]:
+                    p = DATA_DIR / f"{slug}.md"
+                    if p.exists():
+                        bak = DATA_DIR / ".bak" / datetime.now().strftime("%Y%m%d-%H%M%S")
+                        bak.mkdir(parents=True, exist_ok=True)
+                        shutil.copy2(p, bak / p.name)
+                        p.unlink()
+                        summary["removed"] += 1
+        elif scope.get("kind") == "uoa" and scope.get("code"):
+            cs = _load_case_studies()
+            drop = [cid for cid, c in cs.items() if str(c.get("uoa")) == str(scope["code"])]
+            for cid in drop:
+                cs.pop(cid, None)
+            if drop:
+                _save_case_studies(cs)
+                summary["removed"] += len(drop)
 
     # 1. Unit Markdown files (canonical text round-trips as-is).
     DATA_DIR.mkdir(exist_ok=True)

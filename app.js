@@ -636,8 +636,9 @@ document.addEventListener("click", (e) => {
 // Cross-unit comparative dashboards. Reads from /api/scholar/<id> for every
 // set staff member (mostly cached hits — fast). Computes per-unit aggregates.
 
-// Analytics scope state — defaults to whole faculty (all of everything).
-let ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: "unit" };
+// Analytics scope state — defaults to grouping by UoA (REF is the primary
+// lens), whole-institution scope.
+let ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: "uoa" };
 
 // Predicate shared across analytics + main grid. Honours the "Hide emeritus"
 // and "Hide visiting" toggles in the sort bar.
@@ -757,8 +758,23 @@ async function renderAnalyticsForScope() {
   // Re-bind the scope dropdowns immediately
   bindAnalyticsScope();
 
-  const groupBy = ANALYTICS_SCOPE.groupBy || "unit";
+  const groupBy = ANALYTICS_SCOPE.groupBy || "uoa";
   const scopedUnits = _allActiveUnitsForScope(ANALYTICS_SCOPE);
+
+  // REF readiness is computed from the ACTUAL selected outputs (flagged with a
+  // star rating) and the impact case studies — not a venue heuristic. Load
+  // those first so the scorecard reflects real curatorial decisions.
+  await loadRefFlags();
+  let allCases = [], refTargets = { default: { multiplier: 2.5 } };
+  try { allCases = (await (await fetch("/api/case-studies")).json()).case_studies || []; } catch {}
+  try { refTargets = await (await fetch("/api/ref-targets")).json(); } catch {}
+  const casesByUoa = {};
+  for (const c of allCases) {
+    const k = String(c.uoa || "");
+    (casesByUoa[k] ||= { total: 0, finished: 0 });
+    casesByUoa[k].total++;
+    if (c.status === "finished") casesByUoa[k].finished++;
+  }
 
   // Walk every staff member in scope, tag with their unit/faculty/effective
   // UoA, and apply the Hide-emeritus / Hide-visiting toggles so analytics
@@ -789,7 +805,10 @@ async function renderAnalyticsForScope() {
             name: p.name, unit: unit.name, unitSlug: unit.slug, faculty: fac.name,
             uoaCode,
             citedby: d.citedby ?? 0, hindex: d.hindex ?? 0, hindex5y: d.hindex5y ?? 0,
-            citedby5y: d.citedby5y ?? 0, refPubs: d.ref_eligible_count ?? 0,
+            citedby5y: d.citedby5y ?? 0,
+            // Selected-for-REF outputs only (count + their star ratings).
+            refPubs: refFlagCount(p.scholar_id),
+            refRatings: Object.values(refFlagsFor(p.scholar_id)).filter(v => typeof v === "number"),
             cpy: d.cites_per_year || {},
           });
         }
@@ -804,6 +823,7 @@ async function renderAnalyticsForScope() {
     if (!agg.has(key)) agg.set(key, {
       key, name, faculty, total: 0, set: 0, missing: 0, unchecked: 0,
       citedbySum: 0, refPubsSum: 0, hindexMean: 0, h5h_ratios: [], cpyTotal: {},
+      refRatings: [],
     });
     return agg.get(key);
   };
@@ -827,6 +847,7 @@ async function renderAnalyticsForScope() {
       if (!a) continue;
       a.citedbySum += r.citedby;
       a.refPubsSum += r.refPubs;
+      if (r.refRatings) a.refRatings.push(...r.refRatings);
       a.hindexMean += r.hindex;
       if (r.hindex > 0) a.h5h_ratios.push(r.hindex5y / r.hindex);
       for (const [y, v] of Object.entries(r.cpy)) a.cpyTotal[y] = (a.cpyTotal[y] || 0) + (v || 0);
@@ -849,16 +870,26 @@ async function renderAnalyticsForScope() {
       if (!a) continue;
       a.citedbySum += r.citedby;
       a.refPubsSum += r.refPubs;
+      if (r.refRatings) a.refRatings.push(...r.refRatings);
       a.hindexMean += r.hindex;
       if (r.hindex > 0) a.h5h_ratios.push(r.hindex5y / r.hindex);
       for (const [y, v] of Object.entries(r.cpy)) a.cpyTotal[y] = (a.cpyTotal[y] || 0) + (v || 0);
     }
   }
+  const refMult = (refTargets.default && refTargets.default.multiplier) || 2.5;
   for (const a of agg.values()) {
     a.hindexMean = a.set ? a.hindexMean / a.set : 0;
     a.h5h_median = median(a.h5h_ratios);
     a.perCapita = a.set ? a.citedbySum / a.set : 0;
     a.refPerActive = a.set ? a.refPubsSum / a.set : 0;
+    // REF readiness, from real selections: GPA, output target, case studies.
+    a.refGpaVal = a.refRatings.length ? a.refRatings.reduce((s, v) => s + v, 0) / a.refRatings.length : null;
+    a.outputsRequired = Math.round(refMult * a.set);
+    if (a.key.startsWith("uoa-")) {
+      const code = a.key.replace("uoa-", "");
+      const cs = casesByUoa[code] || { total: 0, finished: 0 };
+      a.cases = cs.total; a.casesFinished = cs.finished;
+    }
   }
   // Sort UoA buckets by code (so the headers read 1 → 34) when in UoA mode.
   let aggList = [...agg.values()].filter(a => a.total > 0);
@@ -878,7 +909,7 @@ async function renderAnalyticsForScope() {
     ${renderAnalyticsScopeBar()}
     ${renderVisibility(aggList)}
     ${renderCitationTotals(aggList)}
-    ${renderRefReadiness(aggList)}
+    ${renderRefReadiness(aggList, groupBy)}
     ${renderMomentumQuadrant(aggList)}
     ${crossSection}
     ${renderHeatmap(aggList)}
@@ -909,17 +940,18 @@ function renderAnalyticsScopeBar() {
   const groupBy = scope.groupBy || "unit";
   const excl = activeExclusionLabel();
   return `<div class="analytics-scope">
+    <label class="a-groupby" title="Aggregate every section by REF ${REF_YEAR} UoA bucket or by unit">Group by
+      <select id="a-groupby">
+        <option value="uoa"  ${groupBy==="uoa"?"selected":""}>UoA</option>
+        <option value="unit" ${groupBy==="unit"?"selected":""}>Unit</option>
+      </select>
+    </label>
+    <span class="a-sep" aria-hidden="true"></span>
     <label>Faculty <select id="a-fac">${facOpts}</select></label>
     <label class="${showSchools?'':'sc-hidden'}">School <select id="a-sch" ${showSchools?'':'disabled'}>${schoolOpts}</select></label>
     <label>Unit <select id="a-unit">${unitOpts}</select></label>
     <span class="a-spacer"></span>
-    <label class="a-groupby" title="Aggregate sections by unit OR by REF 2029 UoA bucket">Group by
-      <select id="a-groupby">
-        <option value="unit" ${groupBy==="unit"?"selected":""}>Unit</option>
-        <option value="uoa"  ${groupBy==="uoa"?"selected":""}>UoA</option>
-      </select>
-    </label>
-    <button class="tb-btn" id="a-reset" title="Reset to whole-faculty view">Reset</button>
+    <button class="tb-btn" id="a-reset" title="Reset to whole-institution view">Reset</button>
     <button class="tb-btn" id="a-print" title="Export this analytics view as PDF (browser print dialog)">⤓ PDF</button>
   </div>
   ${excl ? `<button class="analytics-excl-note" type="button" id="a-excl-open" title="Click to see the excluded staff">${escapeHTML(excl)} — inherited from main view.</button>` : ""}`;
@@ -949,7 +981,7 @@ function bindAnalyticsScope() {
     renderAnalyticsForScope();
   });
   rst?.addEventListener("click", () => {
-    ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: ANALYTICS_SCOPE.groupBy || "unit" };
+    ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: ANALYTICS_SCOPE.groupBy || "uoa" };
     renderAnalyticsForScope();
   });
   prn?.addEventListener("click", () => {
@@ -1042,27 +1074,33 @@ function renderCitationTotals(aggList) {
   </section>`;
 }
 
-function renderRefReadiness(aggList) {
-  const sorted = [...aggList].filter(a => a.set > 0).sort((a, b) => b.refPerActive - a.refPerActive);
+function renderRefReadiness(aggList, groupBy) {
+  const byUoa = groupBy === "uoa";
+  const sorted = [...aggList].filter(a => a.set > 0)
+    .sort((a, b) => (b.refPubsSum / Math.max(b.outputsRequired, 1)) - (a.refPubsSum / Math.max(a.outputsRequired, 1)));
   const cards = sorted.map(a => {
     const total = a.refPubsSum;
-    const perPerson = a.refPerActive;
-    const tier = perPerson >= 4 ? "good" : perPerson >= 2 ? "ok" : "low";
+    const need = a.outputsRequired || 0;
+    // Tier from outputs-vs-target (the headline readiness signal).
+    const tier = (rag => ({ ok: "good", warn: "ok", under: "low", na: "low" }[rag]))(targetRag(total, need));
+    const gpa = a.refGpaVal;
+    const csCell = byUoa
+      ? `<div><b>${a.cases || 0}</b><span>case studies${a.casesFinished ? ` · ${a.casesFinished} fin.` : ""}</span></div>`
+      : `<div><b>${a.set}/${a.total}</b><span>active staff</span></div>`;
     return `<div class="ref-card ref-tier-${tier}">
       <h5>${escapeHTML(a.name)}</h5>
       <div class="ref-card-grid">
-        <div><b>${total}</b><span>Total REF pubs</span></div>
-        <div><b>${perPerson.toFixed(1)}</b><span>Avg per person</span></div>
-        <div><b>${a.set}/${a.total}</b><span>Active staff</span></div>
+        <div><b>${total}<small> / ${need}</small></b><span>selected outputs / target</span></div>
+        <div class="rag-${gpaRag(gpa)}"><b>${gpa == null ? "—" : gpa.toFixed(2)}</b><span>mean GPA</span></div>
+        ${csCell}
       </div>
     </div>`;
-  }).join("");
+  }).join("") || `<p class="analytics-note">No outputs have been selected for REF yet — set a star rating on people's outputs.</p>`;
   return `<section class="analytics-section">
-    <h4>3. REF 2029 readiness scorecard</h4>
-    <p class="analytics-q">How much REF-eligible material does each unit currently have?</p>
+    <h4>3. REF ${REF_YEAR} readiness scorecard</h4>
+    <p class="analytics-q">For each ${byUoa ? "UoA" : "unit"}: how do the <em>selected</em> outputs and impact case studies stack up against the submission target?</p>
     <div class="ref-grid">${cards}</div>
-    <p class="analytics-note">Each scholar needs ~4 outputs for REF. Cards tinted green if average ≥4 per person, amber 2–4, red &lt;2.
-    Heuristic only — actual eligibility is judged manually per REF rules and excludes blog posts, op-eds, preprints.</p>
+    <p class="analytics-note">Counts the actual outputs flagged for REF (with their star ratings) and the impact case studies recorded${byUoa ? " for each UoA" : ""} — not a venue heuristic. Target = multiplier × active staff (set in Settings). Cards tint green when selections meet the target, amber when close, red when short.</p>
   </section>`;
 }
 
@@ -1897,6 +1935,17 @@ async function openSettings() {
   try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
   try { fetchCfg = await (await fetch("/api/settings")).json(); } catch {}
   const t = targets.default || { multiplier: 2.5, min_per_person: 1, max_per_person: 5 };
+  // Danger-zone targets: every faculty, and every UoA currently in use.
+  const dzFaculties = (FACULTIES || []).map(f =>
+    `<div class="dz-row"><span class="dz-name">${escapeHTML(f.name)}</span>
+      <button class="tb-btn dz-btn" data-del-fac="${escapeAttr(f.name)}">Delete this faculty</button></div>`).join("")
+    || `<p class="set-help">No faculties loaded.</p>`;
+  const dzUoas = [...new Set((UNITS || []).filter(u => !u.disabled && u.slug !== "all-staff")
+      .flatMap(u => (u.staff || []).map(p => effectiveUoa(p, u)).filter(Boolean)))]
+    .sort((a, b) => a - b)
+    .map(c => `<div class="dz-row"><span class="dz-name">UoA ${c}${UOA_BY_CODE[c]?.name ? " · " + escapeHTML(UOA_BY_CODE[c].name) : ""}</span>
+      <button class="tb-btn dz-btn" data-clear-uoa="${c}">Clear relations</button></div>`).join("")
+    || `<p class="set-help">No UoAs tagged.</p>`;
   const scale = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
   const sort  = localStorage.getItem("sd-sort") || "name";
   const sortOpts = [["name","Name"],["citations","Citations"],["hindex","h-index"],
@@ -1962,6 +2011,22 @@ async function openSettings() {
       </div>
       <span class="set-saved" id="set-folder-saved"></span>
       <p class="set-help">Moving the data folder copies everything to the new location (a dated backup zip is written first; the originals are left in place). You'll be asked to quit and reopen so the change takes effect. Clearing the cache removes downloaded Scholar metrics (re-fetched on next view); your staff/unit data is untouched. Reset preferences clears zoom, sort, filters and scale on this device.</p>
+    </section>
+
+    <section class="set-sec set-danger">
+      <h4>Danger zone</h4>
+      <div class="dz-box">
+        <div class="dz-item">
+          <div class="dz-desc"><strong>Delete a faculty</strong>
+            <p>Permanently removes the faculty and every unit file under it. A copy is written to <code>data/.bak</code> first, but there is no in-app undo.</p></div>
+        </div>
+        ${dzFaculties}
+        <div class="dz-item dz-sep">
+          <div class="dz-desc"><strong>Clear a UoA's relations</strong>
+            <p>Removes the UoA tag from units and people and unassigns its impact case studies. Staff, units and case-study content are kept — only the “who is included” relations are cleared.</p></div>
+        </div>
+        ${dzUoas}
+      </div>
     </section>
 
     <section class="set-sec">
@@ -2053,6 +2118,37 @@ async function openSettings() {
     location.reload();
   });
 
+  // Danger zone — delete a whole faculty (type-to-confirm).
+  body.querySelectorAll("[data-del-fac]").forEach(b => b.addEventListener("click", async () => {
+    const name = b.dataset.delFac;
+    const typed = prompt(`This permanently deletes the faculty “${name}” and ALL of its unit files.\n\n`
+      + `A backup is written to data/.bak, but there's no in-app undo.\n\n`
+      + `Type the faculty name exactly to confirm:`);
+    if (typed === null) return;
+    if (typed.trim() !== name) { alert("That didn't match the faculty name — nothing was deleted."); return; }
+    try {
+      const r = await fetch("/api/delete-faculty", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "delete failed");
+      alert(`Deleted “${name}” — ${d.removed} unit file(s) removed. Reloading…`);
+      location.reload();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  }));
+  // Danger zone — clear a UoA's relations (keeps underlying data).
+  body.querySelectorAll("[data-clear-uoa]").forEach(b => b.addEventListener("click", async () => {
+    const code = b.dataset.clearUoa;
+    if (!confirm(`Clear all relations for UoA ${code}?\n\n`
+      + `This removes the UoA tag from units and people and unassigns its impact case studies. `
+      + `Staff, units and case-study content are NOT deleted.`)) return;
+    try {
+      const r = await fetch("/api/clear-uoa", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "clear failed");
+      alert(`Cleared UoA ${code}: ${d.units_cleared} unit default(s), ${d.people_cleared} person override(s), ${d.case_studies_unassigned} case stud(ies) unassigned. Reloading…`);
+      location.reload();
+    } catch (e) { alert("Clear failed: " + e.message); }
+  }));
+
   // Reveal the data folder in the OS file browser.
   body.querySelector("#set-show-folder")?.addEventListener("click", async () => {
     try {
@@ -2133,6 +2229,66 @@ document.addEventListener("click", (e) => {
 // Lists, for the current scope (Unit / School / Faculty / UoA / All), each
 // scholar with ≥1 REF-flagged output and *only* their flagged outputs.
 // Becomes §3 of the UoA report later; useful standalone now.
+// ─── Text / rich-text report rendering ────────────────────────────────────
+// Reports can be exported as text (charts replaced by text) for pasting into
+// other documents. We build Markdown, render a minimal rich-text preview from
+// it, and offer Copy-as-rich-text / Copy-Markdown / Download .md.
+function mdToHtml(md) {
+  const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const out = []; let inList = false;
+  const closeList = () => { if (inList) { out.push("</ul>"); inList = false; } };
+  for (const ln of md.split("\n")) {
+    if (/^### /.test(ln))      { closeList(); out.push(`<h3>${esc(ln.slice(4))}</h3>`); }
+    else if (/^## /.test(ln))  { closeList(); out.push(`<h2>${esc(ln.slice(3))}</h2>`); }
+    else if (/^# /.test(ln))   { closeList(); out.push(`<h1>${esc(ln.slice(2))}</h1>`); }
+    else if (/^- /.test(ln))   { if (!inList) { out.push("<ul>"); inList = true; } out.push(`<li>${esc(ln.slice(2))}</li>`); }
+    else if (ln.trim() === "") { closeList(); }
+    else                       { closeList(); out.push(`<p>${esc(ln)}</p>`); }
+  }
+  closeList();
+  return out.join("");
+}
+function _flashBtn(b, t) { const o = b.textContent; b.textContent = t; setTimeout(() => { b.textContent = o; }, 1500); }
+function showTextReport(filenameBase, md) {
+  const modal = document.getElementById("text-report-modal");
+  const body = document.getElementById("text-report-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = `
+    <div class="tr-top">
+      <h3>Text version</h3>
+      <div class="tr-actions">
+        <button class="tb-btn" id="tr-copy">Copy (rich text)</button>
+        <button class="tb-btn" id="tr-copymd">Copy Markdown</button>
+        <button class="tb-btn primary" id="tr-dl">⤓ Download .md</button>
+      </div>
+    </div>
+    <p class="tr-hint">Charts and badges replaced with text, for pasting into Word, an email or another report. “Copy (rich text)” keeps the headings and lists when pasted into a word processor.</p>
+    <div class="tr-rich" id="tr-rich">${mdToHtml(md)}</div>`;
+  body.querySelector("#tr-dl").addEventListener("click", () => {
+    const blob = new Blob([md], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = `${filenameBase}.md`;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  });
+  body.querySelector("#tr-copymd").addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(md); _flashBtn(body.querySelector("#tr-copymd"), "Copied ✓"); }
+    catch { alert("Copy failed — select the text manually."); }
+  });
+  body.querySelector("#tr-copy").addEventListener("click", async () => {
+    const html = document.getElementById("tr-rich").innerHTML;
+    try {
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([md], { type: "text/plain" }),
+      })]);
+      _flashBtn(body.querySelector("#tr-copy"), "Copied ✓");
+    } catch {
+      try { await navigator.clipboard.writeText(md); _flashBtn(body.querySelector("#tr-copy"), "Copied (plain) ✓"); }
+      catch { alert("Copy failed."); }
+    }
+  });
+}
+
 // ─── REF quality profile / GPA ────────────────────────────────────────────
 // Ratings are stored per flagged output as numbers (1, 2, 2.5, 3, 3.5, 4);
 // 2.5/3.5 are the "X–Y*" bands. A legacy `true` means flagged-but-unrated.
@@ -2320,10 +2476,13 @@ async function openRefReport() {
   body.innerHTML = `
     <div class="rr-top">
       <div>
-        <h3>REF selection — ${escapeHTML(scope.label)}</h3>
-        <p class="rr-sub">${scholars.length} scholar${scholars.length === 1 ? "" : "s"} · ${totalOutputs} flagged output${totalOutputs === 1 ? "" : "s"}</p>
+        <h3>REF ${REF_YEAR} selection — ${escapeHTML(scope.label)}</h3>
+        <p class="rr-sub">${scholars.length} scholar${scholars.length === 1 ? "" : "s"} · ${totalOutputs} flagged output${totalOutputs === 1 ? "" : "s"} · generated ${escapeHTML(new Date().toLocaleString())}</p>
       </div>
-      <button class="tb-btn primary" id="rr-print">Print / PDF</button>
+      <div class="rr-top-actions">
+        <button class="tb-btn" id="rr-text">≡ Text version</button>
+        <button class="tb-btn primary" id="rr-print">Print / PDF</button>
+      </div>
     </div>
     ${stats}
     ${sections}`;
@@ -2336,6 +2495,36 @@ async function openRefReport() {
     const done = () => { document.body.classList.remove("printing-ref-report"); window.removeEventListener("afterprint", done); };
     window.addEventListener("afterprint", done);
     setTimeout(() => window.print(), 60);
+  });
+
+  // Text version — charts → text, for pasting into other documents.
+  body.querySelector("#rr-text")?.addEventListener("click", () => {
+    const L = [`# REF ${REF_YEAR} selection — ${scope.label}`, "",
+      `Generated ${new Date().toLocaleString()}`, "",
+      `- Scholars with flagged outputs: ${scholars.length}`,
+      `- Outputs flagged: ${totalOutputs} of ${required} target`,
+      `- Mean output GPA: ${uoaGpa == null ? "—" : uoaGpa.toFixed(2)}`, "",
+      "## Output quality profile", ""];
+    [4, 3.5, 3, 2.5, 2, 1].forEach(b => {
+      if (profile.bands[b]) L.push(`- ${REF_BAND_LABELS[b]}: ${profile.bands[b]} (${Math.round(profile.bands[b] / profile.rated * 100)}%)`);
+    });
+    if (profile.total > profile.rated) L.push(`- Unrated: ${profile.total - profile.rated}`);
+    L.push("", "## Selected outputs by scholar", "");
+    for (const p of scholars) {
+      const flags = refFlagsFor(p.scholar_id);
+      const keys = Object.keys(flags);
+      if (!keys.length) continue;
+      const gpa = refGpa(flags);
+      const byKey = new Map(((batch[p.scholar_id]?.recent_publications) || []).map(pub => [pub.pub_key, pub]));
+      L.push(`### ${p.name}${p.title ? " — " + p.title : ""}  (GPA ${gpa == null ? "—" : gpa.toFixed(2)})`);
+      keys.forEach(k => {
+        const pub = byKey.get(k);
+        const t = pub ? `${pub.title} (${pub.year || "n.d."})` : deSlugTitle(k);
+        L.push(`- [${refRatingLabel(flags[k]) || "unrated"}] ${t}`);
+      });
+      L.push("");
+    }
+    showTextReport(`ref-selection-${(scope.name || "report")}`, L.join("\n"));
   });
 }
 
@@ -2360,8 +2549,11 @@ async function renderCaseStudies() {
   const cards = items.map(cs => {
     const st = CS_STATES.find(s => s.key === cs.status) || CS_STATES[0];
     const updated = cs.updated_at ? new Date(cs.updated_at).toLocaleDateString() : "";
+    const slot = cs.slot
+      ? `<span class="cs-slot-badge" title="Slotted for inclusion">№${cs.slot}</span>`
+      : `<span class="cs-slot-badge cs-slot-draft" title="A candidate not yet slotted for inclusion">Draft</span>`;
     return `<button class="cs-cardx" data-cs-edit="${escapeAttr(cs.id)}">
-      <span class="cs-status ${st.cls}">${st.label}</span>
+      <span class="cs-badges"><span class="cs-status ${st.cls}">${st.label}</span>${slot}</span>
       <span class="cs-title">${escapeHTML(cs.title || "Untitled case study")}</span>
       <span class="cs-meta">${(cs.references||[]).length} output(s) · ${(cs.contributors||[]).length} contributor(s)${updated ? " · updated " + escapeHTML(updated) : ""}</span>
     </button>`;
@@ -2458,6 +2650,23 @@ async function openCaseStudyEditor(cs, uoaCode) {
   cs = cs || { uoa: uoaCode, status: "not_started", references: [], contributors: [], versions: [] };
   await loadRefFlags();
 
+  // Inclusion slot: the case studies already in this UoA tell us which slots
+  // are taken; the per-UoA "required" count bounds how many slots there are.
+  let uoaCases = [], uoaMeta = {};
+  try { uoaCases = (await (await fetch("/api/case-studies?uoa=" + encodeURIComponent(uoaCode))).json()).case_studies || []; } catch {}
+  try { uoaMeta = await (await fetch("/api/uoa-meta?uoa=" + encodeURIComponent(uoaCode))).json(); } catch {}
+  const requiredDefault = Math.max(2, Math.ceil((STAFF || []).length / 12));   // indicative
+  let csRequired = uoaMeta.case_studies_required || requiredDefault;
+  const takenSlots = new Map(uoaCases.filter(c => c.id !== cs.id && c.slot).map(c => [Number(c.slot), c.title || "untitled"]));
+  const slotOptionsHtml = (required, current) =>
+    [`<option value="">Draft / candidate (not for inclusion)</option>`]
+      .concat(Array.from({ length: required }, (_, i) => i + 1).map(n => {
+        const taken = takenSlots.has(n);
+        const sel = String(current) === String(n);
+        return `<option value="${n}" ${sel ? "selected" : ""} ${taken && !sel ? "disabled" : ""}>`
+             + `№${n} of ${required}${taken && !sel ? " — taken by “" + escapeHTML(takenSlots.get(n)) + "”" : ""}</option>`;
+      })).join("");
+
   // UoA scholars (current view) + their flagged outputs for the picker.
   const scholars = [...new Map((STAFF || []).filter(p => p.scholar_id).map(p => [p.scholar_id, p])).values()];
   const flaggedIds = scholars.filter(p => refFlagCount(p.scholar_id) > 0).map(p => p.scholar_id);
@@ -2508,8 +2717,12 @@ async function openCaseStudyEditor(cs, uoaCode) {
     <div class="cs-form">
       <label class="cs-f">Title<input id="cs-title" type="text" value="${escapeAttr(cs.title || "")}"></label>
       <div class="cs-row2">
-        <label class="cs-f">Status<select id="cs-status">${statusOpts}</select></label>
+        <label class="cs-f">Status <span class="cs-f-hint">(authoring progress)</span><select id="cs-status">${statusOpts}</select></label>
         <label class="cs-f">Period of underpinning research<input id="cs-period" type="text" placeholder="e.g. 2018–2024" value="${escapeAttr(cs.period || "")}"></label>
+      </div>
+      <div class="cs-row2">
+        <label class="cs-f">Inclusion <span class="cs-f-hint">(which slot in the submission, if any)</span><select id="cs-slot">${slotOptionsHtml(csRequired, cs.slot || "")}</select></label>
+        <label class="cs-f">Case studies required for this UoA<input id="cs-required" type="number" min="0" max="50" value="${csRequired}"></label>
       </div>
       <label class="cs-f">Summary of the impact <span class="wordcount" id="cs-summary-wc"></span><textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
       <label class="cs-f">Underpinning research<textarea id="cs-underpinning" rows="4">${escapeHTML(cs.underpinning_research || "")}</textarea></label>
@@ -2625,11 +2838,21 @@ async function openCaseStudyEditor(cs, uoaCode) {
     document.body.appendChild(a); a.click(); a.remove();
   });
 
+  // Bumping "required" rebuilds the slot dropdown so more/fewer slots show.
+  const slotSel = body.querySelector("#cs-slot");
+  body.querySelector("#cs-required")?.addEventListener("input", (e) => {
+    const n = Math.max(0, parseInt(e.target.value, 10) || 0);
+    csRequired = n;
+    slotSel.innerHTML = slotOptionsHtml(n, slotSel.value);
+  });
+
   body.querySelector("#cs-save").addEventListener("click", async () => {
+    const reqN = Math.max(0, parseInt(body.querySelector("#cs-required").value, 10) || 0);
     const payload = {
       id: cs.id, uoa: uoaCode,
       title:  body.querySelector("#cs-title").value.trim(),
       status: body.querySelector("#cs-status").value,
+      slot:   body.querySelector("#cs-slot").value || null,
       period: body.querySelector("#cs-period").value.trim(),
       summary: body.querySelector("#cs-summary").value.trim(),
       underpinning_research: body.querySelector("#cs-underpinning").value.trim(),
@@ -2639,6 +2862,11 @@ async function openCaseStudyEditor(cs, uoaCode) {
       contributors: chosenContribs.slice(),
     };
     try {
+      // Persist the per-UoA "required" count if the user changed it.
+      if (reqN !== (uoaMeta.case_studies_required || 0)) {
+        await fetch("/api/uoa-meta", { method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ uoa: uoaCode, case_studies_required: reqN }) });
+      }
       const r = await fetch("/api/case-study", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
       if (!r.ok) throw new Error("save failed");
       modal.classList.add("hidden");
@@ -2655,7 +2883,79 @@ async function openCaseStudyEditor(cs, uoaCode) {
   });
 }
 
+// ─── Impact case-study manager (Data menu) ────────────────────────────────
+// A cross-UoA view of every case study: reassign between UoAs, surface and
+// assign unassigned ones, and delete unwanted ones (with a warning).
+async function openCaseStudyManager() {
+  const modal = document.getElementById("cs-manager-modal");
+  modal.classList.remove("hidden");
+  document.getElementById("cs-manager-body").innerHTML = `<p class="spinner">Loading case studies…</p>`;
+  let items = [];
+  try { items = (await (await fetch("/api/case-studies")).json()).case_studies || []; } catch {}
+  renderCaseStudyManager(items);
+}
+function renderCaseStudyManager(items) {
+  const body = document.getElementById("cs-manager-body");
+  const groups = new Map();
+  for (const c of items) {
+    const k = (c.uoa && String(c.uoa).trim()) ? String(c.uoa) : "";
+    (groups.get(k) || groups.set(k, []).get(k)).push(c);
+  }
+  const uoaOptions = (cur) => `<option value="">— Unassigned —</option>` +
+    Array.from({ length: 34 }, (_, i) => i + 1).map(n => {
+      const nm = UOA_BY_CODE[n]?.name ? `UoA ${n} · ${UOA_BY_CODE[n].name}` : `UoA ${n}`;
+      return `<option value="${n}" ${String(cur) === String(n) ? "selected" : ""}>${escapeHTML(nm)}</option>`;
+    }).join("");
+  const orderedKeys = [...groups.keys()].sort((a, b) =>
+    a === "" ? -1 : b === "" ? 1 : (parseInt(a, 10) || 999) - (parseInt(b, 10) || 999));
+  const rowHtml = (list) => list.map(c => {
+    const st = CS_STATES.find(s => s.key === c.status) || CS_STATES[0];
+    return `<div class="csm-row" data-id="${escapeAttr(c.id)}">
+      <span class="cs-status ${st.cls}">${st.label}</span>
+      <span class="cs-slot-badge ${c.slot ? "" : "cs-slot-draft"}">${c.slot ? "№" + c.slot : "Draft"}</span>
+      <span class="csm-title">${escapeHTML(c.title || "Untitled case study")}</span>
+      <span class="csm-meta">${(c.references || []).length} out · ${(c.contributors || []).length} contrib</span>
+      <select class="csm-uoa" data-id="${escapeAttr(c.id)}" title="Reassign this case study to a UoA">${uoaOptions(c.uoa)}</select>
+      <button class="tb-btn csm-del" data-id="${escapeAttr(c.id)}" title="Delete this case study">🗑</button>
+    </div>`;
+  }).join("");
+  const groupsHtml = orderedKeys.map(k => {
+    const list = groups.get(k);
+    const label = k === "" ? "Unassigned — not in any UoA"
+      : (UOA_BY_CODE[k]?.name ? `UoA ${k} · ${UOA_BY_CODE[k].name}` : `UoA ${k}`);
+    return `<section class="csm-group ${k === "" ? "csm-group-unassigned" : ""}">
+      <h4>${escapeHTML(label)} <span class="cs-count">${list.length}</span></h4>${rowHtml(list)}</section>`;
+  }).join("") || `<p class="cs-empty">No impact case studies yet — create one from the By-UoA view.</p>`;
+  body.innerHTML = `
+    <h3>Manage impact case studies</h3>
+    <p class="csm-intro">Reassign a case study to another UoA, pick up unassigned ones, or delete those you don't need. ${items.length} total · generated ${escapeHTML(new Date().toLocaleString())}.</p>
+    ${groupsHtml}`;
+  body.querySelectorAll(".csm-uoa").forEach(sel => sel.addEventListener("change", async () => {
+    try {
+      await fetch("/api/case-study", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: sel.dataset.id, uoa: sel.value || "" }) });
+      openCaseStudyManager();
+      renderCaseStudies();
+    } catch (e) { alert("Reassign failed: " + e.message); }
+  }));
+  body.querySelectorAll(".csm-del").forEach(btn => btn.addEventListener("click", async () => {
+    const cs = items.find(c => c.id === btn.dataset.id);
+    if (!confirm(`Delete the case study “${cs?.title || "Untitled"}”?\n\nThis permanently removes it and its references, contributors and version history. This cannot be undone.`)) return;
+    try {
+      await fetch("/api/case-study", { method: "DELETE", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: btn.dataset.id }) });
+      openCaseStudyManager();
+      renderCaseStudies();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  }));
+}
+
 document.addEventListener("click", (e) => {
+  if (e.target.closest("#tb-cs-manager")) openCaseStudyManager();
+  if (e.target.closest("[data-csm-close]")) document.getElementById("cs-manager-modal").classList.add("hidden");
+  if (e.target.id === "cs-manager-modal") e.target.classList.add("hidden");
+  if (e.target.closest("[data-tr-close]")) document.getElementById("text-report-modal").classList.add("hidden");
+  if (e.target.id === "text-report-modal") e.target.classList.add("hidden");
   if (e.target.closest("[data-cs-close]")) document.getElementById("cs-modal").classList.add("hidden");
   if (e.target.id === "cs-modal") e.target.classList.add("hidden");
   if (e.target.closest("#tb-uoa-report") || e.target.closest("#uoa-report-btn")) buildUoaReport();
@@ -2722,11 +3022,17 @@ async function buildUoaReport() {
     Object.fromEntries(Object.entries(f).map(([k, v]) => [i + ":" + k, v])))));
   const required = Math.round(mult * scholars.length);
 
-  // Case-studies section — full REF3 render.
+  // Case-studies section — full REF3 render. Slotted-for-inclusion first
+  // (by number), candidates/drafts after.
   const byStatus = { not_started: 0, draft: 0, proof: 0, finished: 0 };
   cases.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1; });
+  const slottedCount = cases.filter(c => c.slot).length;
+  cases = cases.slice().sort((a, b) => (a.slot || 99) - (b.slot || 99));
   const casesHtml = cases.map(c => {
     const st = CS_STATES.find(s => s.key === c.status) || CS_STATES[0];
+    const slotTag = c.slot
+      ? `<span class="ur-cs-slot">Case study ${c.slot}</span>`
+      : `<span class="ur-cs-slot ur-cs-slot-draft">Draft / candidate</span>`;
     const refs = (c.references || []).map(r => {
       const [sid, key] = r.split(/:(.+)/);
       const band = refRatingLabel(refFlagsFor(sid)[key]);
@@ -2737,7 +3043,7 @@ async function buildUoaReport() {
     const sources = (c.corroborating_sources || []).map(s => `<li>${escapeHTML(s)}</li>`).join("");
     const sec = (label, txt) => txt ? `<div class="ur-cs-sec"><h5>${label}</h5><p>${escapeHTML(txt).replace(/\n/g, "<br>")}</p></div>` : "";
     return `<article class="ur-cs">
-      <h4>${escapeHTML(c.title || "Untitled case study")} <span class="cs-status ${st.cls}">${st.label}</span></h4>
+      <h4>${slotTag} ${escapeHTML(c.title || "Untitled case study")} <span class="cs-status ${st.cls}">${st.label}</span></h4>
       ${c.period ? `<p class="ur-cs-period">Underpinning research: ${escapeHTML(c.period)}</p>` : ""}
       ${sec("Summary of the impact", c.summary)}
       ${sec("Underpinning research", c.underpinning_research)}
@@ -2753,9 +3059,12 @@ async function buildUoaReport() {
     <div class="ur-top">
       <div>
         <h2 class="ur-title">UoA ${escapeHTML(code)}${uoaName ? " · " + escapeHTML(uoaName) : ""}</h2>
-        <p class="ur-sub">REF submission report · ${escapeHTML(window.__UNIVERSITY__ || "University")} · generated ${escapeHTML(today)}</p>
+        <p class="ur-sub">REF ${REF_YEAR} submission report · ${escapeHTML(window.__UNIVERSITY__ || "University")} · generated ${escapeHTML(new Date().toLocaleString())}</p>
       </div>
-      <button class="tb-btn primary" id="ur-print">Print / PDF</button>
+      <div class="rr-top-actions">
+        <button class="tb-btn" id="ur-text">≡ Text version</button>
+        <button class="tb-btn primary" id="ur-print">Print / PDF</button>
+      </div>
     </div>
     <div class="ur-stats">
       <span><strong>${scholars.length}</strong> staff</span>
@@ -2816,6 +3125,49 @@ async function buildUoaReport() {
     const done = () => { document.body.classList.remove("printing-uoa-report"); window.removeEventListener("afterprint", done); };
     window.addEventListener("afterprint", done);
     setTimeout(() => window.print(), 60);
+  });
+
+  // Text version — the whole report as Markdown (charts → text).
+  body.querySelector("#ur-text")?.addEventListener("click", () => {
+    const narr = body.querySelector("#ur-narrative")?.value || meta.narrative || "";
+    const L = [`# UoA ${code}${uoaName ? " · " + uoaName : ""} — REF ${REF_YEAR} submission report`, "",
+      `${window.__UNIVERSITY__ || "University"} · generated ${new Date().toLocaleString()}`, "",
+      "## Readiness", "",
+      `- Staff: ${scholars.length}`,
+      `- Selected outputs: ${totalOutputs} of ${required} target`,
+      `- Mean output GPA: ${uoaGpa == null ? "—" : uoaGpa.toFixed(2)}`,
+      `- Outputs rated: ${profile.rated} of ${profile.total}`,
+      `- Impact case studies: ${cases.length} (${byStatus.finished} finished, ${byStatus.proof} proof, ${byStatus.draft} draft)`, "",
+      "## Output quality profile", ""];
+    [4, 3.5, 3, 2.5, 2, 1].forEach(b => {
+      if (profile.bands[b]) L.push(`- ${REF_BAND_LABELS[b]}: ${profile.bands[b]} (${Math.round(profile.bands[b] / profile.rated * 100)}%)`);
+    });
+    L.push("", "## Narrative / environment", "", narr.trim() || "_(not yet written)_", "",
+      "## Selected outputs", "");
+    for (const p of scholars.filter(s => refFlagCount(s.scholar_id) > 0)) {
+      const flags = refFlagsFor(p.scholar_id);
+      const gpa = refGpa(flags);
+      L.push(`### ${p.name}${p.title ? " — " + p.title : ""}  (GPA ${gpa == null ? "—" : gpa.toFixed(2)})`);
+      Object.keys(flags).forEach(k => L.push(`- [${refRatingLabel(flags[k]) || "unrated"}] ${pubTitle(p.scholar_id, k)}`));
+      L.push("");
+    }
+    L.push("## Impact case studies", "");
+    for (const c of cases) {
+      const slot = c.slot ? `Case study ${c.slot}` : "Draft / candidate";
+      L.push(`### ${slot}: ${c.title || "Untitled case study"} (${c.status})`);
+      if (c.period) L.push(`Underpinning research: ${c.period}`);
+      if (c.summary) L.push("", `**Summary of the impact.** ${c.summary}`);
+      if (c.underpinning_research) L.push("", `**Underpinning research.** ${c.underpinning_research}`);
+      const refs = (c.references || []).map(r => { const [sid, key] = r.split(/:(.+)/); return pubTitle(sid, key); });
+      if (refs.length) { L.push("", "References to the research:"); refs.forEach(t => L.push(`- ${t}`)); }
+      if (c.details) L.push("", `**Details of the impact.** ${c.details}`);
+      const srcs = c.corroborating_sources || [];
+      if (srcs.length) { L.push("", "Sources to corroborate:"); srcs.forEach(s => L.push(`- ${s}`)); }
+      const contribs = (c.contributors || []).map(id => nameByStaffId.get(id) || id);
+      if (contribs.length) L.push("", `Contributors: ${contribs.join(", ")}`);
+      L.push("");
+    }
+    showTextReport(`uoa-${code}-report`, L.join("\n"));
   });
 }
 
@@ -3179,17 +3531,37 @@ document.getElementById("data-load-input")?.addEventListener("change", async (e)
     } catch { /* not JSON → unit file */ }
 
     if (bundle) {
-      const r = await fetch("/api/bundle-import", {
+      // Detect a collision with data already loaded, and offer to overwrite
+      // (clear the existing scope first) so a re-import leaves nothing stale.
+      const scope = bundle.scope || {};
+      let overwrite = false;
+      let collides = false, what = "this bundle";
+      if (scope.kind === "faculty" && scope.name) {
+        collides = (FACULTIES || []).some(f => f.name === scope.name);
+        what = `the faculty “${scope.name}”`;
+      } else if (scope.kind === "uoa" && scope.code) {
+        collides = (UNITS || []).some(u => !u.disabled &&
+          (u.staff || []).some(p => String(effectiveUoa(p, u)) === String(scope.code)));
+        what = `UoA ${scope.code}`;
+      }
+      if (collides) {
+        overwrite = confirm(`${what} already exists in this copy.\n\n`
+          + `OK = Overwrite: remove the existing ${scope.kind === "faculty" ? "units in that faculty" : "case studies for that UoA"} first, then import (no stray data).\n`
+          + `Cancel = Merge: keep what's there and merge the bundle in.`);
+      }
+      status.textContent = `Importing${overwrite ? " (overwrite)" : ""}…`;
+      const r = await fetch("/api/bundle-import" + (overwrite ? "?overwrite=1" : ""), {
         method: "POST", headers: { "Content-Type": "application/json" }, body: text,
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "bundle import failed");
       (d.warnings || []).forEach(w => console.warn("bundle import:", w));
       const s = d.summary || {};
-      const what = d.kind === "uoa" ? `UoA ${(d.name || "").replace(/^UoA\s*/i, "")}`
+      const label = d.kind === "uoa" ? `UoA ${(d.name || "").replace(/^UoA\s*/i, "")}`
                  : (d.name || "bundle");
-      let msg = `Imported ${what}: ${s.units || 0} unit(s), ${s.scholars || 0} cached profile(s), `
-              + `${s.case_studies || 0} case stud${(s.case_studies === 1) ? "y" : "ies"}.`;
+      let msg = `Imported ${label}: ${s.units || 0} unit(s), ${s.scholars || 0} cached profile(s), `
+              + `${s.case_studies || 0} case stud${(s.case_studies === 1) ? "y" : "ies"}`
+              + `${s.removed ? `, ${s.removed} old item(s) removed` : ""}.`;
       if (d.warnings && d.warnings.length) msg += ` ⚠ ${d.warnings.length} warning(s) — see console.`;
       status.textContent = msg + " Reloading…";
       status.className = "data-status ok";

@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.54 · proof-of-concept.
+**Version:** 0.2.55 · proof-of-concept.
 
 ## What it does
 
@@ -31,7 +31,20 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
   the years with a selected output (empty years show N/A). The REF *exercise
   year* and window are configurable in Settings (year floored at 2029).
 - **GPA & quality profile**: reports compute a mean output GPA per scholar and
-  per UoA, plus a star-band profile (% at each band).
+  per UoA, plus a star-band profile (% at each band). The **Analytics** REF
+  readiness scorecard (which defaults to grouping by UoA) counts the actual
+  selected outputs and impact case studies — not a venue heuristic.
+- **Text / rich-text reports**: the REF selection and UoA reports have a
+  *Text version* button that renders the data as text (charts → text) to copy
+  (as rich text or Markdown) into other documents. All reports are datestamped.
+- **Case-study inclusion slots**: each impact case study can be slotted as
+  *№N of the total required* for the UoA (unique), or left as a *Draft /
+  candidate*. A **Data → Manage impact case studies** modal reassigns them
+  between UoAs, surfaces unassigned ones, and deletes unwanted ones.
+- **Danger Zone** (Settings): delete a whole faculty (type-to-confirm) or
+  clear a UoA's relations (untags units/people, unassigns its case studies —
+  underlying data kept). Loading a bundle that collides with an existing
+  faculty/UoA offers to overwrite (clearing stale data first) or merge.
 - **Reports**: a **Report** button beside the UoA selector builds the full UoA
   report — a colour-coded Red/Amber/Green readiness dashboard, quality profile,
   narrative/environment, selected outputs with ratings, and every impact case

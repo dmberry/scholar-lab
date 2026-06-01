@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.54</span>
+    <span class="tb-sub" id="tb-version">v0.2.55</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -80,6 +80,10 @@
         <button class="tb-menu-item" id="tb-new-unit" role="menuitem">
           <span class="tb-mi-label">New unit…</span>
           <span class="tb-mi-hint">Create a unit (faculty, school, name, UoA)</span>
+        </button>
+        <button class="tb-menu-item" id="tb-cs-manager" role="menuitem">
+          <span class="tb-mi-label">Manage impact case studies…</span>
+          <span class="tb-mi-hint">Reassign between UoAs, track unassigned, delete</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-refresh" role="menuitem">
@@ -309,6 +313,22 @@
   <div class="modal-card ref-report-card">
     <button class="close" aria-label="Close" data-ref-report-close>×</button>
     <div id="ref-report-body"></div>
+  </div>
+</div>
+
+<!-- Text / rich-text version of a report -->
+<div id="text-report-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card tr-card">
+    <button class="close" aria-label="Close" data-tr-close>×</button>
+    <div id="text-report-body"></div>
+  </div>
+</div>
+
+<!-- Impact case-study manager -->
+<div id="cs-manager-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card csm-card">
+    <button class="close" aria-label="Close" data-csm-close>×</button>
+    <div id="cs-manager-body"></div>
   </div>
 </div>
 
