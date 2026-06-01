@@ -1998,6 +1998,15 @@ function openHelp() {
        REF&nbsp;${REF_YEAR} submission across Faculty → School → Unit, or by Unit of Assessment.
        Everything is stored on your machine; nothing is uploaded.</p>
 
+    <div class="help-demo">
+      <p class="help-demo-head">New here? Try the demo data</p>
+      <p class="help-demo-lead">Load a ready-made sample to explore every feature, publications,
+         REF ratings, GPA, readiness scorecard and impact case studies, without touching real staff
+         records. The UoA bundle is best seen in <strong>By&nbsp;UoA</strong> view. Nothing is
+         fetched from Google&nbsp;Scholar; don't press Refresh on a demo card.</p>
+      <div id="help-demo-buttons" class="help-demo-buttons"><span class="set-help">Looking for demo data…</span></div>
+    </div>
+
     <h3 class="help-s">1 · Choosing what you're looking at</h3>
     <p>The two tabs at the top switch the lens. <strong>By Faculty</strong> drills Faculty → School →
        Unit; <strong>By UoA</strong> gathers everyone tagged to a Unit of Assessment, across units.
@@ -2065,6 +2074,77 @@ function openHelp() {
          (Mrs&nbsp;Dilworth. Please check what that is) and hope you find it useful.</p>
       <p class="help-pop-foot">— The Vice-Chancellor. <em>Finem respice!</em></p>
     </div>`;
+  populateHelpSamples();
+}
+
+// Render a load button per shipped demo bundle into the help box. Driven by
+// /api/samples so it tracks whatever sample files the app actually ships.
+async function populateHelpSamples() {
+  const host = document.getElementById("help-demo-buttons");
+  if (!host) return;
+  try {
+    const r = await fetch("/api/samples", { cache: "no-store" });
+    const d = await r.json();
+    const samples = d.samples || [];
+    if (!samples.length) { host.innerHTML = `<span class="set-help">No demo data is bundled with this copy.</span>`; return; }
+    const label = (s) => {
+      if (s.kind === "faculty") return "Load whole institution";
+      if (s.kind === "uoa") return `Load UoA ${s.code || ""}`.trim();
+      return "Load demo bundle";
+    };
+    const sub = (s) => {
+      const bits = [];
+      if (s.units) bits.push(`${s.units} unit${s.units === 1 ? "" : "s"}`);
+      if (s.case_studies) bits.push(`${s.case_studies} case stud${s.case_studies === 1 ? "y" : "ies"}`);
+      return bits.join(" · ");
+    };
+    host.innerHTML = samples.map(s =>
+      `<button class="tb-btn help-demo-btn" data-load-sample="${escapeAttr(s.file)}">
+         <span class="help-demo-btn-main">${escapeHTML(label(s))}</span>
+         ${sub(s) ? `<span class="help-demo-btn-sub">${escapeHTML(sub(s))}</span>` : ""}
+       </button>`).join("");
+  } catch {
+    host.innerHTML = `<span class="set-help">Couldn't list demo data.</span>`;
+  }
+}
+
+// Fetch a shipped sample bundle and run it through the same import path as a
+// user-picked file (collision check + overwrite prompt + reload).
+async function loadSampleBundle(file, btn) {
+  const orig = btn ? btn.innerHTML : "";
+  try {
+    if (btn) { btn.disabled = true; btn.innerHTML = `<span class="help-demo-btn-main">Loading…</span>`; }
+    const r = await fetch("/api/sample?file=" + encodeURIComponent(file), { cache: "no-store" });
+    const text = await r.text();
+    if (!r.ok) throw new Error("could not read sample");
+    const bundle = JSON.parse(text);
+    const scope = bundle.scope || {};
+    let overwrite = false, collides = false, what = "this demo";
+    if (scope.kind === "faculty" && scope.name) {
+      collides = (FACULTIES || []).some(f => f.name === scope.name);
+      what = `the faculty “${scope.name}”`;
+    } else if (scope.kind === "uoa" && scope.code) {
+      collides = (UNITS || []).some(u => !u.disabled &&
+        (u.staff || []).some(p => String(effectiveUoa(p, u)) === String(scope.code)));
+      what = `UoA ${scope.code}`;
+    }
+    if (collides) {
+      overwrite = confirm(`${what} already exists in this copy.\n\n`
+        + `OK = Overwrite: remove the existing ${scope.kind === "faculty" ? "units in that faculty" : "case studies for that UoA"} first, then load the demo.\n`
+        + `Cancel = Merge: keep what's there and merge the demo in.`);
+    }
+    const ir = await fetch("/api/bundle-import" + (overwrite ? "?overwrite=1" : ""), {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: text,
+    });
+    const d = await ir.json();
+    if (!ir.ok) throw new Error(d.error || "import failed");
+    (d.warnings || []).forEach(w => console.warn("sample import:", w));
+    if (btn) btn.innerHTML = `<span class="help-demo-btn-main">Loaded — reloading…</span>`;
+    setTimeout(() => location.reload(), 800);
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.innerHTML = orig; }
+    alert("Couldn't load the demo: " + err.message);
+  }
 }
 
 async function openSettings() {
@@ -2411,6 +2491,8 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
   if (e.target.closest("#tb-dark-toggle")) setDark(!isDark());
   if (e.target.closest("#tb-help"))      openHelp();
+  const sampleBtn = e.target.closest("[data-load-sample]");
+  if (sampleBtn) loadSampleBundle(sampleBtn.getAttribute("data-load-sample"), sampleBtn);
   if (e.target.closest("#tb-help-about") || e.target.closest("#tb-about")) openAbout();
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
   if (e.target.closest("[data-help-close]"))     document.getElementById("help-modal").classList.add("hidden");

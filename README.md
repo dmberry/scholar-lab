@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 3.0.4 · proof-of-concept.
+**Version:** 3.1 · proof-of-concept.
 
 ## What it does
 
@@ -198,6 +198,17 @@ upgrades. The per-user data folder is:
 First-launch OS warnings are expected for an unsigned app: macOS shows
 *"unidentified developer"* (right-click → **Open** clears it), and Windows
 SmartScreen shows *"Windows protected your PC"* (**More info → Run anyway**).
+
+### Try the demo data
+
+To explore every feature without touching real records, open **Help → Using
+Scholar Dashboard** and, under *"New here? Try the demo data"*, click **Load
+whole institution** or **Load UoA 99**. These bundle a fictional university with
+seeded profiles, REF ratings, GPA, a readiness scorecard and impact case
+studies. The demo uses out-of-range UoA codes (99 and 98) so it can never
+collide with a real REF UoA in your working data. The bundles ship inside the
+app; see [`samples/poppleton/`](samples/poppleton/) for details and a
+regenerator script.
 
 ### Source-tree path (if you cloned the repo)
 

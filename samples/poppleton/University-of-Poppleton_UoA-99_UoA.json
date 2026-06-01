@@ -1,7 +1,7 @@
 {
   "_meta": {
     "app": "Scholar Dashboard",
-    "app_version": "3.0.1",
+    "app_version": "3.1",
     "format_version": 1,
     "exported_at": "2026-06-01T09:00:00+00:00",
     "kind": "bundle",
@@ -9,17 +9,17 @@
   },
   "scope": {
     "kind": "uoa",
-    "code": "34",
+    "code": "99",
     "name": "Communication, Cultural and Media Studies, Library and Information Management"
   },
   "uoa": {
-    "code": "34",
+    "code": "99",
     "name": "Communication, Cultural and Media Studies, Library and Information Management"
   },
   "units": [
     {
       "slug": "media-cultural-studies",
-      "markdown": "Generator: Scholar Dashboard v3.0.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 34\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 |  | missing | uoa:0\n"
+      "markdown": "Generator: Scholar Dashboard v3.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 99\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 |  | missing | uoa:0\n"
     }
   ],
   "scholar_cache": {
@@ -202,7 +202,7 @@
   "case_studies": [
     {
       "id": "cs-poppleton-dogsbody-vassal",
-      "uoa": "34",
+      "uoa": "99",
       "title": "Dogsbody and Vassal: Fourteen Months of Practice-Based Research",
       "status": "finished",
       "slot": 1,
@@ -237,7 +237,7 @@
     },
     {
       "id": "cs-poppleton-ref-excluded",
-      "uoa": "34",
+      "uoa": "99",
       "title": "REF-Excluded but Research Active: The Poppletonian Apology",
       "status": "proof",
       "slot": 2,
@@ -272,7 +272,7 @@
     },
     {
       "id": "cs-poppleton-heritage",
-      "uoa": "34",
+      "uoa": "99",
       "title": "The Higher Education Experience: From Barricade to Heritage Attraction",
       "status": "draft",
       "slot": 3,
@@ -305,7 +305,7 @@
     }
   ],
   "uoa_meta": {
-    "34": {
+    "99": {
       "narrative": "Media and Cultural Studies at Poppleton is built on practice-based research. Following the reclassification of Professor Lapping and Mr Odgers as 'REF-excluded research active' and the subsequent Poppletonian Apology, the unit has reframed its industrial action as practice and its barricaded office as a site-specific output. Submissions are made in the spirit of the University motto, Finem respice! — 'consider the end'."
     }
   }

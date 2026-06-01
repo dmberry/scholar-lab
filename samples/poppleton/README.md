@@ -9,9 +9,19 @@ Laurie Taylor's long-running "Poppletonian" column in *Times Higher Education*.
 | File | Load it to demonstrate |
 |------|------------------------|
 | `University-of-Poppleton_Faculty.json` | The whole institution: two faculties, the faculty → school → unit tree, By-Faculty and By-UoA views, and the three Scholar states. |
-| `University-of-Poppleton_UoA-34_UoA.json` | The single-UoA REF workflow: one unit (Media and Cultural Studies) with three **impact case studies** across draft / proof / finished, slotted №1–3. |
+| `University-of-Poppleton_UoA-99_UoA.json` | The single-UoA REF workflow: one unit (Media and Cultural Studies) with three **impact case studies** across draft / proof / finished, slotted №1–3. |
 
 ## How to load it
+
+The easiest way: **Help → Using Scholar Dashboard**, then under *"New here? Try
+the demo data"* click **Load whole institution** or **Load UoA 99**. These
+bundles ship inside the app, so the buttons work on a fresh install with no
+files to find.
+
+The demo uses out-of-range UoA codes (**99** and **98**) on purpose, so loading
+it can never collide with a real REF UoA (1–34) in your working data.
+
+Or load the JSON directly:
 
 1. Open Scholar Dashboard. Faculty bundles load from either view; the UoA
    bundle is best appreciated in **By UoA** view.
@@ -27,11 +37,11 @@ the unit files from your data folder.
 
 **Faculty of Arts and Social Sciences**
 - *School of Media, Culture and Society*
-  - **Department of Media and Cultural Studies** (UoA 34) — Professor Gordon
+  - **Department of Media and Cultural Studies** (UoA 99) — Professor Gordon
     Lapping (HoD) and Ted Odgers, whose practice-based outputs and barricaded
     office anchor the case studies, plus **Maureen** the long-suffering
     departmental secretary (no research profile).
-  - **Department of Social Psychology** (UoA 4) — Professor G. W. Tipping, of
+  - **Department of Social Psychology** (UoA 98) — Professor G. W. Tipping, of
     two-way-mirror fame.
 
 **University Directorate and Professional Services** (no UoA)
@@ -50,9 +60,9 @@ the point. It exercises:
 - **No-UoA staff** — the whole Directorate sits outside the REF units (`uoa:0`).
 - **REF star ratings** across the 1\*–4\* bands (including the 2–3\* / 3–4\*
   in-between bands), so the quality profile, mean GPA and Red/Amber/Green
-  readiness scorecard populate for UoA 34 and UoA 4.
+  readiness scorecard populate for UoA 99 and UoA 98.
 - **UoA narratives** for 34 and 4, and **four impact case studies** (three in
-  UoA 34, one in UoA 4) with references picked from rated outputs and
+  UoA 99, one in UoA 98) with references picked from rated outputs and
   contributors drawn from their authors.
 
 ## The case studies
@@ -67,7 +77,7 @@ column actually ran:
   relativism of progressive public relations", and the motto *Finem respice!*
 - **The Higher Education Experience** — the preserved barricade repackaged as a
   paying heritage attraction (Bimpson's "silver lining").
-- **Behind the Glass** (UoA 4) — Tipping's two-way mirror and his "just think of
+- **Behind the Glass** (UoA 98) — Tipping's two-way mirror and his "just think of
   what happened with lasers" defence of blue-skies research, with Doubleday's
   "imagine yourself as a tree" wellbeing response.
 

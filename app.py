@@ -109,7 +109,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "3.0.4"
+__version__ = "3.1"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -2294,6 +2294,56 @@ def api_bundle_import():
     return jsonify({"ok": True, "summary": summary, "warnings": warnings,
                     "kind": scope.get("kind") or ("uoa" if bundle.get("uoa") else "bundle"),
                     "name": scope.get("name") or (bundle.get("uoa") or {}).get("name", "")})
+
+
+# ── Demo / sample bundles ───────────────────────────────────────────────────
+# Ready-made bundles shipped with the app (samples/) so a fresh install can be
+# explored without touching real staff records. They load through the same
+# import path as any user-picked bundle.
+SAMPLES_DIR = STATIC_ROOT / "samples"
+
+
+@app.route("/api/samples")
+def api_samples():
+    """List the demo bundles shipped under samples/. Each entry carries enough
+    metadata for the UI to label a load button."""
+    items = []
+    if SAMPLES_DIR.is_dir():
+        for p in sorted(SAMPLES_DIR.rglob("*.json")):
+            try:
+                d = json.loads(p.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            meta = d.get("_meta") or {}
+            if meta.get("format") not in _BUNDLE_FORMATS and meta.get("kind") not in ("bundle", "uoa-bundle"):
+                continue   # not a Scholar Dashboard bundle — skip
+            scope = d.get("scope") or {}
+            items.append({
+                "file": p.relative_to(SAMPLES_DIR).as_posix(),
+                "kind": scope.get("kind") or "bundle",
+                "code": scope.get("code") or None,
+                "name": scope.get("name") or "",
+                "units": len(d.get("units") or []),
+                "case_studies": len(d.get("case_studies") or []),
+            })
+    return jsonify({"samples": items})
+
+
+@app.route("/api/sample")
+def api_sample():
+    """Return one demo bundle's raw JSON by its samples-relative path. The path
+    is resolved inside SAMPLES_DIR only — no traversal outside it."""
+    rel = (request.args.get("file") or "").strip()
+    if not rel:
+        return jsonify({"error": "file required"}), 400
+    try:
+        target = (SAMPLES_DIR / rel).resolve()
+        target.relative_to(SAMPLES_DIR.resolve())   # raises if escaping
+    except (ValueError, OSError):
+        return jsonify({"error": "invalid sample path"}), 400
+    if not target.is_file():
+        return jsonify({"error": "sample not found"}), 404
+    return Response(target.read_text(encoding="utf-8"), mimetype="application/json")
 
 
 @app.route("/api/scholar-batch")

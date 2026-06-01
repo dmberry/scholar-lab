@@ -176,6 +176,17 @@ body {
 .help-card code { background: #efeae0; padding: .05em .35em; border-radius: 4px; font-size: .85em; }
 .help-foot { margin-top: 1.2rem; padding-top: .7rem; border-top: 1px solid var(--border);
   color: var(--muted); font-size: .8rem; font-style: italic; }
+/* "Try the demo data" callout in the help box. */
+.help-demo { margin: 1rem 0 1.2rem; padding: .9rem 1rem; border: 1px solid var(--accent);
+  border-radius: 8px; background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.help-demo-head { margin: 0 0 .3rem; font-size: .95rem; font-weight: 700; color: var(--accent); }
+.help-demo-lead { margin: 0 0 .7rem; font-size: .85rem; line-height: 1.5; color: var(--ink); }
+.help-demo-buttons { display: flex; flex-wrap: wrap; gap: .5rem; }
+.help-demo-btn { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: .45rem .8rem; line-height: 1.2; cursor: pointer; }
+.help-demo-btn-main { font-weight: 600; font-size: .85rem; }
+.help-demo-btn-sub { font-size: .7rem; color: var(--muted); }
+.help-demo-btn:disabled { opacity: .6; cursor: default; }
 /* Poppleton aside in the help box — redbrick-on-cream, tongue firmly in cheek. */
 .help-poppleton { margin-top: 1.3rem; padding: .9rem 1rem; background: #f6f1e9;
   border: 1px solid #d8cdbb; border-left: 4px solid #6b2734; border-radius: 6px; color: #2e2228; }

@@ -34,6 +34,7 @@ datas = [
     (str(HERE / "style.css"),   "."),
     (str(HERE / "app.js"),      "."),
     (str(HERE / "data.example"), "data.example"),
+    (str(HERE / "samples"),      "samples"),   # demo bundles, loadable from Help
 ]
 
 a = Analysis(

@@ -3,7 +3,10 @@
 
 Two self-contained bundles (load via File → Load):
   * University-of-Poppleton_Faculty.json   — the whole institution
-  * University-of-Poppleton_UoA-34_UoA.json — the single-UoA REF workflow
+  * University-of-Poppleton_UoA-99_UoA.json — the single-UoA REF workflow
+
+The demo uses out-of-range UoA codes (99 and 98) on purpose, so loading it can
+never collide with a real REF UoA (1–34) in someone's working data.
 
 REAL CHARACTERS ONLY. Every named person below is a recurring figure from
 Laurie Taylor's "Poppletonian" column in Times Higher Education, placed in the
@@ -37,7 +40,7 @@ import re
 from pathlib import Path
 
 UNIVERSITY = "University of Poppleton"
-APP_VERSION = "3.0.1"
+APP_VERSION = "3.1"
 FORMAT_VERSION = 1
 
 FAC_ARTS = "Faculty of Arts and Social Sciences"
@@ -108,14 +111,14 @@ def rate(scholar_id, title, year, stars):
 # Units
 # ════════════════════════════════════════════════════════════════════════════
 add_unit("media-cultural-studies", "Department of Media and Cultural Studies",
-         FAC_ARTS, SCHOOL_MCS, 34, FAC_ARTS_URL)
+         FAC_ARTS, SCHOOL_MCS, 99, FAC_ARTS_URL)
 add_unit("social-psychology", "Department of Social Psychology",
-         FAC_ARTS, SCHOOL_MCS, 4, FAC_ARTS_URL)
+         FAC_ARTS, SCHOOL_MCS, 98, FAC_ARTS_URL)
 add_unit("directorate", "Senior Management and Professional Services",
          FAC_DIR, None, None)
 
 
-# ── Media and Cultural Studies (UoA 34) ──────────────────────────────────────
+# ── Media and Cultural Studies (UoA 99) ──────────────────────────────────────
 add_person("media-cultural-studies", "Professor Gordon Lapping",
            "Head of Department · Professor of Cultural Studies", "PUP0001", "ppltn_lapping")
 set_profile("ppltn_lapping",
@@ -172,7 +175,7 @@ add_person("media-cultural-studies", "Maureen",
            "Departmental Secretary", "PUP0003", None, status="missing", uoa=0)
 
 
-# ── Social Psychology (UoA 4) ────────────────────────────────────────────────
+# ── Social Psychology (UoA 98) ───────────────────────────────────────────────
 add_person("social-psychology", "Professor G. W. Tipping",
            "Head of Department · Professor of Social Psychology", "PUP0011", "ppltn_tipping")
 set_profile("ppltn_tipping",
@@ -221,14 +224,14 @@ add_person("directorate", "Keith Ponting", "Staff Reporter, The Poppletonian", "
 
 # ── UoA narratives ───────────────────────────────────────────────────────────
 UOA_META = {
-    "34": {"narrative":
+    "99": {"narrative":
         "Media and Cultural Studies at Poppleton is built on practice-based "
         "research. Following the reclassification of Professor Lapping and Mr "
         "Odgers as 'REF-excluded research active' and the subsequent Poppletonian "
         "Apology, the unit has reframed its industrial action as practice and its "
         "barricaded office as a site-specific output. Submissions are made in the "
         "spirit of the University motto, Finem respice! — 'consider the end'."},
-    "4": {"narrative":
+    "98": {"narrative":
         "Social Psychology at Poppleton is organised around observation and the "
         "psychology of being watched. Professor Tipping's two-way-mirror programme "
         "anchors the unit's claim to blue-skies research, a claim he defends, when "
@@ -251,9 +254,9 @@ def _case(cid, uoa, title, status, slot, contributors, references,
     }
 
 
-CASES_UOA34 = [
+CASES_UOA99 = [
     _case(
-        "cs-poppleton-dogsbody-vassal", "34",
+        "cs-poppleton-dogsbody-vassal", "99",
         "Dogsbody and Vassal: Fourteen Months of Practice-Based Research",
         "finished", 1,
         ["Professor Gordon Lapping", "Ted Odgers"],
@@ -288,7 +291,7 @@ CASES_UOA34 = [
         "changed public conversation about practice, labour and the agile office).",
     ),
     _case(
-        "cs-poppleton-ref-excluded", "34",
+        "cs-poppleton-ref-excluded", "99",
         "REF-Excluded but Research Active: The Poppletonian Apology",
         "proof", 2,
         ["Professor Gordon Lapping", "Ted Odgers"],
@@ -318,7 +321,7 @@ CASES_UOA34 = [
         "classification and institutional candour.",
     ),
     _case(
-        "cs-poppleton-heritage", "34",
+        "cs-poppleton-heritage", "99",
         "The Higher Education Experience: From Barricade to Heritage Attraction",
         "draft", 3,
         ["Professor Gordon Lapping", "Ted Odgers"],
@@ -345,9 +348,9 @@ CASES_UOA34 = [
     ),
 ]
 
-CASES_UOA4 = [
+CASES_UOA98 = [
     _case(
-        "cs-poppleton-two-way-mirror", "4",
+        "cs-poppleton-two-way-mirror", "98",
         "Behind the Glass: The Two-Way Mirror and the Blue-Skies Defence",
         "proof", 1,
         ["Professor G. W. Tipping"],
@@ -375,7 +378,7 @@ CASES_UOA4 = [
     ),
 ]
 
-CASE_STUDIES = CASES_UOA34 + CASES_UOA4   # the faculty bundle carries both UoAs
+CASE_STUDIES = CASES_UOA99 + CASES_UOA98   # the faculty bundle carries both UoAs
 
 
 # ── Canonical unit Markdown (mirrors app.py _unit_to_markdown) ────────────────
@@ -444,31 +447,31 @@ def build_faculty():
     }
 
 
-UOA34_NAME = "Communication, Cultural and Media Studies, Library and Information Management"
+UOA99_NAME = "Communication, Cultural and Media Studies, Library and Information Management"
 
 
-def build_uoa34():
+def build_uoa99():
     unit = ROSTER["media-cultural-studies"]
     sids = [p["scholar_id"] for p in unit["staff"] if p["scholar_id"]]
     return {
         "_meta": _meta_block(),
-        "scope": {"kind": "uoa", "code": "34", "name": UOA34_NAME},
-        "uoa": {"code": "34", "name": UOA34_NAME},   # back-compat for older readers
+        "scope": {"kind": "uoa", "code": "99", "name": UOA99_NAME},
+        "uoa": {"code": "99", "name": UOA99_NAME},   # back-compat for older readers
         "units": [{"slug": "media-cultural-studies",
                    "markdown": unit_markdown("media-cultural-studies", unit)}],
         "scholar_cache": {sid: CACHE[sid] for sid in sids if sid in CACHE},
         "ref_flags": {sid: REF_FLAGS[sid] for sid in sids if sid in REF_FLAGS},
         "scholar_meta": {},
-        "case_studies": CASES_UOA34,
-        "uoa_meta": {"34": UOA_META["34"]},
+        "case_studies": CASES_UOA99,
+        "uoa_meta": {"99": UOA_META["99"]},
     }
 
 
 if __name__ == "__main__":
     fac = Path(__file__).with_name("University-of-Poppleton_Faculty.json")
     fac.write_text(json.dumps(build_faculty(), indent=2, ensure_ascii=False), encoding="utf-8")
-    uoa = Path(__file__).with_name("University-of-Poppleton_UoA-34_UoA.json")
-    uoa.write_text(json.dumps(build_uoa34(), indent=2, ensure_ascii=False), encoding="utf-8")
+    uoa = Path(__file__).with_name("University-of-Poppleton_UoA-99_UoA.json")
+    uoa.write_text(json.dumps(build_uoa99(), indent=2, ensure_ascii=False), encoding="utf-8")
 
     n_people = sum(len(u["staff"]) for u in ROSTER.values())
     n_pubs = sum(len(p["recent_publications"]) for p in CACHE.values())
@@ -476,8 +479,8 @@ if __name__ == "__main__":
     print(f"Wrote {fac.name}")
     print(f"  units {len(ROSTER)} · people {n_people} ({len(CACHE)} with profiles) · "
           f"pubs {n_pubs} · ratings {n_flags} · case studies {len(CASE_STUDIES)} "
-          f"(UoA34={len(CASES_UOA34)}, UoA4={len(CASES_UOA4)}) · narratives {len(UOA_META)}")
+          f"(UoA99={len(CASES_UOA99)}, UoA98={len(CASES_UOA98)}) · narratives {len(UOA_META)}")
     print(f"Wrote {uoa.name}")
     mcs = ROSTER["media-cultural-studies"]
-    print(f"  UoA 34 · 1 unit · {len(mcs['staff'])} people · "
-          f"{len(CASES_UOA34)} case studies ({', '.join(c['status'] for c in CASES_UOA34)})")
+    print(f"  UoA 99 · 1 unit · {len(mcs['staff'])} people · "
+          f"{len(CASES_UOA99)} case studies ({', '.join(c['status'] for c in CASES_UOA99)})")
