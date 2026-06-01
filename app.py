@@ -109,7 +109,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "3.1.3"
+__version__ = "3.1.4"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -1062,6 +1062,11 @@ def api_case_study_write():
     data = _load_case_studies()
 
     if request.method == "DELETE":
+        # Bulk delete: ?all=1 (or body {"all": true}) clears every case study.
+        if str(request.args.get("all") or body.get("all") or "").lower() in ("1", "true", "yes"):
+            n = len(data)
+            _save_case_studies({})
+            return jsonify({"ok": True, "removed_all": True, "count": n})
         cid = body.get("id") or request.args.get("id")
         existed = data.pop(cid, None) is not None
         _save_case_studies(data)
@@ -1088,9 +1093,10 @@ def api_case_study_write():
     for f in _CASE_STUDY_LISTS:
         if f in body and isinstance(body[f], list):
             rec[f] = body[f]
-    # Inclusion slot: an integer "№N of required", unique within the UoA, or
-    # None = a draft/candidate not slotted for inclusion. Assigning a slot held
-    # by another case study in the same UoA bumps that one back to draft.
+    # Inclusion slot: an integer "№N of required", or None = a draft/candidate
+    # not slotted for inclusion. The number is whatever the user sets — we no
+    # longer force uniqueness within the UoA (two case studies may share a slot
+    # if the user chooses; the UI flags duplicates but doesn't block them).
     if "slot" in body:
         raw = body.get("slot")
         if raw in (None, "", "draft", 0, "0"):
@@ -1101,10 +1107,6 @@ def api_case_study_write():
             except (TypeError, ValueError):
                 n = 0
             rec["slot"] = n if n > 0 else None
-        if rec["slot"] is not None:
-            for oid, other in data.items():
-                if oid != cid and str(other.get("uoa")) == rec["uoa"] and other.get("slot") == rec["slot"]:
-                    other["slot"] = None
     rec["status"] = status
     rec["updated_at"] = now
     # Stamp the version log on creation or any status transition.

@@ -2210,9 +2210,11 @@ async function openSettings() {
   body.innerHTML = `<p class="spinner">Loading…</p>`;
   let about = {}, targets = { default: { multiplier: 2.5, min_per_person: 1, max_per_person: 5 } };
   let fetchCfg = { cooldown_minutes: 10, idle_minutes: 20, cache_ttl_days: 7 };
+  let csCount = 0;
   try { about = await (await fetch("/api/about")).json(); } catch {}
   try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
   try { fetchCfg = await (await fetch("/api/settings")).json(); } catch {}
+  try { csCount = ((await (await fetch("/api/case-studies")).json()).case_studies || []).length; } catch {}
   const t = targets.default || { multiplier: 2.5, min_per_person: 1, max_per_person: 5 };
   // Danger-zone targets: every faculty, and every UoA currently in use.
   const dzFaculties = (FACULTIES || []).map(f =>
@@ -2333,6 +2335,12 @@ async function openSettings() {
             <p>Removes the UoA tag from units and people and unassigns its impact case studies. Staff, units and case-study content are kept — only the “who is included” relations are cleared.</p></div>
         </div>
         ${dzUoas}
+        <div class="dz-item dz-sep">
+          <div class="dz-desc"><strong>Delete all impact case studies</strong>
+            <p>Permanently removes every impact case study across all UoAs (${csCount} currently). There is no in-app undo. Staff, units and ratings are untouched.</p></div>
+        </div>
+        <div class="dz-row"><span class="dz-name">${csCount} case stud${csCount === 1 ? "y" : "ies"}</span>
+          <button class="tb-btn dz-btn" id="dz-del-all-cs" ${csCount ? "" : "disabled"}>Delete all case studies</button></div>
       </div>
     </section>
 
@@ -2466,6 +2474,19 @@ async function openSettings() {
       const r = await fetch("/api/delete-unit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ slug }) });
       const d = await r.json(); if (!r.ok) throw new Error(d.error || "failed");
       alert(`Deleted “${label}”. Reloading…`); location.reload();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  });
+  // Danger zone — delete every impact case study (all UoAs).
+  body.querySelector("#dz-del-all-cs")?.addEventListener("click", async () => {
+    if (!confirm("Delete ALL impact case studies, across every UoA?\n\n"
+      + "This permanently removes every case study. There is no in-app undo. "
+      + "Staff, units and ratings are not affected.")) return;
+    try {
+      const r = await fetch("/api/case-study?all=1", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: "{}" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "delete failed");
+      alert(`Deleted ${d.count} case stud${d.count === 1 ? "y" : "ies"}. Reloading…`);
+      location.reload();
     } catch (e) { alert("Delete failed: " + e.message); }
   });
   // Danger zone — clear a UoA's relations (keeps underlying data).
@@ -3009,8 +3030,10 @@ async function openCaseStudyEditor(cs, uoaCode) {
       .concat(Array.from({ length: required }, (_, i) => i + 1).map(n => {
         const taken = takenSlots.has(n);
         const sel = String(current) === String(n);
-        return `<option value="${n}" ${sel ? "selected" : ""} ${taken && !sel ? "disabled" : ""}>`
-             + `№${n} of ${required}${taken && !sel ? " — taken by “" + escapeHTML(takenSlots.get(n)) + "”" : ""}</option>`;
+        // Taken slots are still selectable (the user may deliberately set a
+        // duplicate); we only flag them, never block.
+        return `<option value="${n}" ${sel ? "selected" : ""}>`
+             + `№${n} of ${required}${taken && !sel ? " — also “" + escapeHTML(takenSlots.get(n)) + "”" : ""}</option>`;
       })).join("");
 
   // UoA scholars (current view) + their flagged outputs for the picker.
