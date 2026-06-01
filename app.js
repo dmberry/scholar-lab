@@ -2585,6 +2585,7 @@ async function openSettings() {
 document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-settings") || e.target.closest("#tb-help-settings")) openSettings();
   if (e.target.closest("#tb-ref-report")) openRefReport();
+  if (e.target.closest("#tb-optimise")) openOptimiser();
   if (e.target.closest("#tb-ref-targets")) openSettings();
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
   if (e.target.closest("#tb-dark-toggle")) setDark(!isDark());
@@ -2742,6 +2743,136 @@ function deSlugTitle(pubKey) {
   if (!m) return pubKey || "Untitled";
   const title = m[2].replace(/-/g, " ");
   return `${m[1]} · ${title.charAt(0).toUpperCase()}${title.slice(1)}`;
+}
+
+// ── Selection optimiser (decision support) ────────────────────────────────
+// Greedy GPA-maximising selection: satisfy each person's floor (min), then
+// fill up to the UoA volume target with the globally highest-rated remaining
+// outputs, never exceeding any person's cap (max). Optimal for maximising the
+// rating sum under per-person upper bounds + a cardinality target.
+function optimiseSelection(people, mult, minPer, maxPer) {
+  people.forEach(p => p.outputs.sort((a, b) => b.rating - a.rating));
+  const N = people.length;
+  const volume = Math.round(mult * N);
+  const chosen = new Set();           // "sid|key"
+  const count = {};
+  let floorTotal = 0;
+  for (const p of people) {
+    const take = Math.min(minPer, p.outputs.length, maxPer);
+    for (let i = 0; i < take; i++) chosen.add(p.sid + "|" + p.outputs[i].key);
+    count[p.sid] = take; floorTotal += take;
+  }
+  const pool = [];
+  for (const p of people)
+    for (let i = count[p.sid]; i < Math.min(p.outputs.length, maxPer); i++)
+      pool.push({ sid: p.sid, key: p.outputs[i].key, rating: p.outputs[i].rating });
+  pool.sort((a, b) => b.rating - a.rating);
+  let budget = volume - floorTotal;
+  for (const item of pool) {
+    if (budget <= 0) break;
+    if (count[item.sid] >= maxPer) continue;
+    chosen.add(item.sid + "|" + item.key); count[item.sid]++; budget--;
+  }
+  return { volume, floorTotal, chosen, count, N };
+}
+
+async function openOptimiser() {
+  await loadRefFlags();
+  const scope = currentScope();
+  // Cohort: people in the current view with ≥1 numeric rating.
+  const seen = new Map();
+  for (const p of (STAFF || [])) {
+    if (p.scholar_id && refFlagCount(p.scholar_id) > 0 && !seen.has(p.scholar_id)) seen.set(p.scholar_id, p);
+  }
+  const cohort = [...seen.values()].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  const back = document.createElement("div");
+  back.className = "modal";
+  back.innerHTML = `<div class="modal-card help-card"><button class="close" aria-label="Close" data-opt-close>×</button><div id="opt-body"><p class="spinner">Optimising…</p></div></div>`;
+  document.body.appendChild(back);
+  const body = back.querySelector("#opt-body");
+  const close = () => back.remove();
+  back.querySelector("[data-opt-close]").onclick = close;
+  back.addEventListener("click", (e) => { if (e.target === back) close(); });
+
+  if (!cohort.length) {
+    body.innerHTML = `<h2 class="help-h">Selection optimiser — ${escapeHTML(scope.label)}</h2>
+      <p class="affil">No rated outputs in this view yet. Rate people's outputs (1*–4*) on their cards first.</p>`;
+    return;
+  }
+  let batch = {}, targets = { default: { multiplier: 2.5, min_per_person: 1, max_per_person: 5 } };
+  try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(cohort.map(p => p.scholar_id).join(",")))).json(); } catch {}
+  try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
+  const t = targets.default || { multiplier: 2.5, min_per_person: 1, max_per_person: 5 };
+  const mult = t.multiplier || 2.5, minPer = t.min_per_person ?? 1, maxPer = t.max_per_person ?? 5;
+
+  // Build per-person numeric outputs with titles.
+  const people = cohort.map(p => {
+    const flags = refFlagsFor(p.scholar_id);
+    const byKey = new Map(((batch[p.scholar_id]?.recent_publications) || []).map(pub => [pub.pub_key, pub]));
+    const outputs = Object.entries(flags)
+      .filter(([, r]) => typeof r === "number")
+      .map(([key, rating]) => {
+        const pub = byKey.get(key);
+        return { key, rating, title: pub?.title || deSlugTitle(key), year: pub?.year || "" };
+      });
+    return { sid: p.scholar_id, name: p.name, title: p.title, outputs };
+  }).filter(p => p.outputs.length);
+
+  const res = optimiseSelection(people, mult, minPer, maxPer);
+  const allRatings = people.flatMap(p => p.outputs.map(o => o.rating));
+  const selRatings = people.flatMap(p => p.outputs.filter(o => res.chosen.has(p.sid + "|" + o.key)).map(o => o.rating));
+  const mean = (a) => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+  const gpaAll = mean(allRatings), gpaSel = mean(selRatings);
+  const totalAvail = allRatings.length;
+  const band = (r) => `<span class="rr-band band-${String(r).replace(".", "_")}">${REF_BAND_LABELS[r] || r}</span>`;
+
+  const rows = people.map(p => {
+    const sel = p.outputs.filter(o => res.chosen.has(p.sid + "|" + o.key));
+    const over = p.outputs.length > maxPer;
+    const under = sel.length < minPer && p.outputs.length >= minPer;
+    return `<tr class="${over ? "opt-over" : ""}${under ? " opt-under" : ""}">
+      <td>${escapeHTML(p.name)}</td>
+      <td class="num">${p.outputs.length}</td>
+      <td class="num"><strong>${sel.length}</strong></td>
+      <td class="num">${maxPer}</td>
+      <td>${over ? `<span class="opt-flag">over cap — ${p.outputs.length - sel.length} dropped</span>` : ""}${under ? `<span class="opt-flag">under min</span>` : ""}</td>
+    </tr>`;
+  }).join("");
+
+  const detail = people.map(p => {
+    const sel = p.outputs.filter(o => res.chosen.has(p.sid + "|" + o.key)).sort((a, b) => b.rating - a.rating);
+    const dropped = p.outputs.filter(o => !res.chosen.has(p.sid + "|" + o.key)).sort((a, b) => b.rating - a.rating);
+    if (!sel.length && !dropped.length) return "";
+    return `<div class="opt-person"><div class="opt-person-h">${escapeHTML(p.name)}</div>
+      <ol class="opt-pubs">${sel.map(o => `<li>${band(o.rating)} ${escapeHTML(o.title)} <span class="opt-yr">${escapeHTML(String(o.year || ""))}</span></li>`).join("")}</ol>
+      ${dropped.length ? `<div class="opt-dropped">Not submitted: ${dropped.map(o => `${REF_BAND_LABELS[o.rating] || o.rating} ${escapeHTML(o.title)}`).join("; ")}</div>` : ""}</div>`;
+  }).join("");
+
+  const shortfall = totalAvail < res.volume;
+  const over = res.floorTotal > res.volume;
+  body.innerHTML = `
+    <h2 class="help-h">Selection optimiser — ${escapeHTML(scope.label)}</h2>
+    <p class="help-lead">Best mean-GPA selection that hits the volume target while respecting the
+       per-person cap. Volume = ${mult} × ${res.N} staff with rated outputs = <strong>${res.volume}</strong> outputs;
+       cap ${maxPer}/person, floor ${minPer}/person.</p>
+    <div class="opt-kpis">
+      <div class="opt-kpi"><div class="opt-k">Optimised GPA</div><div class="opt-v rag-${gpaRag(gpaSel)}">${gpaSel == null ? "—" : gpaSel.toFixed(2)}</div></div>
+      <div class="opt-kpi"><div class="opt-k">GPA if all submitted</div><div class="opt-v">${gpaAll == null ? "—" : gpaAll.toFixed(2)}</div></div>
+      <div class="opt-kpi"><div class="opt-k">Selected / target</div><div class="opt-v">${selRatings.length} / ${res.volume}</div></div>
+      <div class="opt-kpi"><div class="opt-k">Rated available</div><div class="opt-v">${totalAvail}</div></div>
+    </div>
+    ${shortfall ? `<p class="opt-note opt-warn">Short of the volume target by ${res.volume - totalAvail}: rate more outputs, or this UoA can't reach the target.</p>` : ""}
+    ${over ? `<p class="opt-note opt-warn">The per-person floor (${minPer}/person) already exceeds the volume target, so the floor is submitted (over target).</p>` : ""}
+    <table class="opt-table">
+      <thead><tr><th>Researcher</th><th class="num">Rated</th><th class="num">Submit</th><th class="num">Cap</th><th></th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <h3 class="help-s">Suggested submission</h3>
+    ${detail}
+    <p class="help-foot">Indicative only. Verify the volume rule, the per-person cap, and output
+       eligibility against the current REF 2029 guidance — the parameters are configurable in
+       Settings → REF 2029 targets.</p>`;
 }
 
 async function openRefReport() {
