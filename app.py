@@ -88,7 +88,14 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.51"
+__version__ = "0.2.52"
+# Bump when an export schema changes in a way older readers can't ingest.
+# Every export embeds this; imports warn (but still try) when they meet a
+# higher number than they understand. See _format_warning().
+EXPORT_FORMAT_VERSION = 1
+# The REF exercise year can be reconfigured but never set earlier than the
+# current exercise (REF 2029); earlier values make no sense for the window.
+REF_MIN_YEAR = 2029
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -438,10 +445,49 @@ def _load_staff() -> dict:
     return {"faculties": out, "university": _UNIVERSITY, "_parse_warnings": warnings}
 
 
+def _generator_line() -> str:
+    """A version stamp embedded in every text export. Parsers treat
+    'Generator:' as just another header key, so it round-trips harmlessly;
+    importers read the format number from it to detect incompatibilities."""
+    return f"Generator: Scholar Dashboard v{__version__} (format {EXPORT_FORMAT_VERSION})"
+
+
+def _export_meta() -> dict:
+    """Version block embedded in every JSON / bundle export."""
+    return {
+        "app": "Scholar Dashboard",
+        "app_version": __version__,
+        "format_version": EXPORT_FORMAT_VERSION,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
+def _format_warning(found) -> str | None:
+    """Return a human-readable warning if an import declares a format
+    version newer than this build understands; else None. We never block —
+    we try the import and surface the risk."""
+    try:
+        fv = int(found)
+    except (TypeError, ValueError):
+        return None
+    if fv > EXPORT_FORMAT_VERSION:
+        return (f"File was made by a newer export format (v{fv}); this build "
+                f"reads up to v{EXPORT_FORMAT_VERSION}. Imported on a best-effort "
+                f"basis — some fields may be ignored.")
+    return None
+
+
+def _scan_generator_format(text: str):
+    """Pull the 'format N' number out of a Generator: header line, if any."""
+    m = re.search(r"^Generator:.*\(format\s+(\d+)\)", text, re.MULTILINE)
+    return int(m.group(1)) if m else None
+
+
 def _unit_to_markdown(unit: dict, faculty: dict, school: dict | None) -> str:
     """Serialise one unit (with its faculty/school context) to a Markdown
     unit file. Canonical output — re-serialising is idempotent."""
-    L = [f"University: {_UNIVERSITY}",
+    L = [_generator_line(),
+         f"University: {_UNIVERSITY}",
          f"Faculty: {faculty.get('name', '')}"]
     if faculty.get("url"):
         L.append(f"Faculty-URL: {faculty['url']}")
@@ -472,6 +518,36 @@ def _unit_to_markdown(unit: dict, faculty: dict, school: dict | None) -> str:
             line += f" | uoa:{p['uoa']}"
         L.append(line)
     return "\n".join(L) + "\n"
+
+
+def _unit_context_map() -> dict:
+    """slug → (unit, faculty_dict, school_dict|None) for the whole dataset, so
+    a unit can be re-serialised to canonical Markdown (with a current Generator
+    stamp) on export rather than served as possibly-stale on-disk text."""
+    data = _load_staff()
+    m: dict = {}
+    for fac in data.get("faculties", []):
+        for sch in fac.get("schools", []):
+            for u in sch.get("units", []):
+                m[_slugify(u.get("slug", ""))] = (u, fac, sch)
+        for u in fac.get("units", []):
+            m[_slugify(u.get("slug", ""))] = (u, fac, None)
+    for u in (data.get("units") or []):
+        m[_slugify(u.get("slug", ""))] = (u, {"name": data.get("university", "")}, None)
+    return m
+
+
+def _unit_markdown(slug: str, ctx: dict | None = None) -> str | None:
+    """Canonical Markdown for one unit (freshly serialised → carries the
+    version stamp). Falls back to raw on-disk text if the unit isn't in the
+    loaded tree. Returns None if neither exists."""
+    slug = _slugify(slug)
+    ctx = ctx if ctx is not None else _unit_context_map()
+    if slug in ctx:
+        u, fac, sch = ctx[slug]
+        return _unit_to_markdown(u, fac, sch)
+    p = DATA_DIR / f"{slug}.md"
+    return p.read_text(encoding="utf-8") if p.exists() else None
 
 
 def _write_staff_markdown(payload: dict) -> int:
@@ -1006,6 +1082,7 @@ def api_case_study_write():
 
 def _case_study_to_markdown(cs: dict) -> str:
     L = ["# Impact Case Study", ""]
+    L.append(_generator_line())
     L.append(f"UoA: {cs.get('uoa', '')}")
     L.append(f"Title: {cs.get('title', '')}")
     L.append(f"Status: {cs.get('status', 'not_started')}")
@@ -1108,6 +1185,8 @@ def api_case_studies_zip():
         return jsonify({"error": "no case studies to export"}), 404
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("MANIFEST.json", json.dumps({**_export_meta(), "kind": "case-studies",
+                                                  "uoa": uoa, "count": len(items)}, indent=2))
         for c in items:
             slug = _slugify(c.get("title") or c.get("id"))[:50] or c.get("id")
             zf.writestr(f"{c.get('uoa','x')}-{slug}.md", _case_study_to_markdown(c))
@@ -1135,7 +1214,9 @@ def api_case_study_import():
     data = _load_case_studies()
     data[cid] = parsed
     _save_case_studies(data)
-    return jsonify({"ok": True, "case_study": parsed})
+    warn = _format_warning(_scan_generator_format(text))
+    return jsonify({"ok": True, "case_study": parsed,
+                    "warnings": [warn] if warn else []})
 
 
 @app.route("/api/uoa-meta", methods=["GET", "POST"])
@@ -1247,7 +1328,7 @@ def api_settings():
     cm = _clamp(body.get("cooldown_minutes"), 0, 180,  SCHOLAR_COOLDOWN_SECONDS / 60)
     im = _clamp(body.get("idle_minutes"),     0, 1440, IDLE_TIMEOUT_SECONDS / 60)
     td = _clamp(body.get("cache_ttl_days"),   0.04, 365, CACHE_TTL_SECONDS / 86400)
-    ry = _int(body.get("ref_year"),          2000, 2100, REF_YEAR)
+    ry = _int(body.get("ref_year"),          REF_MIN_YEAR, 2100, max(REF_YEAR, REF_MIN_YEAR))
     ws = _int(body.get("ref_window_start"),  1900, 2100, REF_START_YEAR_PY)
     we = _int(body.get("ref_window_end"),    1900, 2100, REF_END_YEAR_PY)
     if we < ws:
@@ -1368,13 +1449,13 @@ def api_unit_file():
     """
     if request.method == "GET":
         slug = _slugify(request.args.get("slug", ""))
-        path = DATA_DIR / f"{slug}.md"
-        if not path.exists():
+        md = _unit_markdown(slug)
+        if md is None:
             return jsonify({"error": f"no unit file for slug '{slug}'"}), 404
         return Response(
-            path.read_text(encoding="utf-8"),
+            md,
             mimetype="text/markdown",
-            headers={"Content-Disposition": f'attachment; filename="{path.name}"'},
+            headers={"Content-Disposition": f'attachment; filename="{slug}.md"'},
         )
     # POST — body is the raw Markdown text of one unit file.
     text = request.get_data(as_text=True) or ""
@@ -1390,6 +1471,9 @@ def api_unit_file():
     if not parsed.get("ok"):
         return jsonify({"error": "could not parse uploaded unit file",
                         "warnings": parsed.get("warnings", [])}), 400
+    fmt_warn = _format_warning(_scan_generator_format(text))
+    if fmt_warn:
+        parsed.setdefault("warnings", []).append(fmt_warn)
     global _UNIVERSITY
     if parsed.get("university"):
         _UNIVERSITY = parsed["university"]
@@ -1478,7 +1562,8 @@ def api_export():
         if scope_slugs is not None:
             src = [u for u in src if _slugify(u.get("slug", "")) in scope_slugs]
         payload["units"] = [{**u, "staff": _enrich_staff_list(u.get("staff", []))} for u in src]
-    payload["exported_at"] = datetime.now(timezone.utc).isoformat()
+    payload["_meta"] = _export_meta()
+    payload["exported_at"] = payload["_meta"]["exported_at"]   # back-compat alias
 
     fname_base = re.sub(r"[^A-Za-z0-9._-]+", "-", name_arg).strip("-") or "scholar-dashboard"
     body = json.dumps(payload, indent=2, ensure_ascii=False)
@@ -1511,12 +1596,17 @@ def api_export_units_zip():
 
     buf = io.BytesIO()
     written = 0
+    ctx = _unit_context_map()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        manifest_slugs = []
         for slug in slugs:
-            path = DATA_DIR / f"{slug}.md"
-            if path.exists():
-                zf.writestr(path.name, path.read_text(encoding="utf-8"))
+            md = _unit_markdown(slug, ctx)
+            if md is not None:
+                zf.writestr(f"{_slugify(slug)}.md", md)
+                manifest_slugs.append(slug)
                 written += 1
+        zf.writestr("MANIFEST.json", json.dumps({**_export_meta(), "kind": "units",
+                                                  "units": manifest_slugs}, indent=2))
     if not written:
         return jsonify({"error": "no unit files matched the requested scope"}), 404
     buf.seek(0)
@@ -1526,6 +1616,177 @@ def api_export_units_zip():
         mimetype="application/zip",
         headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
+
+
+# ── Complete-UoA bundle (load / save an entire UoA) ─────────────────────────
+# In UoA mode, "Save" exports one self-contained <name>_UoA.json carrying the
+# unit files, the cached Scholar payloads (so pubs travel offline), the REF
+# ratings, the institutional profiles, every impact case study, and the UoA
+# narrative. "Load" ingests it back. The bundle re-uses the existing per-unit
+# Markdown so unit data round-trips losslessly.
+_UOA_BUNDLE_FORMAT = "scholar-dashboard-uoa-bundle"
+
+
+def _assemble_uoa_bundle(code: str, slugs: list[str], uoa_name: str = "") -> dict:
+    code = str(code)
+    want = {_slugify(s) for s in slugs if s and s.strip()} or None
+    units_md: list[dict] = []
+    scholar_ids: set[str] = set()
+    staff_keys: set[str] = set()
+
+    def _walk(units, fac, sch):
+        for u in units:
+            slug = _slugify(u.get("slug", ""))
+            if want is not None and slug not in want:
+                continue
+            units_md.append({"slug": slug, "markdown": _unit_to_markdown(u, fac, sch)})
+            for person in u.get("staff", []):
+                if person.get("scholar_id"):
+                    scholar_ids.add(person["scholar_id"])
+                staff_keys.add(person.get("staff_id") or person.get("scholar_id") or person.get("name") or "")
+
+    staff_data = _load_staff()
+    for fac in staff_data.get("faculties", []):
+        for sch in fac.get("schools", []):
+            _walk(sch.get("units", []), fac, sch)
+        _walk(fac.get("units", []), fac, None)
+    if isinstance(staff_data.get("units"), list):
+        _walk(staff_data["units"], {"name": staff_data.get("university", "")}, None)
+
+    flags = _load_ref_flags()
+    ref_flags = {sid: flags[sid] for sid in scholar_ids if sid in flags}
+
+    scholar_cache: dict = {}
+    for sid in scholar_ids:
+        p = _cache_path(sid)
+        if p.exists():
+            try:
+                scholar_cache[sid] = json.loads(p.read_text())
+            except (OSError, ValueError):
+                pass
+
+    try:
+        smeta = json.loads(SCHOLAR_META_FILE.read_text())
+    except (OSError, ValueError):
+        smeta = {}
+    scholar_meta = {k: v for k, v in smeta.items() if k in staff_keys}
+
+    cases = [c for c in _load_case_studies().values() if str(c.get("uoa")) == code]
+
+    try:
+        umeta = json.loads(UOA_META_FILE.read_text())
+    except (OSError, ValueError):
+        umeta = {}
+
+    return {
+        "_meta": {**_export_meta(), "kind": "uoa-bundle", "format": _UOA_BUNDLE_FORMAT},
+        "uoa": {"code": code, "name": uoa_name},
+        "units": units_md,
+        "scholar_cache": scholar_cache,
+        "ref_flags": ref_flags,
+        "scholar_meta": scholar_meta,
+        "case_studies": cases,
+        "uoa_meta": umeta.get(code, {"narrative": ""}),
+    }
+
+
+@app.route("/api/uoa-bundle.json")
+def api_uoa_bundle_get():
+    """Export a complete UoA bundle. ?code=NN (the UoA), ?slugs=a,b,c (the
+    contributing unit slugs), ?name= (UoA display name). Filename ends _UoA."""
+    code = (request.args.get("code") or request.args.get("uoa") or "").strip()
+    if not code:
+        return jsonify({"error": "code (UoA) required"}), 400
+    slugs = [s for s in request.args.get("slugs", "").split(",") if s.strip()]
+    bundle = _assemble_uoa_bundle(code, slugs, request.args.get("name", ""))
+    base = re.sub(r"[^A-Za-z0-9._-]+", "-", request.args.get("file") or f"uoa-{code}").strip("-") or f"uoa-{code}"
+    body = json.dumps(bundle, indent=2, ensure_ascii=False)
+    return Response(body, mimetype="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{base}_UoA.json"'})
+
+
+@app.route("/api/uoa-bundle-import", methods=["POST"])
+def api_uoa_bundle_import():
+    """Ingest a UoA bundle (body = the bundle JSON). Non-destructive: unit
+    files are backed up before overwrite, and ref-flags / scholar-meta /
+    case studies are merged, not replaced wholesale."""
+    bundle = request.get_json(force=True, silent=True) or {}
+    meta = bundle.get("_meta") or {}
+    if meta.get("format") != _UOA_BUNDLE_FORMAT and meta.get("kind") != "uoa-bundle":
+        return jsonify({"error": "this file is not a UoA bundle"}), 400
+    warnings = []
+    w = _format_warning(meta.get("format_version"))
+    if w:
+        warnings.append(w)
+    summary = {"units": 0, "scholars": 0, "case_studies": 0, "ref_flags": 0}
+
+    # 1. Unit Markdown files (canonical text round-trips as-is).
+    DATA_DIR.mkdir(exist_ok=True)
+    for u in bundle.get("units", []):
+        slug = _slugify(u.get("slug", ""))
+        text = u.get("markdown", "")
+        if not slug or not text.strip():
+            continue
+        dest = DATA_DIR / f"{slug}.md"
+        if dest.exists():
+            bak = DATA_DIR / ".bak" / datetime.now().strftime("%Y%m%d-%H%M%S")
+            bak.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(dest, bak / dest.name)
+        dest.write_text(text, encoding="utf-8")
+        summary["units"] += 1
+
+    # 2. Cached Scholar payloads (pubs) — write straight to the cache.
+    CACHE_DIR.mkdir(exist_ok=True)
+    for sid, payload in (bundle.get("scholar_cache") or {}).items():
+        try:
+            _cache_path(sid).write_text(json.dumps(payload, indent=2))
+            summary["scholars"] += 1
+        except (OSError, TypeError):
+            pass
+
+    # 3. REF ratings — merge per scholar.
+    flags = _load_ref_flags()
+    for sid, m in (bundle.get("ref_flags") or {}).items():
+        if isinstance(m, dict):
+            flags.setdefault(sid, {}).update(m)
+            summary["ref_flags"] += len(m)
+    _save_ref_flags(flags)
+
+    # 4. Institutional profiles — merge by key.
+    try:
+        smeta = json.loads(SCHOLAR_META_FILE.read_text())
+    except (OSError, ValueError):
+        smeta = {}
+    smeta.update(bundle.get("scholar_meta") or {})
+    try:
+        SCHOLAR_META_FILE.write_text(json.dumps(smeta, indent=2, ensure_ascii=False))
+    except OSError:
+        pass
+
+    # 5. Impact case studies — upsert by id.
+    data = _load_case_studies()
+    for i, c in enumerate(bundle.get("case_studies") or []):
+        cid = c.get("id") or ("cs-" + datetime.now().strftime("%Y%m%d%H%M%S%f") + str(i))
+        c["id"] = cid
+        data[cid] = c
+        summary["case_studies"] += 1
+    _save_case_studies(data)
+
+    # 6. UoA narrative.
+    um = bundle.get("uoa_meta") or {}
+    code = str((bundle.get("uoa") or {}).get("code") or "")
+    if code and (um.get("narrative") or "").strip():
+        try:
+            allmeta = json.loads(UOA_META_FILE.read_text())
+        except (OSError, ValueError):
+            allmeta = {}
+        allmeta[code] = {"narrative": um.get("narrative", "")}
+        try:
+            UOA_META_FILE.write_text(json.dumps(allmeta, indent=2, ensure_ascii=False))
+        except OSError:
+            pass
+
+    return jsonify({"ok": True, "uoa": code, "summary": summary, "warnings": warnings})
 
 
 @app.route("/api/scholar-batch")

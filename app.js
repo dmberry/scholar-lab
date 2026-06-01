@@ -1854,7 +1854,7 @@ async function openSettings() {
       <p class="set-help">The exercise year names the “REF &lt;year&gt;” chip and reports;
          the window bounds which publication years count as eligible.</p>
       <div class="set-grid3">
-        <label>Exercise year <input type="number" id="set-ref-year" step="1" min="2000" max="2100" value="${fetchCfg.ref_year || 2029}"></label>
+        <label>Exercise year <input type="number" id="set-ref-year" step="1" min="2029" max="2100" value="${fetchCfg.ref_year || 2029}"></label>
         <label>Window start <input type="number" id="set-ref-start" step="1" min="1900" max="2100" value="${fetchCfg.ref_window_start || 2021}"></label>
         <label>Window end <input type="number" id="set-ref-end" step="1" min="1900" max="2100" value="${fetchCfg.ref_window_end || 2028}"></label>
       </div>
@@ -1916,8 +1916,22 @@ async function openSettings() {
   // REF targets — save to backend.
   body.querySelector("#set-save-ref")?.addEventListener("click", async () => {
     const saved = body.querySelector("#set-ref-saved");
+    let year = parseInt(body.querySelector("#set-ref-year").value, 10) || 2029;
+    if (year < 2029) {
+      alert("The REF exercise year cannot be earlier than 2029 — that is the current exercise. Resetting to 2029.");
+      year = 2029;
+      body.querySelector("#set-ref-year").value = 2029;
+    }
+    // Changing the exercise year relabels every chip and report and
+    // re-scopes eligibility, so make the user confirm it's deliberate.
+    if (year !== REF_YEAR &&
+        !confirm(`Change the REF exercise year from ${REF_YEAR} to ${year}?\n\n`
+               + `This relabels every "REF" chip and report and re-scopes which `
+               + `publication years count as eligible. Existing flags are kept.`)) {
+      return;
+    }
     const payload = {
-      ref_year:         parseInt(body.querySelector("#set-ref-year").value, 10) || 2029,
+      ref_year:         year,
       ref_window_start: parseInt(body.querySelector("#set-ref-start").value, 10) || 2021,
       ref_window_end:   parseInt(body.querySelector("#set-ref-end").value, 10) || 2028,
     };
@@ -2165,6 +2179,7 @@ async function renderCaseStudies() {
       <div class="cs-actions">
         <button class="tb-btn" id="cs-import" title="Import case studies from Markdown (.md) files">⬆ Import…</button>
         <button class="tb-btn" id="cs-export-all" ${items.length ? "" : "disabled"} title="Download this UoA's case studies as a .zip of Markdown files">⤓ Export all</button>
+        <button class="tb-btn" id="cs-report" title="Generate the full UoA report — narrative, selected outputs and every case study (printable)">📄 Report</button>
         <button class="tb-btn primary" id="cs-new">＋ New case study</button>
         <input type="file" id="cs-import-input" accept=".md,text/markdown,text/plain" multiple hidden>
       </div>
@@ -2175,6 +2190,7 @@ async function renderCaseStudies() {
       <span class="cs-empty-hint">creates an editable example REF3 case study you can adapt or delete · or Import from Markdown (template in docs/)</span>
     </div>`}</div>`;
   document.getElementById("cs-new")?.addEventListener("click", () => openCaseStudyEditor(null, code));
+  document.getElementById("cs-report")?.addEventListener("click", () => buildUoaReport());
   document.getElementById("cs-demo")?.addEventListener("click", () => createDemoCaseStudy(code));
   document.getElementById("cs-export-all")?.addEventListener("click", () => {
     const a = document.createElement("a");
@@ -2258,20 +2274,30 @@ async function openCaseStudyEditor(cs, uoaCode) {
   if (flaggedIds.length) {
     try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(flaggedIds.join(",")))).json(); } catch {}
   }
-  const refSel = new Set(cs.references || []);
-  const refRows = [];
+  // Faceted Scholar → Output picker: only REF-rated outputs in this UoA.
+  const ratingLabel = (r) => ({ 1: "1*", 2: "2*", 2.5: "2–3*", 3: "3*", 3.5: "3–4*", 4: "4*" }[r] || "");
+  const refByScholar = [];          // [{ sid, name, outputs: [{id, label}] }]
+  const refLabelById = new Map();   // id → display label (for the chosen list)
   for (const p of scholars) {
-    const keys = Object.keys(refFlagsFor(p.scholar_id));
+    const flags = refFlagsFor(p.scholar_id);
+    const keys = Object.keys(flags);
     if (!keys.length) continue;
     const byKey = new Map(((batch[p.scholar_id]?.recent_publications) || []).map(pub => [pub.pub_key, pub]));
-    refRows.push(`<div class="cs-ref-group"><div class="cs-ref-person">${escapeHTML(p.name)}</div>` +
-      keys.map(k => {
-        const id = p.scholar_id + ":" + k;
-        const pub = byKey.get(k);
-        const label = pub ? `${escapeHTML(pub.title || "Untitled")} (${pub.year || "n.d."})` : escapeHTML(deSlugTitle(k));
-        return `<label class="cs-ref-row"><input type="checkbox" class="cs-ref-cb" value="${escapeAttr(id)}" ${refSel.has(id) ? "checked" : ""}> ${label}</label>`;
-      }).join("") + `</div>`);
+    const outputs = keys.map(k => {
+      const id = p.scholar_id + ":" + k;
+      const pub = byKey.get(k);
+      const base = pub ? `${pub.title || "Untitled"} (${pub.year || "n.d."})` : deSlugTitle(k);
+      const rl = ratingLabel(flags[k]);
+      const label = rl ? `${base} · ${rl}` : base;
+      refLabelById.set(id, label);
+      return { id, label };
+    });
+    refByScholar.push({ sid: p.scholar_id, name: p.name, outputs });
   }
+  // Working list of chosen reference ids (ordered); saved verbatim.
+  const chosenRefs = [...(cs.references || [])];
+  const refDisplay = (id) => refLabelById.get(id)
+    || (() => { const [, k] = id.split(/:(.+)/); return deSlugTitle(k || id); })();
   // Contributors = ALL staff in the UoA (they needn't have a Scholar
   // profile), de-duped, with a name fallback so a row is never blank.
   const contribSel = new Set(cs.contributors || []);
@@ -2297,7 +2323,14 @@ async function openCaseStudyEditor(cs, uoaCode) {
       <label class="cs-f">Summary of the impact <span class="wordcount" id="cs-summary-wc"></span><textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
       <label class="cs-f">Underpinning research<textarea id="cs-underpinning" rows="4">${escapeHTML(cs.underpinning_research || "")}</textarea></label>
       <div class="cs-f"><span class="cs-f-label">References to the research (REF-flagged outputs)</span>
-        <div class="cs-checklist">${refRows.join("") || '<p class="cs-empty">No REF-flagged outputs in this UoA yet — tick the REF box on people\'s cards first.</p>'}</div></div>
+        ${refByScholar.length ? `<div class="cs-ref-picker">
+          <select id="cs-ref-scholar" class="cs-ref-sel"><option value="">Scholar…</option>${
+            refByScholar.map((s, i) => `<option value="${i}">${escapeHTML(s.name)} (${s.outputs.length})</option>`).join("")}</select>
+          <select id="cs-ref-output" class="cs-ref-sel" disabled><option value="">Output…</option></select>
+          <button type="button" class="tb-btn" id="cs-ref-add" disabled>Add</button>
+        </div>
+        <ul class="cs-ref-chosen" id="cs-ref-chosen"></ul>`
+        : '<p class="cs-empty">No REF-flagged outputs in this UoA yet — set a rating on people\'s outputs first.</p>'}</div>
       <label class="cs-f">Details of the impact<textarea id="cs-details" rows="5">${escapeHTML(cs.details || "")}</textarea></label>
       <label class="cs-f">Sources to corroborate <span class="cs-f-hint">(one per line)</span><textarea id="cs-sources" rows="3">${escapeHTML((cs.corroborating_sources || []).join("\n"))}</textarea></label>
       <div class="cs-f"><span class="cs-f-label">Contributors</span>
@@ -2315,6 +2348,43 @@ async function openCaseStudyEditor(cs, uoaCode) {
 
   // REF gives an indicative ~100-word limit for the impact summary.
   wireWordCount(body.querySelector("#cs-summary"), body.querySelector("#cs-summary-wc"), 100);
+
+  // Faceted references picker — scholar → output → Add, with a removable list.
+  const refScholarSel = body.querySelector("#cs-ref-scholar");
+  const refOutputSel  = body.querySelector("#cs-ref-output");
+  const refAddBtn     = body.querySelector("#cs-ref-add");
+  const refChosenEl   = body.querySelector("#cs-ref-chosen");
+  const renderChosen = () => {
+    if (!refChosenEl) return;
+    refChosenEl.innerHTML = chosenRefs.length
+      ? chosenRefs.map(id => `<li class="cs-ref-pill"><span>${escapeHTML(refDisplay(id))}</span>` +
+          `<button type="button" class="cs-ref-rm" data-ref-id="${escapeAttr(id)}" title="Remove">×</button></li>`).join("")
+      : `<li class="cs-ref-none">No outputs selected yet.</li>`;
+  };
+  const fillOutputs = () => {
+    if (!refOutputSel) return;
+    const s = refByScholar[refScholarSel.value];
+    const avail = s ? s.outputs.filter(o => !chosenRefs.includes(o.id)) : [];
+    refOutputSel.innerHTML = `<option value="">Output…</option>` +
+      avail.map(o => `<option value="${escapeAttr(o.id)}">${escapeHTML(o.label)}</option>`).join("");
+    refOutputSel.disabled = !s || !avail.length;
+    refAddBtn.disabled = true;
+  };
+  refScholarSel?.addEventListener("change", fillOutputs);
+  refOutputSel?.addEventListener("change", () => { refAddBtn.disabled = !refOutputSel.value; });
+  refAddBtn?.addEventListener("click", () => {
+    const id = refOutputSel.value;
+    if (id && !chosenRefs.includes(id)) chosenRefs.push(id);
+    renderChosen(); fillOutputs();
+  });
+  refChosenEl?.addEventListener("click", (ev) => {
+    const b = ev.target.closest(".cs-ref-rm"); if (!b) return;
+    const i = chosenRefs.indexOf(b.dataset.refId);
+    if (i >= 0) chosenRefs.splice(i, 1);
+    renderChosen(); fillOutputs();
+  });
+  renderChosen();
+
   body.querySelector("#cs-download")?.addEventListener("click", () => {
     const a = document.createElement("a");
     a.href = `/api/case-study.md?id=${encodeURIComponent(cs.id)}`; a.download = "";
@@ -2331,7 +2401,7 @@ async function openCaseStudyEditor(cs, uoaCode) {
       underpinning_research: body.querySelector("#cs-underpinning").value.trim(),
       details: body.querySelector("#cs-details").value.trim(),
       corroborating_sources: body.querySelector("#cs-sources").value.split("\n").map(s => s.trim()).filter(Boolean),
-      references:   [...body.querySelectorAll(".cs-ref-cb:checked")].map(c => c.value),
+      references:   chosenRefs.slice(),
       contributors: [...body.querySelectorAll(".cs-contrib-cb:checked")].map(c => c.value),
     };
     try {
@@ -2555,13 +2625,31 @@ async function quitServer() {
 }
 
 // Toolbar "Save unit" — download the currently-selected unit's Markdown file.
+// In UoA mode it instead saves the whole UoA as one self-contained bundle.
 function saveCurrentUnit() {
+  if (VIEW_MODE === "uoa") { saveUoaBundle(); return; }
   if (!CURRENT_UNIT || CURRENT_UNIT.slug === "all-staff") {
     alert("Select a single unit first — \"Save unit\" downloads one unit's file. "
         + "(The current view is an aggregate, not a single unit.)");
     return;
   }
   downloadUnitFile(CURRENT_UNIT.slug);
+}
+
+// Save an entire UoA: units + cached pubs (with ratings) + impact case
+// studies + narrative, as one <name>_UoA.json bundle that Load re-ingests.
+function saveUoaBundle() {
+  const code = document.getElementById("uoa-select")?.value;
+  if (!code) { alert("Pick a UoA first — \"Save\" in UoA mode bundles the selected UoA."); return; }
+  const scope = currentScope();
+  const uoaName = UOA_BY_CODE[code]?.name || "";
+  const url = `/api/uoa-bundle.json?code=${encodeURIComponent(code)}`
+            + `&slugs=${encodeURIComponent(scope.slugs.join(","))}`
+            + `&name=${encodeURIComponent(uoaName)}`
+            + `&file=${encodeURIComponent(scope.name)}`;
+  const a = document.createElement("a");
+  a.href = url; a.download = "";
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 // Describe what the current view covers, for scope-aware Export. Returns
@@ -2775,6 +2863,30 @@ document.getElementById("data-load-input")?.addEventListener("change", async (e)
   status.className = "data-status";
   try {
     const text = await file.text();
+    // A complete-UoA bundle is JSON with our format marker; anything else
+    // is treated as a single unit Markdown file.
+    let bundle = null;
+    try {
+      const j = JSON.parse(text);
+      if (j && j._meta && (j._meta.format === "scholar-dashboard-uoa-bundle" || j._meta.kind === "uoa-bundle")) bundle = j;
+    } catch { /* not JSON → unit file */ }
+
+    if (bundle) {
+      const r = await fetch("/api/uoa-bundle-import", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: text,
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "bundle import failed");
+      (d.warnings || []).forEach(w => console.warn("uoa-bundle import:", w));
+      const s = d.summary || {};
+      let msg = `Imported UoA ${d.uoa || ""}: ${s.units || 0} unit(s), ${s.scholars || 0} cached profile(s), ${s.case_studies || 0} case stud${(s.case_studies === 1) ? "y" : "ies"}.`;
+      if (d.warnings && d.warnings.length) msg += ` ⚠ ${d.warnings.length} warning(s) — see console.`;
+      status.textContent = msg + " Reloading…";
+      status.className = "data-status ok";
+      setTimeout(() => location.reload(), 1200);
+      return;
+    }
+
     const r = await fetch("/api/unit-file", {
       method: "POST",
       headers: { "Content-Type": "text/markdown" },
@@ -3278,6 +3390,24 @@ function applyViewMode(initialUnit) {
     const slug = initialUnit || sel.value;
     if (slug) selectUnit(slug);
   }
+  applyFileMenuLabels();
+}
+
+// The File menu's Load / Save items act on a single unit in Faculty mode but
+// on a whole UoA bundle in UoA mode — reflect that in their labels.
+function applyFileMenuLabels() {
+  const uoa = VIEW_MODE === "uoa";
+  const set = (id, label, hint) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const l = el.querySelector(".tb-mi-label"), h = el.querySelector(".tb-mi-hint");
+    if (l) l.textContent = label;
+    if (h) h.textContent = hint;
+  };
+  set("tb-load-unit", uoa ? "Load…" : "Load unit file…",
+      uoa ? "Import a unit file or a complete UoA bundle" : "Import a unit Markdown file from disk");
+  set("tb-save-unit", uoa ? "Save UoA…" : "Save current unit…",
+      uoa ? "Download the whole UoA as one bundle (units, pubs, case studies)" : "Download this unit as Markdown");
 }
 
 // Render the staff grid filtered to a single UoA code. Synthesises a unit-
