@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.35 · proof-of-concept.
+**Version:** 0.2.36 · proof-of-concept.
 
 ## What it does
 
@@ -28,7 +28,8 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 - **Analytics modal**: cross-unit visibility, citation totals, REF readiness,
   momentum, cross-listings, citation history.
 - **Data editor**: add / edit / remove faculties, schools, units, and staff.
-- **Toolbar New / Load / Save unit file** controls and per-unit ⤓ download.
+- **Toolbar Data menu** (Edit data / New unit / Load unit file / Save unit)
+  and an **Export menu** (Print / Save as PDF / Download JSON).
 - Server-side Scholar cache (7-day TTL) in `.cache/`; force-refresh per card
   or the whole view. A **10-minute server cooldown** is auto-engaged after a
   Scholar 429 / captcha so repeated retries don't make things worse.
@@ -80,7 +81,8 @@ Faculty/School headers loads under "Unfiled".
 
 The `data/` folder is **gitignored** (it holds personal data). Copy
 `data.example/` to `data/` to get started, or use the in-app Data editor
-(Toolbar → ⚙ Data) or **+ New unit** to create the first file.
+(Toolbar → **Data ▾** → Edit data) or **Data ▾ → New unit** to create the
+first file.
 
 ## Three-state Scholar tracking
 

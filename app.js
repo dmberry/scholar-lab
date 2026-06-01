@@ -1674,10 +1674,54 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-save-unit")) saveCurrentUnit();
   if (e.target.closest("#tb-new-unit")) newUnitFlow();
   if (e.target.closest("#a-excl-open")) openExcludedModal();
+  // Export menu — Print and Save-as-PDF both open the browser print
+  // dialog (PDF is just "Print → Save as PDF"); the print stylesheet
+  // does the rest.
+  if (e.target.closest("#tb-print") || e.target.closest("#tb-pdf")) {
+    closeToolbarMenus();
+    setTimeout(() => window.print(), 60);
+  }
   if (e.target.closest("#tb-quit")) {
     if (SERVER_DOWN) showRestartInstructions();
     else quitServer();
   }
+});
+
+// ─── Toolbar dropdown menus (Data, Export) ───────────────────────────────
+// Lightweight popovers anchored under their trigger button. One open at a
+// time; click-away and Escape close them; picking an item closes too.
+function closeToolbarMenus() {
+  document.querySelectorAll(".tb-menu.open").forEach(m => {
+    m.classList.remove("open");
+    m.querySelector(".tb-menu-btn")?.setAttribute("aria-expanded", "false");
+    m.querySelector(".tb-menu-pop")?.setAttribute("hidden", "");
+  });
+}
+function openToolbarMenu(menu) {
+  const wasOpen = menu.classList.contains("open");
+  closeToolbarMenus();
+  if (wasOpen) return;             // toggle off if it was already open
+  menu.classList.add("open");
+  menu.querySelector(".tb-menu-btn")?.setAttribute("aria-expanded", "true");
+  menu.querySelector(".tb-menu-pop")?.removeAttribute("hidden");
+}
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".tb-menu-btn");
+  if (btn) {
+    e.preventDefault();
+    openToolbarMenu(btn.closest(".tb-menu"));
+    return;
+  }
+  // Click on a menu item → let its own handler run, then close.
+  if (e.target.closest(".tb-menu-item")) {
+    closeToolbarMenus();
+    return;
+  }
+  // Click anywhere else → close any open menu.
+  if (!e.target.closest(".tb-menu")) closeToolbarMenus();
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeToolbarMenus();
 });
 
 // ─── Server liveness ────────────────────────────────────────────────────

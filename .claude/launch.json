@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "scholar-dashboard-static",
-      "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "5057"],
+      "name": "scholar-dashboard",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": ["app.py"],
       "port": 5057
     }
   ]
