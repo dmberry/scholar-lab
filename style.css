@@ -366,7 +366,9 @@ body {
   font: inherit; font-weight: 400; padding: .4rem .5rem;
   border: 1px solid var(--border); border-radius: 6px; width: 100%;
 }
-.cs-f textarea { resize: vertical; line-height: 1.45; }
+.cs-f textarea { resize: vertical; line-height: 1.45; min-height: 8.5rem; }
+/* The two big narrative fields get more room to write in. */
+#cs-underpinning, #cs-details { min-height: 12rem; }
 .cs-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
 .cs-checklist { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .5rem; max-height: 14rem; overflow-y: auto; font-weight: 400; }
 .cs-checklist-sm { max-height: 9rem; }
