@@ -345,8 +345,10 @@ shows them, untick "Headers and footers" in the print dialog.
 
 ---
 
-<sub>It looks like you're trying to assess research. There may be a helpful paperclip
-who has opinions about that — try typing its name. It is not the only thing listening:
-a certain goddess of wisdom answers to hers, and somewhere a redbrick university you may
-recognise from the back pages of <i>Times Higher Education</i> is only too glad to offer
-its counsel on the matter. Finem respice!</sub>
+<sub>It looks like you're trying to assess research. A few things are listening: just
+type a name anywhere on the page (no text box needed, and nothing to click) and someone
+answers. Type <b>clippy</b> for a helpful paperclip with opinions about the bureaucracy
+of metrics. A goddess of wisdom replies to <b>athena</b>; the redbrick university you may
+recognise from the back pages of <i>Times Higher Education</i> answers to <b>poppleton</b>;
+and there is a fourth for anyone who types like a <b>hacker</b>. Type the same name again
+to dismiss. Finem respice!</sub>
