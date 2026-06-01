@@ -51,20 +51,23 @@ the unit files from your data folder.
   Jennifer Doubleday (Wellbeing / "Thought for the Week") and Keith Ponting (30),
   the staff reporter.
 
-Every named figure now carries a (deliberately comic) Scholar profile, so the
-demo is dense with cards to explore. The managers' profiles are the joke: the
-Vice-Chancellor has an enormous citation count but an h-index of 4 (his strategy
-documents mostly cite each other); Maureen the secretary quietly out-publishes
-the professors she types for; Doubleday and Trouncing both rope Professor Tipping
-into co-authorships. They sit at `uoa:0`, outside the REF units, so they show as
-citation cards in Faculty view but are excluded from any UoA submission, the
-satirical point being that the people with the metrics are the ones who can't be
-returned. It exercises:
+Every named figure carries a (deliberately comic) Scholar profile, so the demo
+is dense with cards to explore. The managers' profiles are the joke, and so are
+their *venues*: the managers don't publish in academic journals, they publish in
+Poppleton's own organs, **The Poppletonian**, the student magazine
+(**Poppleton Student**), prospectuses, promotional pamphlets, HR briefing notes,
+security bulletins and staff handbooks. The Vice-Chancellor has an enormous
+citation count but an h-index of 4 (his Strategic Review documents mostly cite
+each other); **Maureen** the secretary quietly out-publishes the professors she
+types for; **Keith Ponting (30)**, the staff reporter, has a profile made
+entirely of articles he filed for The Poppletonian. They sit at `uoa:0`, outside
+the REF units, so they show as citation cards in Faculty view but are excluded
+from any UoA submission, the satirical point being that the people with the
+metrics are the ones who can't be returned. It exercises:
 
-- **Two Scholar states** — `set` (everyone with a profile, academics and the
-  comically-profiled managers) and `unchecked` (Keith Ponting (30), perpetually
-  un-assessed). To see the `missing` state, clear any one profile in the Data
-  editor.
+- **The `set` state for everyone** — academics, comically-profiled managers, and
+  the reporter all have profiles. To see the `missing` / `unchecked` states,
+  clear or blank a profile in the Data editor.
 - **No-UoA staff** — the whole Directorate sits outside the REF units (`uoa:0`).
 - **A co-authorship graph** — Maureen ↔ Lapping/Odgers, Doubleday ↔ Tipping,
   Trouncing ↔ Tipping, Bimpson ↔ Targett.

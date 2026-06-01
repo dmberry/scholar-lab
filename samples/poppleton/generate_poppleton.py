@@ -40,7 +40,7 @@ import re
 from pathlib import Path
 
 UNIVERSITY = "University of Poppleton"
-APP_VERSION = "3.1.1"
+APP_VERSION = "3.1.2"
 FORMAT_VERSION = 1
 
 FAC_ARTS = "Faculty of Arts and Social Sciences"
@@ -227,8 +227,9 @@ rate("ppltn_tipping", "The Observed Self: Surveillance in the Senior Common Room
 
 # ── Directorate & Professional Services (no UoA; managers with comic profiles) ─
 # These are uoa:0 (explicitly outside the REF units), so their citation cards
-# appear in Faculty view but they are excluded from any UoA submission. Keith
-# Ponting is left 'unchecked' to keep that Scholar state demonstrated.
+# appear in Faculty view but they are excluded from any UoA submission. Their
+# "outputs" are Poppleton's own organs — The Poppletonian, the student magazine,
+# prospectuses, pamphlets, briefing notes and handbooks — not academic journals.
 add_person("directorate", "The Vice-Chancellor", "Vice-Chancellor", "PUP0021",
            "ppltn_vc", uoa=0)
 set_profile("ppltn_vc",
@@ -261,13 +262,13 @@ set_profile("ppltn_targett",
     curve={2018:6,2019:11,2020:15,2021:18,2022:21,2023:23,2024:20,2025:15,2026:7},
     pubs=[
         pub("The Underheated Open-Plan Office and the Enhanced Collegial Environment", 2024,
-            "Journal of Workspace Studies 11 (2), 88-109", 14, "J Targett"),
+            "The Poppletonian · Corporate Affairs briefing", 14, "J Targett"),
         pub("Realising a Strategic Estate Consolidation", 2023,
-            "Higher Education Management Quarterly 39 (4), 410-428", 9, "J Targett"),
+            "University of Poppleton · press release", 9, "J Targett"),
         pub("Goodbye and Good Luck: Reframing Closure as Opportunity", 2022,
-            "Public Relations Review 48 (3), 102-119", 12, "J Targett"),
+            "The Poppletonian", 12, "J Targett"),
         pub("The Research Visibility Journey: A Communications Framework", 2021,
-            "Corporate Communications 26 (1), 33-51", 8, "J Targett"),
+            "University of Poppleton Prospectus 2021", 8, "J Targett"),
     ])
 
 add_person("directorate", "Georgina Edsel", "Deputy Head of Brand Management", "PUP0023",
@@ -280,11 +281,11 @@ set_profile("ppltn_edsel",
     curve={2020:5,2021:8,2022:11,2023:14,2024:16,2025:12,2026:6},
     pubs=[
         pub("We Are in the Global Top 1%: A Benchmarking Methodology", 2024,
-            "Journal of Marketing for Higher Education 34 (2), 201-220", 11, "G Edsel"),
+            "University of Poppleton Prospectus (front cover)", 11, "G Edsel"),
         pub("The Ethical Relativism of Progressive Public Relations", 2023,
-            "Public Relations Inquiry 12 (3), 277-295", 9, "G Edsel"),
+            "The Poppletonian", 9, "G Edsel"),
         pub("Recommended by Eight out of Ten: Comparative Claims in HE Marketing", 2022,
-            "International Journal of Advertising 41 (5), 880-901", 7, "G Edsel"),
+            "University of Poppleton · promotional pamphlet", 7, "G Edsel"),
     ])
 
 add_person("directorate", "Louise Bimpson", "Director of Human Resources", "PUP0024",
@@ -297,11 +298,11 @@ set_profile("ppltn_bimpson",
     curve={2019:7,2020:11,2021:14,2022:17,2023:19,2024:18,2025:13,2026:6},
     pubs=[
         pub("The Silver Lining: Restructuring as Opportunity", 2024,
-            "Human Resource Management Journal 34 (3), 455-474", 13, "L Bimpson, J Targett"),
+            "Poppleton HR · briefing note", 13, "L Bimpson, J Targett"),
         pub("From Barricaded Corridor to Paying Attraction: The Higher Education Experience", 2023,
-            "Tourism Management Perspectives 47, 101122", 10, "L Bimpson"),
+            "University of Poppleton Visitor Centre brochure", 10, "L Bimpson"),
         pub("Voluntary Severance and the Engaged Workforce", 2022,
-            "Work, Employment and Society 36 (4), 712-730", 8, "L Bimpson"),
+            "Poppleton Staff Handbook, Appendix C", 8, "L Bimpson"),
     ])
 
 add_person("directorate", "Ted Chippings", "Head of TEF Submissions", "PUP0025",
@@ -314,13 +315,13 @@ set_profile("ppltn_chippings",
     curve={2018:8,2019:13,2020:17,2021:21,2022:25,2023:27,2024:24,2025:17,2026:7},
     pubs=[
         pub("The Gross Teaching Quotient: Towards a Single Number", 2024,
-            "Assessment & Evaluation in Higher Education 49 (5), 640-661", 16, "T Chippings"),
+            "University of Poppleton · TEF submission, Annexe 4", 16, "T Chippings"),
         pub("Words Mean What We Choose Them to Mean: A Humpty-Dumpty Approach to the TEF", 2023,
-            "Studies in Higher Education 48 (8), 1190-1209", 13, "T Chippings"),
+            "The Poppletonian", 13, "T Chippings"),
         pub("Outstanding, Fusion, Creative: A Working Lexicon", 2022,
-            "Higher Education Policy 35 (2), 300-318", 11, "T Chippings"),
+            "Poppleton Staff Style Guide", 11, "T Chippings"),
         pub("Bronze as the New Gold: Reframing the Award", 2021,
-            "Quality in Higher Education 27 (1), 44-62", 9, "T Chippings"),
+            "University of Poppleton · press release", 9, "T Chippings"),
     ])
 
 add_person("directorate", "Brigadier T. W. Trouncing", "Head of Campus Security", "PUP0026",
@@ -333,11 +334,11 @@ set_profile("ppltn_trouncing",
     curve={2020:4,2021:6,2022:9,2023:12,2024:13,2025:9,2026:5},
     pubs=[
         pub("Discipline and Punish: Outsourcing Academic Sanctions to HM Prison Service", 2024,
-            "Security Journal 37 (2), 188-206", 9, "T W Trouncing"),
+            "Poppleton Campus Security Bulletin", 9, "T W Trouncing"),
         pub("Surveillance Positions at Key Points on Campus", 2023,
-            "Surveillance & Society 21 (3), 301-319", 12, "T W Trouncing, G W Tipping"),
+            "Poppleton Campus Code of Conduct (revised edition)", 12, "T W Trouncing, G W Tipping"),
         pub("The Withdrawal of Photocopying Rights as a Deterrent", 2022,
-            "Crime Prevention and Community Safety 24 (4), 410-427", 7, "T W Trouncing"),
+            "Poppleton Staff Disciplinary Handbook", 7, "T W Trouncing"),
     ])
 
 add_person("directorate", "Jennifer Doubleday", "Wellbeing Coordinator (Thought for the Week)",
@@ -350,17 +351,35 @@ set_profile("ppltn_doubleday",
     curve={2017:9,2018:14,2019:19,2020:23,2021:27,2022:30,2023:31,2024:27,2025:20,2026:9},
     pubs=[
         pub("Imagine Yourself as a Tree: Mindfulness for the Watched Subject", 2024,
-            "Mindfulness 15 (4), 880-899", 18, "J Doubleday, G W Tipping"),
+            "The Poppletonian · Thought for the Week", 18, "J Doubleday, G W Tipping"),
         pub("Know Yourself and Grow Yourself: A Personal Development Curriculum", 2023,
-            "Journal of Further and Higher Education 47 (6), 720-738", 12, "J Doubleday"),
+            "Poppleton Wellbeing pamphlet", 12, "J Doubleday"),
         pub("Thought for the Week: A Decade of Apercus", 2022,
-            "Wellbeing in Higher Education 8 (2), 145-163", 10, "J Doubleday"),
+            "The Poppletonian (collected columns)", 10, "J Doubleday"),
         pub("The Moment You Are Satisfied Is the Moment You Stop Growing", 2021,
-            "International Journal of Wellbeing 11 (3), 55-72", 14, "J Doubleday"),
+            "Poppleton Student · guest column", 14, "J Doubleday"),
     ])
 
 add_person("directorate", "Keith Ponting", "Staff Reporter, The Poppletonian", "PUP0028",
-           None, status="unchecked", uoa=0)
+           "ppltn_ponting", uoa=0)
+set_profile("ppltn_ponting",
+    name="Keith Ponting (30)",
+    affiliation="Staff Reporter, The Poppletonian, University of Poppleton",
+    interests=["Campus Journalism", "Vox Pops", "Press Releases", "Shorthand"],
+    citedby=39, citedby5y=31, hindex=3, hindex5y=3, i10=2, i10_5y=2,
+    curve={2018:3,2019:4,2020:5,2021:5,2022:6,2023:6,2024:5,2025:3,2026:2},
+    pubs=[
+        pub("Are Our Governors Out of Touch? A Special Report", 2024,
+            "The Poppletonian", 4, "K Ponting (30)"),
+        pub("'No Going Back': The Vice-Chancellor Speaks", 2023,
+            "The Poppletonian", 6, "K Ponting (30)"),
+        pub("Mindfulness Comes to Poppleton: Staff Asked to Imagine Themselves as Trees", 2022,
+            "The Poppletonian", 5, "K Ponting (30)"),
+        pub("Wrestling Reported in A Block as Open-Plan Office Opens", 2021,
+            "The Poppletonian", 7, "K Ponting (30)"),
+        pub("Top 1%? An Investigation", 2020,
+            "The Poppletonian", 3, "K Ponting (30)"),
+    ])
 
 
 # ── UoA narratives ───────────────────────────────────────────────────────────
