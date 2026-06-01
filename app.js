@@ -2035,6 +2035,146 @@ async function openRefReport() {
   });
 }
 
+// ─── REF impact case studies ──────────────────────────────────────────────
+const CS_STATES = [
+  { key: "not_started", label: "Not started", cls: "cs-st-none" },
+  { key: "draft",       label: "Draft",       cls: "cs-st-draft" },
+  { key: "proof",       label: "Proof",       cls: "cs-st-proof" },
+  { key: "finished",    label: "Finished",    cls: "cs-st-done" },
+];
+
+// Render the case-studies panel above the people grid — only in By UoA view.
+async function renderCaseStudies() {
+  const panel = document.getElementById("uoa-cs");
+  if (!panel) return;
+  const code = document.getElementById("uoa-select")?.value;
+  if (VIEW_MODE !== "uoa" || !code) { panel.classList.add("hidden"); panel.innerHTML = ""; return; }
+  panel.classList.remove("hidden");
+  let items = [];
+  try { items = (await (await fetch("/api/case-studies?uoa=" + encodeURIComponent(code))).json()).case_studies || []; } catch {}
+  const uoaName = UOA_BY_CODE[code]?.name || "";
+  const cards = items.map(cs => {
+    const st = CS_STATES.find(s => s.key === cs.status) || CS_STATES[0];
+    const updated = cs.updated_at ? new Date(cs.updated_at).toLocaleDateString() : "";
+    return `<button class="cs-cardx" data-cs-edit="${escapeAttr(cs.id)}">
+      <span class="cs-status ${st.cls}">${st.label}</span>
+      <span class="cs-title">${escapeHTML(cs.title || "Untitled case study")}</span>
+      <span class="cs-meta">${(cs.references||[]).length} output(s) · ${(cs.contributors||[]).length} contributor(s)${updated ? " · updated " + escapeHTML(updated) : ""}</span>
+    </button>`;
+  }).join("");
+  panel.innerHTML = `
+    <div class="cs-panel-head">
+      <h2>Impact case studies — UoA ${escapeHTML(code)}${uoaName ? " · " + escapeHTML(uoaName) : ""} <span class="cs-count">${items.length}</span></h2>
+      <button class="tb-btn primary" id="cs-new">＋ New case study</button>
+    </div>
+    <div class="cs-grid">${cards || `<p class="cs-empty">No case studies yet for this UoA. Click ＋ New case study to add one.</p>`}</div>`;
+  document.getElementById("cs-new")?.addEventListener("click", () => openCaseStudyEditor(null, code));
+  panel.querySelectorAll("[data-cs-edit]").forEach(b => b.addEventListener("click", () => {
+    const cs = items.find(c => c.id === b.dataset.csEdit);
+    if (cs) openCaseStudyEditor(cs, code);
+  }));
+}
+
+// REF3-template editor for one case study.
+async function openCaseStudyEditor(cs, uoaCode) {
+  const modal = document.getElementById("cs-modal");
+  const body  = document.getElementById("cs-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = `<p class="spinner">Loading…</p>`;
+  cs = cs || { uoa: uoaCode, status: "not_started", references: [], contributors: [], versions: [] };
+  await loadRefFlags();
+
+  // UoA scholars (current view) + their flagged outputs for the picker.
+  const scholars = [...new Map((STAFF || []).filter(p => p.scholar_id).map(p => [p.scholar_id, p])).values()];
+  const flaggedIds = scholars.filter(p => refFlagCount(p.scholar_id) > 0).map(p => p.scholar_id);
+  let batch = {};
+  if (flaggedIds.length) {
+    try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(flaggedIds.join(",")))).json(); } catch {}
+  }
+  const refSel = new Set(cs.references || []);
+  const refRows = [];
+  for (const p of scholars) {
+    const keys = Object.keys(refFlagsFor(p.scholar_id));
+    if (!keys.length) continue;
+    const byKey = new Map(((batch[p.scholar_id]?.recent_publications) || []).map(pub => [pub.pub_key, pub]));
+    refRows.push(`<div class="cs-ref-group"><div class="cs-ref-person">${escapeHTML(p.name)}</div>` +
+      keys.map(k => {
+        const id = p.scholar_id + ":" + k;
+        const pub = byKey.get(k);
+        const label = pub ? `${escapeHTML(pub.title || "Untitled")} (${pub.year || "n.d."})` : escapeHTML(deSlugTitle(k));
+        return `<label class="cs-ref-row"><input type="checkbox" class="cs-ref-cb" value="${escapeAttr(id)}" ${refSel.has(id) ? "checked" : ""}> ${label}</label>`;
+      }).join("") + `</div>`);
+  }
+  const contribSel = new Set(cs.contributors || []);
+  const contribRows = scholars.map(p => {
+    const id = p.staff_id || p.name;
+    return `<label class="cs-ref-row"><input type="checkbox" class="cs-contrib-cb" value="${escapeAttr(id)}" ${contribSel.has(id) ? "checked" : ""}> ${escapeHTML(p.name)}</label>`;
+  }).join("");
+  const statusOpts = CS_STATES.map(s => `<option value="${s.key}" ${s.key === cs.status ? "selected" : ""}>${s.label}</option>`).join("");
+  const versions = (cs.versions || []).slice().reverse()
+    .map(v => `<li>${escapeHTML(new Date(v.ts).toLocaleString())} — <strong>${escapeHTML(v.status)}</strong>${v.note ? " · " + escapeHTML(v.note) : ""}</li>`).join("");
+
+  body.innerHTML = `
+    <h3>${cs.id ? "Edit" : "New"} impact case study <span class="cs-uoa-tag">UoA ${escapeHTML(uoaCode)}</span></h3>
+    <div class="cs-form">
+      <label class="cs-f">Title<input id="cs-title" type="text" value="${escapeAttr(cs.title || "")}"></label>
+      <div class="cs-row2">
+        <label class="cs-f">Status<select id="cs-status">${statusOpts}</select></label>
+        <label class="cs-f">Period of underpinning research<input id="cs-period" type="text" placeholder="e.g. 2018–2024" value="${escapeAttr(cs.period || "")}"></label>
+      </div>
+      <label class="cs-f">Summary of the impact<textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
+      <label class="cs-f">Underpinning research<textarea id="cs-underpinning" rows="4">${escapeHTML(cs.underpinning_research || "")}</textarea></label>
+      <div class="cs-f"><span class="cs-f-label">References to the research (REF-flagged outputs)</span>
+        <div class="cs-checklist">${refRows.join("") || '<p class="cs-empty">No REF-flagged outputs in this UoA yet — tick the REF box on people\'s cards first.</p>'}</div></div>
+      <label class="cs-f">Details of the impact<textarea id="cs-details" rows="5">${escapeHTML(cs.details || "")}</textarea></label>
+      <label class="cs-f">Sources to corroborate <span class="cs-f-hint">(one per line)</span><textarea id="cs-sources" rows="3">${escapeHTML((cs.corroborating_sources || []).join("\n"))}</textarea></label>
+      <div class="cs-f"><span class="cs-f-label">Contributors</span>
+        <div class="cs-checklist cs-checklist-sm">${contribRows || '<p class="cs-empty">No staff in this UoA.</p>'}</div></div>
+      ${versions ? `<details class="cs-versions"><summary>Version history (${(cs.versions || []).length})</summary><ul>${versions}</ul></details>` : ""}
+    </div>
+    <div class="data-actions">
+      ${cs.id ? `<button class="tb-btn cs-danger" id="cs-delete">Delete</button>` : ""}
+      <span class="data-actions-spacer"></span>
+      <span class="set-saved" id="cs-saved"></span>
+      <button class="tb-btn" data-cs-close>Cancel</button>
+      <button class="tb-btn primary" id="cs-save">Save</button>
+    </div>`;
+
+  body.querySelector("#cs-save").addEventListener("click", async () => {
+    const payload = {
+      id: cs.id, uoa: uoaCode,
+      title:  body.querySelector("#cs-title").value.trim(),
+      status: body.querySelector("#cs-status").value,
+      period: body.querySelector("#cs-period").value.trim(),
+      summary: body.querySelector("#cs-summary").value.trim(),
+      underpinning_research: body.querySelector("#cs-underpinning").value.trim(),
+      details: body.querySelector("#cs-details").value.trim(),
+      corroborating_sources: body.querySelector("#cs-sources").value.split("\n").map(s => s.trim()).filter(Boolean),
+      references:   [...body.querySelectorAll(".cs-ref-cb:checked")].map(c => c.value),
+      contributors: [...body.querySelectorAll(".cs-contrib-cb:checked")].map(c => c.value),
+    };
+    try {
+      const r = await fetch("/api/case-study", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      if (!r.ok) throw new Error("save failed");
+      modal.classList.add("hidden");
+      renderCaseStudies();
+    } catch (e) { body.querySelector("#cs-saved").textContent = "Save failed"; }
+  });
+  body.querySelector("#cs-delete")?.addEventListener("click", async () => {
+    if (!confirm("Delete this case study? This can't be undone.")) return;
+    try {
+      await fetch("/api/case-study", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: cs.id }) });
+      modal.classList.add("hidden");
+      renderCaseStudies();
+    } catch (e) { alert("Delete failed: " + e.message); }
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("[data-cs-close]")) document.getElementById("cs-modal").classList.add("hidden");
+  if (e.target.id === "cs-modal") e.target.classList.add("hidden");
+});
+
 // ─── Server liveness ────────────────────────────────────────────────────
 // The backend kills itself after 20 minutes of no real requests, so we
 // poll /api/heartbeat every 60s. When it fails, the Quit button swaps to
@@ -2933,6 +3073,8 @@ function escapeAttr(s) { return String(s ?? "").replace(/"/g, "&quot;"); }
 
 function renderPeople() {
   grid.innerHTML = "";
+  // Impact-case-studies panel (By UoA view only; no-ops otherwise).
+  renderCaseStudies();
   // ── Overview-by-unit mode: one Staff-by-role card per unit in the current
   // school/faculty scope, no individual people cards. Useful for getting a
   // top-down picture of an aggregate view.

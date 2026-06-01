@@ -210,6 +210,61 @@ body {
   line-height: 1.45; margin: .6rem 0;
 }
 
+/* Impact case studies — UoA panel */
+#uoa-cs { margin: .5rem 0 1.2rem; }
+#uoa-cs.hidden { display: none; }
+.cs-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.cs-panel-head h2 { margin: .5rem 0; }
+.cs-count {
+  display: inline-block; min-width: 1.4em; text-align: center;
+  font-size: .7rem; background: var(--accent-soft); color: var(--accent);
+  border-radius: 999px; padding: .1em .5em; margin-left: .3rem; vertical-align: middle;
+}
+.cs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .6rem; }
+.cs-cardx {
+  display: flex; flex-direction: column; gap: .3rem; text-align: left;
+  background: #fff; border: 1px solid var(--border); border-radius: 8px;
+  padding: .7rem .8rem; cursor: pointer; font: inherit;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.cs-cardx:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+.cs-title { font-weight: 600; font-size: .9rem; line-height: 1.25; }
+.cs-meta { font-size: .72rem; color: var(--muted); }
+.cs-empty { color: var(--muted); font-size: .85rem; }
+.cs-status {
+  align-self: flex-start; font-size: .62rem; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase; padding: .2em .55em; border-radius: 999px;
+}
+.cs-st-none  { background: #eee;     color: #6b6b6b; }
+.cs-st-draft { background: #fff0d6;  color: #8a5a00; }
+.cs-st-proof { background: #dbe8fb;  color: #1d4f91; }
+.cs-st-done  { background: #d8f0df;  color: #1a7f3c; }
+
+/* Case-study editor */
+.cs-card { max-width: 46rem; }
+.cs-uoa-tag { font-size: .7rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: .15em .55em; border-radius: 999px; vertical-align: middle; margin-left: .4rem; }
+.cs-form { display: flex; flex-direction: column; gap: .7rem; margin: .8rem 0; }
+.cs-f { display: flex; flex-direction: column; gap: .25rem; font-size: .82rem; font-weight: 600; color: var(--ink); }
+.cs-f-label { font-size: .82rem; font-weight: 600; }
+.cs-f-hint { font-weight: 400; color: var(--muted); }
+.cs-f input, .cs-f select, .cs-f textarea {
+  font: inherit; font-weight: 400; padding: .4rem .5rem;
+  border: 1px solid var(--border); border-radius: 6px; width: 100%;
+}
+.cs-f textarea { resize: vertical; line-height: 1.45; }
+.cs-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.cs-checklist { border: 1px solid var(--border); border-radius: 6px; padding: .4rem .5rem; max-height: 14rem; overflow-y: auto; font-weight: 400; }
+.cs-checklist-sm { max-height: 9rem; }
+.cs-ref-group { margin-bottom: .4rem; }
+.cs-ref-person { font-size: .74rem; font-weight: 700; color: var(--muted); margin: .2rem 0; }
+.cs-ref-row { display: flex; gap: .4rem; align-items: flex-start; font-size: .82rem; font-weight: 400; padding: .12rem 0; cursor: pointer; }
+.cs-ref-row input { margin-top: .2em; }
+.cs-versions { margin-top: .3rem; }
+.cs-versions summary { cursor: pointer; font-size: .8rem; color: var(--muted); }
+.cs-versions ul { margin: .4rem 0 0; padding-left: 1.1rem; font-size: .78rem; color: var(--muted); }
+.cs-danger { color: #a31818; border-color: #e0c4c4; }
+.cs-danger:hover { background: #fef0f0; border-color: #a31818; }
+
 /* REF selection report */
 .ref-report-card { max-width: 44rem; }
 .rr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; }

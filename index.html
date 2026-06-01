@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.44</span>
+    <span class="tb-sub" id="tb-version">v0.2.45</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -154,6 +154,9 @@
     </div>
   </section>
 
+  <!-- Impact case studies — only shown in By UoA view. Populated by JS. -->
+  <section id="uoa-cs" class="hidden"></section>
+
   <section id="people">
     <h2>People</h2>
     <div class="sort-bar">
@@ -242,6 +245,14 @@
       <button class="tb-btn primary" id="data-save">Save changes</button>
     </div>
     <p class="data-status" id="data-status"></p>
+  </div>
+</div>
+
+<!-- Impact case study editor (REF3 template) -->
+<div id="cs-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card cs-card">
+    <button class="close" aria-label="Close" data-cs-close>×</button>
+    <div id="cs-body"></div>
   </div>
 </div>
 

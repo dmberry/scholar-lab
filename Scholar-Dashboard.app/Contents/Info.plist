@@ -9,9 +9,9 @@
   <key>CFBundleIdentifier</key>
   <string>com.scholar-dashboard.launcher</string>
   <key>CFBundleVersion</key>
-  <string>0.2.44</string>
+  <string>0.2.45</string>
   <key>CFBundleShortVersionString</key>
-  <string>0.2.44</string>
+  <string>0.2.45</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleExecutable</key>
