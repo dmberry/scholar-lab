@@ -2225,10 +2225,15 @@ async function openCaseStudyEditor(cs, uoaCode) {
         return `<label class="cs-ref-row"><input type="checkbox" class="cs-ref-cb" value="${escapeAttr(id)}" ${refSel.has(id) ? "checked" : ""}> ${label}</label>`;
       }).join("") + `</div>`);
   }
+  // Contributors = ALL staff in the UoA (they needn't have a Scholar
+  // profile), de-duped, with a name fallback so a row is never blank.
   const contribSel = new Set(cs.contributors || []);
-  const contribRows = scholars.map(p => {
-    const id = p.staff_id || p.name;
-    return `<label class="cs-ref-row"><input type="checkbox" class="cs-contrib-cb" value="${escapeAttr(id)}" ${contribSel.has(id) ? "checked" : ""}> ${escapeHTML(p.name)}</label>`;
+  const allStaff = [...new Map((STAFF || []).map(p => [(p.staff_id || p.scholar_id || p.name), p])).values()]
+    .sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+  const contribRows = allStaff.map(p => {
+    const id = p.staff_id || p.scholar_id || p.name;
+    const label = p.name || p.staff_id || "(unnamed)";
+    return `<label class="cs-ref-row"><input type="checkbox" class="cs-contrib-cb" value="${escapeAttr(id)}" ${contribSel.has(id) ? "checked" : ""}> ${escapeHTML(label)}</label>`;
   }).join("");
   const statusOpts = CS_STATES.map(s => `<option value="${s.key}" ${s.key === cs.status ? "selected" : ""}>${s.label}</option>`).join("");
   const versions = (cs.versions || []).slice().reverse()
