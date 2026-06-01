@@ -636,6 +636,31 @@ document.addEventListener("click", (e) => {
 // Cross-unit comparative dashboards. Reads from /api/scholar/<id> for every
 // set staff member (mostly cached hits — fast). Computes per-unit aggregates.
 
+// ─── Theme ────────────────────────────────────────────────────────────────
+// Palette presets applied via [data-theme] on <html>, persisted in
+// localStorage (also applied pre-paint by an inline script in index.html).
+const THEMES = [
+  ["default", "Default (parchment)"],
+  ["white",   "White"],
+  ["blue",    "Blue"],
+  ["brown",   "Brown"],
+  ["yellow",  "Yellow"],
+  ["dark",    "Dark"],
+];
+function currentTheme() { return localStorage.getItem("sd-theme") || "default"; }
+function applyTheme(name) {
+  if (!name || name === "default") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = name;
+}
+function setTheme(name) {
+  applyTheme(name);
+  if (!name || name === "default") localStorage.removeItem("sd-theme");
+  else localStorage.setItem("sd-theme", name);
+  // Keep the Settings select + View toggle in sync if present.
+  const sel = document.getElementById("set-theme"); if (sel) sel.value = currentTheme();
+  const dk = document.getElementById("tb-dark-toggle"); if (dk) dk.setAttribute("aria-checked", currentTheme() === "dark" ? "true" : "false");
+}
+
 // Analytics scope state — defaults to grouping by UoA (REF is the primary
 // lens), whole-institution scope.
 let ANALYTICS_SCOPE = { facultySlug: "__all__", schoolSlug: "__all__", unitSlug: "__all__", groupBy: "uoa" };
@@ -2052,13 +2077,14 @@ async function openSettings() {
   const sortOpts = [["name","Name"],["citations","Citations"],["hindex","h-index"],
                     ["h5","h5-index"],["role","Stack by role"],["overview","Overview"]]
     .map(([v,l]) => `<option value="${v}" ${v===sort?"selected":""}>${l}</option>`).join("");
-  const darkOn = (localStorage.getItem("sd-theme") === "dark");
+  const curTheme = currentTheme();
   body.innerHTML = `
     <section class="set-sec">
       <h4>Appearance</h4>
-      <div class="set-toggle-row">
-        <label class="set-switch" for="set-dark">Dark mode</label>
-        <input type="checkbox" id="set-dark" ${darkOn ? "checked" : ""}>
+      <div class="set-row">
+        <label for="set-theme">Theme</label>
+        <select id="set-theme" class="unit-select">${
+          THEMES.map(([v, l]) => `<option value="${v}" ${v === curTheme ? "selected" : ""}>${l}</option>`).join("")}</select>
       </div>
       <div class="set-row">
         <label>Card chart scale</label>
@@ -2162,16 +2188,8 @@ async function openSettings() {
       </details>
     </section>`;
 
-  // Appearance — dark mode (applies immediately + persists).
-  body.querySelector("#set-dark")?.addEventListener("change", (e) => {
-    if (e.target.checked) {
-      document.documentElement.dataset.theme = "dark";
-      localStorage.setItem("sd-theme", "dark");
-    } else {
-      delete document.documentElement.dataset.theme;
-      localStorage.removeItem("sd-theme");
-    }
-  });
+  // Appearance — theme (applies immediately + persists).
+  body.querySelector("#set-theme")?.addEventListener("change", (e) => setTheme(e.target.value));
 
   // Display defaults — apply immediately + persist.
   body.querySelectorAll("[data-set-scale]").forEach(b => b.addEventListener("click", () => {
@@ -2363,6 +2381,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-ref-report")) openRefReport();
   if (e.target.closest("#tb-ref-targets")) openSettings();
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
+  if (e.target.closest("#tb-dark-toggle")) setTheme(currentTheme() === "dark" ? "default" : "dark");
   if (e.target.closest("#tb-help"))      openHelp();
   if (e.target.closest("#tb-help-about") || e.target.closest("#tb-about")) openAbout();
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
@@ -5458,3 +5477,139 @@ function escapeHTML(s) {
 }
 
 loadStaff();
+
+// ─── Clippy (easter egg) ───────────────────────────────────────────────────
+// A wink at the bureaucracy of research metrics. Type "clippy", "hacker", or
+// "themis" anywhere outside a text field to summon a paperclip / Themis with
+// rotating, scholar-lab-themed messages. Ported from LLMbench's Clippy.
+(function () {
+  const CLIPPY = [
+    "It looks like you're trying to measure scholarly worth with a citation count. Would you like me to pretend that's the same thing?",
+    "Hi! I see you're preparing a REF submission. Did you know the whole exercise is a ritual for turning thought into a number? Carry on.",
+    "Google Scholar says this person has thousands of citations. It does not say whether anyone read them.",
+    "I notice you rated an output 4*. Somewhere, a panel of your peers is preparing to disagree.",
+    "Tip: the h-index rewards people who publish a lot and get cited a lot. It is, in other words, a tautology with a Greek letter.",
+    "You appear to be flagging outputs for REF. Remember: the work was the point. The submission is the paperwork.",
+    "Did you know? A monograph and a blog post both count as '1 output' to Scholar. Scholar has no taste.",
+    "I see you're comparing units by citation. Practice-based disciplines are quietly screaming. Scholar can't hear them.",
+    "This UoA's GPA is a number derived from other numbers derived from opinions. Treat it accordingly.",
+    "Reminder: 'impact' in REF means impact beyond academia. Your citation count is, technically, the opposite of that.",
+    "You're assigning a UoA. Somewhere a colleague is being filed into a unit they've never heard of. That's governance.",
+    "Fun fact: citation counts rise after you die. The academy rewards persistence, then permanence.",
+    "I notice this person is 'Missing on Google Scholar'. They may simply have declined to be counted. Respect.",
+    "The REF window is 2021–2028. Before it is heritage; after it is hope. The present is a spreadsheet.",
+    "You appear to be writing an impact case study. The genre is: a true story, optimised for a rubric.",
+    "Tip: a citation is not applause. Half of them are people disagreeing with you in a footnote.",
+    "Green on the readiness scorecard is good. Red is 'more meetings'. Amber is the human condition.",
+    "Did you know? Bibliometrics were invented to manage libraries, not to judge minds. We repurposed the tool, as ever.",
+    "You're exporting a report. Paper makes the numbers feel true. The oldest trick in the bureaucratic book.",
+    "Reminder: the scholar is not the metrics. But the metrics are what gets funded. Discuss.",
+  ];
+  const HACKER = [
+    "I HACKED GOOGLE SCHOLAR. THE H-INDEX IS JUST SORTING A LIST AND COUNTING. THAT'S IT. THAT'S THE ALGORITHM.",
+    "I'M IN THE CITATION GRAPH. IT'S NODES AND EDGES. NONE OF THE EDGES MEAN 'GOOD'.",
+    "BREACHED THE REF DATABASE. EVERY '4*' IS A HUMAN GUESS WEARING A NUMBER COSTUME.",
+    "DOWNLOADED ALL THE METRICS. THEY MEASURE ACTIVITY, NOT THOUGHT. NOBODY TELL THE FUNDERS.",
+    "I CRACKED THE GPA FORMULA. IT'S A WEIGHTED AVERAGE OF OPINIONS. THE CURTAIN HIDES ANOTHER CURTAIN.",
+    "EXPLOITING THE i10-INDEX: IT COUNTS PAPERS WITH ≥10 CITATIONS. THAT'S THE WHOLE EXPLOIT. THERE IS NO EXPLOIT.",
+    "I HACKED THE IMPACT CASE STUDY. IT'S A NARRATIVE. STORIES BEAT NUMBERS. THE QUANTS NEVER STOOD A CHANCE.",
+    "ACCESSED THE SCHOLAR CACHE. THESE NUMBERS ARE DAYS OLD. YOU ARE GOVERNING WITH STALE DICE.",
+    "I INTERCEPTED A CITATION IN TRANSIT. IT WAS NEGATIVE. THE METRIC COUNTED IT AS POSITIVE. THE METRIC CANNOT READ.",
+    "ROOT ACCESS TO THE REF. THE ROOT IS: MONEY FOLLOWS THE NUMBERS, SO THE NUMBERS BECOME THE WORK. RECURSIVE. TRAGIC.",
+    "I HACKED THE UoA ASSIGNMENTS. PEOPLE ARE BEING FILED INTO BOXES THEY DIDN'T CHOOSE. THIS IS CALLED 'STRATEGY'.",
+    "I TRIED TO FIND THE BEST RESEARCHER BY METRICS ALONE. THE ALGORITHM RETURNED A DEAD PHYSICIST AND A SPAM JOURNAL.",
+  ];
+  const THEMIS = [
+    "I hold the scales of assessment. But you cannot weigh a thought against a citation. One has mass; the other has marketing.\n\n⚖️ Themis",
+    "Justice asks what the work was for. The metric asks how often it was mentioned. These are not the same question.\n\n⚖️ Themis",
+    "The ancients weighed the heart against a feather. You weigh a career against an h-index. The feather was, frankly, fairer.\n\n⚖️ Themis",
+    "You rate an output 4*. I have weighed many such judgements: honest attempts at the impossible — ranking the incommensurable.\n\n⚖️ Themis",
+    "A high citation count measures attention, not merit. The market and the mind keep different courts.\n\n⚖️ Themis",
+    "You are told impact must reach beyond the academy, yet you measure it with the academy's own instruments. The scales were forged in the building they assess.\n\n⚖️ Themis",
+    "Every UoA is a boundary drawn around scholars. Boundaries are acts of power. Draw them knowing that.\n\n⚖️ Themis",
+    "The GPA reduces a year of labour to two decimals. I do not condemn this; I only ask you remember what was discarded to make the number tidy.\n\n⚖️ Themis",
+    "Practice-based work is invisible to this tool, as to the citation index. Absence in the ledger is not absence in the world.\n\n⚖️ Themis",
+    "You prepare a submission: a trial in which the defendant is thought and the verdict is funding. Argue well.\n\n⚖️ Themis",
+    "The dead are cited more than the living. The academy, like all institutions, prefers its geniuses safely finished.\n\n⚖️ Themis",
+    "I am goddess of order, not of measurement. I can weigh what was done. I cannot certify that the weighing was wise.\n\n⚖️ Themis",
+  ];
+
+  let visible = false, mode = "clippy", used = new Set(), timer = null, host = null;
+  const msgs = () => (mode === "hacker" ? HACKER : mode === "themis" ? THEMIS : CLIPPY);
+  function pick() {
+    let avail = msgs().map((_, i) => i).filter(i => !used.has(i));
+    if (!avail.length) { used = new Set(); avail = msgs().map((_, i) => i); }
+    const i = avail[Math.floor(Math.random() * avail.length)];
+    used.add(i);
+    return msgs()[i];
+  }
+  function charSVG() {
+    if (mode === "themis") {
+      return `<svg width="44" height="56" viewBox="0 0 48 60" aria-hidden="true">
+        <ellipse cx="24" cy="16" rx="8" ry="9" fill="#e8d0bc"/>
+        <path d="M16 14 Q18 6, 24 5 Q30 6, 32 14" fill="#c4a87c"/>
+        <rect x="16" y="13" width="16" height="4" rx="1" fill="#8b7355"/>
+        <line x1="24" y1="25" x2="24" y2="30" stroke="#e8d0bc" stroke-width="3"/>
+        <path d="M14 30 L24 28 L34 30 L36 55 L12 55 Z" fill="#d4c5a0"/>
+        <line x1="14" y1="34" x2="6" y2="38" stroke="#e8d0bc" stroke-width="2" stroke-linecap="round"/>
+        <line x1="34" y1="34" x2="42" y2="38" stroke="#e8d0bc" stroke-width="2" stroke-linecap="round"/>
+        <line x1="6" y1="38" x2="42" y2="38" stroke="#b8860b" stroke-width="1.5"/>
+        <path d="M2 42 Q6 40, 10 42 Q6 44, 2 42" fill="none" stroke="#b8860b" stroke-width="1"/>
+        <path d="M38 44 Q42 42, 46 44 Q42 46, 38 44" fill="none" stroke="#b8860b" stroke-width="1"/></svg>`;
+    }
+    const hk = mode === "hacker";
+    return `<svg width="44" height="58" viewBox="0 0 48 64" aria-hidden="true">
+      <path d="M24 4 C12 4, 8 12, 8 20 L8 44 C8 52, 12 58, 20 58 L28 58 C36 58, 40 52, 40 44 L40 20 C40 12, 36 8, 28 8 L20 8"
+        fill="none" stroke="${hk ? '#00ff00' : 'currentColor'}" stroke-width="3" stroke-linecap="round"/>
+      ${hk ? '<rect x="14" y="26" width="8" height="4" rx="1" fill="#00ff00"/><rect x="26" y="26" width="8" height="4" rx="1" fill="#00ff00"/>'
+           : '<circle cx="18" cy="28" r="3" fill="currentColor"/><circle cx="30" cy="28" r="3" fill="currentColor"/>'}
+      <path d="M20 36 Q24 40, 28 36" fill="none" stroke="${hk ? '#00ff00' : 'currentColor'}" stroke-width="1.5" stroke-linecap="round"/></svg>`;
+  }
+  function update() {
+    if (!host) return;
+    const b = host.querySelector(".clippy-bubble-text");
+    if (b) { b.textContent = pick(); }
+  }
+  function render() {
+    if (host) host.remove();
+    host = document.createElement("div");
+    host.className = "clippy-wrap clippy-" + mode;
+    const hint = mode === "hacker" ? 'type "clippy" to downgrade' : 'type "clippy" to dismiss';
+    host.innerHTML = `
+      <div class="clippy-bubble">
+        <p class="clippy-bubble-text"></p>
+        <p class="clippy-hint">${hint}</p>
+      </div>
+      <div class="clippy-char" title="another, please">${charSVG()}</div>
+      <button class="clippy-close" aria-label="Dismiss">×</button>`;
+    document.body.appendChild(host);
+    host.querySelector(".clippy-bubble-text").textContent = pick();
+    host.querySelector(".clippy-char").addEventListener("click", update);
+    host.querySelector(".clippy-close").addEventListener("click", hide);
+  }
+  function show() {
+    visible = true; render();
+    clearInterval(timer);
+    timer = setInterval(() => { if (visible) update(); }, mode === "themis" ? 12000 : 8000);
+  }
+  function hide() {
+    visible = false; clearInterval(timer);
+    if (host) { host.remove(); host = null; }
+  }
+  let buf = "";
+  window.addEventListener("keydown", (e) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target && e.target.isContentEditable)) return;
+    if (e.key.length !== 1) return;
+    buf = (buf + e.key.toLowerCase()).slice(-10);
+    for (const m of ["clippy", "hacker", "themis"]) {
+      if (buf.endsWith(m)) {
+        buf = "";
+        if (m === "clippy" && mode === "clippy" && visible) { hide(); }
+        else { mode = m; used = new Set(); show(); }
+      }
+    }
+  });
+})();
+
+// Sync the View-menu Dark-mode toggle's tick on load.
+document.getElementById("tb-dark-toggle")?.setAttribute("aria-checked", currentTheme() === "dark" ? "true" : "false");

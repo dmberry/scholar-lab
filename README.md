@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 0.2.59 · proof-of-concept.
+**Version:** 0.2.60 · proof-of-concept.
 
 ## What it does
 
@@ -90,6 +90,9 @@ read as indicative rather than definitive.
   export carries a version stamp and imports warn on a newer format.
 - **Configurable data folder**: relocate it from *Settings → Data & reset*
   (backup-first copy), with a **Show Folder** button to reveal it.
+- **Themes & dark mode**: a theme picker in *Settings → Appearance*
+  (Default / White / Blue / Brown / Yellow / Dark), persisted across sessions,
+  with a quick **Dark mode** toggle on the View menu.
 - **Help menu**: an in-app guide to the whole workflow.
 - **Analytics modal**: cross-unit visibility, citation totals, REF readiness,
   momentum, cross-listings, citation history.

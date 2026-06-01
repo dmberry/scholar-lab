@@ -6,8 +6,8 @@
 <title>Scholar Dashboard</title>
 <link rel="stylesheet" href="style.css">
 <script>
-  // Apply the saved theme before first paint to avoid a flash of light mode.
-  try { if (localStorage.getItem("sd-theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}
+  // Apply the saved theme before first paint to avoid a flash of the default.
+  try { var t = localStorage.getItem("sd-theme"); if (t && t !== "default") document.documentElement.dataset.theme = t; } catch (e) {}
 </script>
 </head>
 <body>
@@ -23,7 +23,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.59</span>
+    <span class="tb-sub" id="tb-version">v0.2.60</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -62,6 +62,10 @@
         </button>
         <button class="tb-menu-item tb-menu-item-plain" data-zoom="0" role="menuitem">
           <span class="tb-mi-label">Reset text size</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-dark-toggle" role="menuitemcheckbox" aria-checked="false">
+          <span class="tb-mi-label">Dark mode</span>
         </button>
       </div>
     </div>

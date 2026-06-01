@@ -2433,3 +2433,80 @@ h2 {
 [data-theme="dark"] .cs-empty,
 [data-theme="dark"] .data-help,
 [data-theme="dark"] .set-help { color: var(--muted); }
+
+/* Dark-mode fixes for report + analytics surfaces (the light tints were
+   jarring on a dark background). */
+[data-theme="dark"] .qp-bar { background: #2a2e35; }
+[data-theme="dark"] .abar { background: #2a2e35; }
+[data-theme="dark"] .ref-card { background: var(--card); border-color: var(--border); }
+[data-theme="dark"] .ref-card.ref-tier-good { background: #13241a; border-color: #1f5c38; }
+[data-theme="dark"] .ref-card.ref-tier-ok   { background: #241f12; border-color: #6b561f; }
+[data-theme="dark"] .ref-card.ref-tier-low  { background: #2a1717; border-color: #6b2f2f; }
+[data-theme="dark"] .rag-tile            { background: #1b1f25; }
+[data-theme="dark"] .rag-tile.rag-ok     { background: #13241a; }
+[data-theme="dark"] .rag-tile.rag-warn   { background: #241f12; }
+[data-theme="dark"] .rag-tile.rag-under  { background: #2a1717; }
+[data-theme="dark"] .rag-ok    { color: #5fcf86; }
+[data-theme="dark"] .rag-warn  { color: #e0b15a; }
+[data-theme="dark"] .rag-under { color: #f08a8a; }
+[data-theme="dark"] .rag-tile.rag-ok .rag-val,    [data-theme="dark"] .rag-tile.rag-ok .rag-note    { color: #5fcf86; }
+[data-theme="dark"] .rag-tile.rag-warn .rag-val,  [data-theme="dark"] .rag-tile.rag-warn .rag-note  { color: #e0b15a; }
+[data-theme="dark"] .rag-tile.rag-under .rag-val, [data-theme="dark"] .rag-tile.rag-under .rag-note { color: #f08a8a; }
+[data-theme="dark"] .rr-gpa.rag-ok strong    { color: #5fcf86; }
+[data-theme="dark"] .rr-gpa.rag-warn strong  { color: #e0b15a; }
+[data-theme="dark"] .rr-gpa.rag-under strong { color: #f08a8a; }
+[data-theme="dark"] .ur-sc-gpa.rag-ok    { background: #13241a; }
+[data-theme="dark"] .ur-sc-gpa.rag-warn  { background: #241f12; }
+[data-theme="dark"] .ur-sc-gpa.rag-under { background: #2a1717; }
+/* Authoring-status chips. */
+[data-theme="dark"] .cs-st-none  { background: #2a2e35; color: #cfd3da; }
+[data-theme="dark"] .cs-st-draft { background: #2e2716; color: #e0b15a; }
+[data-theme="dark"] .cs-st-proof { background: #16243a; color: #7fb0ff; }
+[data-theme="dark"] .cs-st-done  { background: #13241a; color: #5fcf86; }
+[data-theme="dark"] .rr-readiness.ok    { background: #13241a; color: #5fcf86; }
+[data-theme="dark"] .rr-readiness.under { background: #241f12; color: #e0b15a; }
+/* Excluded-staff note / misc light pills. */
+[data-theme="dark"] .data-table th { background: #23262c; }
+
+/* ── Theme palettes (light variants) ──────────────────────────────────────
+   Each just recolours the core vars; the default ("parchment") needs no rule.
+   The "dark" theme additionally pulls in the surface overrides above. */
+[data-theme="white"] {
+  --bg: #ffffff; --card: #ffffff; --border: #e6e6e6; --accent-soft: #eef3fb;
+}
+[data-theme="blue"] {
+  --bg: #eef4fb; --card: #ffffff; --accent: #1b5fb0; --accent-soft: #dbe8f8; --border: #cdddee;
+}
+[data-theme="brown"] {
+  --bg: #f4ece0; --ink: #33281d; --muted: #6f5d49; --accent: #8a5a2b;
+  --accent-soft: #ecdcc6; --border: #ddcbb2; --card: #fbf5ec;
+}
+[data-theme="yellow"] {
+  --bg: #fdf7e3; --ink: #322b16; --muted: #6f6536; --accent: #9a7400;
+  --accent-soft: #f5e9c2; --border: #e7d9a6; --card: #fffdf5;
+}
+
+/* View-menu checkbox item (Dark mode). */
+[role="menuitemcheckbox"][aria-checked="true"] .tb-mi-label::after { content: "  ✓"; color: var(--accent); font-weight: 700; }
+
+/* ── Clippy easter egg ─────────────────────────────────────────────────── */
+.clippy-wrap { position: fixed; bottom: 1rem; right: 1rem; z-index: 10000;
+  display: flex; flex-direction: column; align-items: flex-end; pointer-events: none; }
+.clippy-bubble { pointer-events: auto; margin-bottom: .6rem; max-width: 320px; padding: .7rem .8rem;
+  border-radius: 10px; background: var(--card); color: var(--ink); border: 1px solid var(--border);
+  box-shadow: 0 8px 28px rgba(0,0,0,.18); font-size: .82rem; animation: clippy-in .18s ease; }
+.clippy-bubble-text { margin: 0; line-height: 1.5; white-space: pre-line; }
+.clippy-hint { margin: .5rem 0 0; font-size: .68rem; color: var(--muted); }
+.clippy-char { pointer-events: auto; cursor: pointer; color: var(--muted); transition: transform .12s ease; }
+.clippy-char:hover { transform: scale(1.1); }
+.clippy-char:active { transform: scale(.95); }
+.clippy-close { pointer-events: auto; position: absolute; top: -6px; right: -6px; width: 20px; height: 20px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--muted);
+  cursor: pointer; font-size: 11px; line-height: 1; }
+@keyframes clippy-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.clippy-hacker .clippy-bubble { background: #000; border-color: #00aa00; color: #00ff66; font-family: ui-monospace, Menlo, monospace; }
+.clippy-hacker .clippy-hint { color: #00aa44; }
+.clippy-hacker .clippy-close { background: #000; border-color: #00aa00; color: #00ff66; }
+.clippy-themis .clippy-bubble { background: #0a0a1a; border-color: #b8860b; color: #e8dcc0; font-style: italic; }
+.clippy-themis .clippy-hint { color: #b8860b; }
+.clippy-themis .clippy-close { background: #0a0a1a; border-color: #b8860b; color: #b8860b; }
