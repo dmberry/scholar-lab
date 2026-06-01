@@ -2115,15 +2115,41 @@ async function renderCaseStudies() {
   panel.innerHTML = `
     <div class="cs-panel-head">
       <h2>Impact case studies — UoA ${escapeHTML(code)}${uoaName ? " · " + escapeHTML(uoaName) : ""} <span class="cs-count">${items.length}</span></h2>
-      <button class="tb-btn primary" id="cs-new">＋ New case study</button>
+      <div class="cs-actions">
+        <button class="tb-btn" id="cs-import" title="Import case studies from Markdown (.md) files">⬆ Import…</button>
+        <button class="tb-btn" id="cs-export-all" ${items.length ? "" : "disabled"} title="Download this UoA's case studies as a .zip of Markdown files">⤓ Export all</button>
+        <button class="tb-btn primary" id="cs-new">＋ New case study</button>
+        <input type="file" id="cs-import-input" accept=".md,text/markdown,text/plain" multiple hidden>
+      </div>
     </div>
     <div class="cs-grid">${cards || `<div class="cs-empty">
       <p>No case studies yet for this UoA.</p>
       <button class="tb-btn" id="cs-demo">✨ Start from a demo</button>
-      <span class="cs-empty-hint">creates an editable example REF3 case study you can adapt or delete</span>
+      <span class="cs-empty-hint">creates an editable example REF3 case study you can adapt or delete · or Import from Markdown (template in docs/)</span>
     </div>`}</div>`;
   document.getElementById("cs-new")?.addEventListener("click", () => openCaseStudyEditor(null, code));
   document.getElementById("cs-demo")?.addEventListener("click", () => createDemoCaseStudy(code));
+  document.getElementById("cs-export-all")?.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = `/api/case-studies.zip?uoa=${encodeURIComponent(code)}`; a.download = "";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
+  const importInput = document.getElementById("cs-import-input");
+  document.getElementById("cs-import")?.addEventListener("click", () => importInput?.click());
+  importInput?.addEventListener("change", async (e) => {
+    const files = [...(e.target.files || [])];
+    if (!files.length) return;
+    let ok = 0, fail = 0;
+    for (const f of files) {
+      try {
+        const text = await f.text();
+        const r = await fetch("/api/case-study-import", { method: "POST", headers: { "Content-Type": "text/markdown" }, body: text });
+        if (r.ok) ok++; else fail++;
+      } catch { fail++; }
+    }
+    alert(`Imported ${ok} case stud${ok === 1 ? "y" : "ies"}${fail ? `, ${fail} failed (check the UoA: header / template)` : ""}.`);
+    renderCaseStudies();
+  });
   panel.querySelectorAll("[data-cs-edit]").forEach(b => b.addEventListener("click", () => {
     const cs = items.find(c => c.id === b.dataset.csEdit);
     if (cs) openCaseStudyEditor(cs, code);
@@ -2228,6 +2254,7 @@ async function openCaseStudyEditor(cs, uoaCode) {
     </div>
     <div class="data-actions">
       ${cs.id ? `<button class="tb-btn cs-danger" id="cs-delete">Delete</button>` : ""}
+      ${cs.id ? `<button class="tb-btn" id="cs-download">⤓ Download .md</button>` : ""}
       <span class="data-actions-spacer"></span>
       <span class="set-saved" id="cs-saved"></span>
       <button class="tb-btn" data-cs-close>Cancel</button>
@@ -2236,6 +2263,11 @@ async function openCaseStudyEditor(cs, uoaCode) {
 
   // REF gives an indicative ~100-word limit for the impact summary.
   wireWordCount(body.querySelector("#cs-summary"), body.querySelector("#cs-summary-wc"), 100);
+  body.querySelector("#cs-download")?.addEventListener("click", () => {
+    const a = document.createElement("a");
+    a.href = `/api/case-study.md?id=${encodeURIComponent(cs.id)}`; a.download = "";
+    document.body.appendChild(a); a.click(); a.remove();
+  });
 
   body.querySelector("#cs-save").addEventListener("click", async () => {
     const payload = {
@@ -3797,6 +3829,14 @@ function renderPerson(p, d) {
 
     ${sparkline(cpy)}
 
+    <div class="profile-block">
+      <label class="profile-label" for="profile-text">Institutional profile
+        <span class="profile-saved" id="profile-saved"></span></label>
+      <textarea id="profile-text" class="profile-text" rows="3"
+        placeholder="Institutional staff-page URL and/or a short bio for REF returns…"></textarea>
+      <button class="tb-btn profile-save" id="profile-save">Save profile</button>
+    </div>
+
     <h4 style="margin:1rem 0 .4rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
       Recent publications (REF 2029 window, from 2021)
       <span class="ref-summary" id="ref-summary-${escapeAttr(p.scholar_id)}">${refFlagCount(p.scholar_id)} flagged for REF</span>
@@ -3827,6 +3867,31 @@ function renderPerson(p, d) {
   requestAnimationFrame(() => {
     const scroller = modalBody.querySelector(".sparkline-scroll");
     if (scroller) scroller.scrollLeft = scroller.scrollWidth;
+  });
+  // Institutional profile — load + wire save (keyed by staff_id/scholar_id).
+  wireProfileEditor(modalBody, p);
+}
+
+// A stable per-person key for the institutional-profile store.
+function personKey(p) { return String(p.staff_id || p.scholar_id || p.name || ""); }
+
+// Load + save the institutional-profile textarea inside a person modal.
+function wireProfileEditor(root, p) {
+  const ta = root.querySelector("#profile-text");
+  const btn = root.querySelector("#profile-save");
+  const saved = root.querySelector("#profile-saved");
+  if (!ta || !btn) return;
+  const key = personKey(p);
+  fetch("/api/scholar-meta?key=" + encodeURIComponent(key))
+    .then(r => r.ok ? r.json() : null).then(d => { if (d && d.profile) ta.value = d.profile; })
+    .catch(() => {});
+  btn.addEventListener("click", async () => {
+    try {
+      const r = await fetch("/api/scholar-meta", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, profile: ta.value }) });
+      if (!r.ok) throw new Error();
+      if (saved) { saved.textContent = "Saved ✓"; setTimeout(() => saved.textContent = "", 2500); }
+    } catch { if (saved) saved.textContent = "Save failed"; }
   });
 }
 

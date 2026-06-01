@@ -75,6 +75,7 @@ REF_FLAGS_FILE    = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: Tr
 REF_TARGETS_FILE  = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
 CASE_STUDIES_FILE = USER_ROOT / "case_studies.json"  # {id: {uoa, title, status, …, versions[]}}
 UOA_META_FILE     = USER_ROOT / "uoa_meta.json"      # {uoa_code: {narrative}}
+SCHOLAR_META_FILE = USER_ROOT / "scholar_meta.json"  # {person_key: {profile}}
 
 # First-run seed: if the user has no data/ yet, copy the bundled
 # data.example/ so they see a working dashboard immediately rather than
@@ -87,7 +88,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.48"
+__version__ = "0.2.49"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -961,6 +962,143 @@ def api_case_study_write():
     return jsonify({"ok": True, "case_study": rec})
 
 
+# ── Case-study Markdown import / export ─────────────────────────────────────
+# A portable, human/AI-editable format. See docs/case-study-template.md.
+
+def _case_study_to_markdown(cs: dict) -> str:
+    L = ["# Impact Case Study", ""]
+    L.append(f"UoA: {cs.get('uoa', '')}")
+    L.append(f"Title: {cs.get('title', '')}")
+    L.append(f"Status: {cs.get('status', 'not_started')}")
+    L.append(f"Period: {cs.get('period', '')}")
+    L.append(f"Contributors: {', '.join(cs.get('contributors', []))}")
+    L.append("References:")
+    for r in cs.get("references", []):
+        L.append(f"  - {r}")
+    L.append("")
+    for label, key in (("Summary of the impact", "summary"),
+                       ("Underpinning research", "underpinning_research"),
+                       ("Details of the impact", "details")):
+        L += [f"## {label}", "", (cs.get(key) or ""), ""]
+    L += ["## Sources to corroborate", ""]
+    for s in cs.get("corroborating_sources", []):
+        L.append(f"- {s}")
+    L.append("")
+    return "\n".join(L)
+
+
+_CS_SECTION_KEYS = {
+    "summary of the impact": "summary",
+    "underpinning research": "underpinning_research",
+    "details of the impact": "details",
+    "sources to corroborate": "corroborating_sources",
+}
+
+
+def _parse_case_study_markdown(text: str) -> dict:
+    cs = {"references": [], "corroborating_sources": [], "contributors": [],
+          "status": "draft", "uoa": "", "title": "", "period": "",
+          "summary": "", "underpinning_research": "", "details": ""}
+    section = None       # current "## …" body key
+    in_refs = False
+    buf = []
+
+    def flush():
+        nonlocal buf
+        if section in ("summary", "underpinning_research", "details"):
+            cs[section] = "\n".join(buf).strip()
+        buf.clear()
+
+    for ln in text.splitlines():
+        if ln.startswith("## "):
+            flush(); in_refs = False
+            section = _CS_SECTION_KEYS.get(ln[3:].strip().lower())
+            continue
+        if ln.startswith("# "):
+            continue
+        if section == "corroborating_sources":
+            m = re.match(r"\s*-\s+(.*)", ln)
+            if m and m.group(1).strip():
+                cs["corroborating_sources"].append(m.group(1).strip())
+            continue
+        if section in ("summary", "underpinning_research", "details"):
+            buf.append(ln); continue
+        # Header region (before the first "## ").
+        if ln.strip().lower() == "references:":
+            in_refs = True; continue
+        if in_refs:
+            m = re.match(r"\s*-\s+(.*)", ln)
+            if m:
+                if m.group(1).strip():
+                    cs["references"].append(m.group(1).strip())
+                continue
+            in_refs = False
+        m = re.match(r"([A-Za-z ]+):\s*(.*)", ln)
+        if m:
+            k, v = m.group(1).strip().lower(), m.group(2).strip()
+            if k == "uoa":          cs["uoa"] = v
+            elif k == "title":      cs["title"] = v
+            elif k == "status":     cs["status"] = v if v in _CASE_STUDY_STATES else "draft"
+            elif k == "period":     cs["period"] = v
+            elif k == "contributors":
+                cs["contributors"] = [x.strip() for x in v.split(",") if x.strip()]
+    flush()
+    return cs
+
+
+@app.route("/api/case-study.md")
+def api_case_study_md():
+    """Download one case study as Markdown. ?id=<id>."""
+    cid = request.args.get("id", "")
+    cs = _load_case_studies().get(cid)
+    if not cs:
+        return jsonify({"error": "no such case study"}), 404
+    slug = _slugify(cs.get("title") or cid)[:50] or "case-study"
+    return Response(_case_study_to_markdown(cs), mimetype="text/markdown",
+                    headers={"Content-Disposition": f'attachment; filename="{slug}.md"'})
+
+
+@app.route("/api/case-studies.zip")
+def api_case_studies_zip():
+    """Download all case studies (optionally ?uoa=NN) as a .zip of .md files."""
+    import io, zipfile
+    data = _load_case_studies()
+    uoa = request.args.get("uoa")
+    items = [c for c in data.values() if not uoa or str(c.get("uoa")) == str(uoa)]
+    if not items:
+        return jsonify({"error": "no case studies to export"}), 404
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for c in items:
+            slug = _slugify(c.get("title") or c.get("id"))[:50] or c.get("id")
+            zf.writestr(f"{c.get('uoa','x')}-{slug}.md", _case_study_to_markdown(c))
+    buf.seek(0)
+    fname = f"case-studies{('-uoa' + uoa) if uoa else ''}-{datetime.now().strftime('%Y%m%d')}.zip"
+    return Response(buf.getvalue(), mimetype="application/zip",
+                    headers={"Content-Disposition": f'attachment; filename="{fname}"'})
+
+
+@app.route("/api/case-study-import", methods=["POST"])
+def api_case_study_import():
+    """Import one case study from Markdown (body = the .md text). Creates a
+    new record (always a fresh id). Returns the saved case study."""
+    text = request.get_data(as_text=True) or ""
+    if not text.strip():
+        return jsonify({"error": "empty upload"}), 400
+    parsed = _parse_case_study_markdown(text)
+    if not parsed.get("uoa"):
+        return jsonify({"error": "missing 'UoA:' header — see the template"}), 400
+    now = datetime.now(timezone.utc).isoformat()
+    cid = "cs-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
+    parsed.update({"id": cid, "created_at": now, "updated_at": now,
+                   "versions": [{"ts": now, "status": parsed.get("status", "draft"),
+                                 "note": "imported from Markdown"}]})
+    data = _load_case_studies()
+    data[cid] = parsed
+    _save_case_studies(data)
+    return jsonify({"ok": True, "case_study": parsed})
+
+
 @app.route("/api/uoa-meta", methods=["GET", "POST"])
 def api_uoa_meta():
     """Per-UoA narrative / environment text for the UoA report.
@@ -984,6 +1122,31 @@ def api_uoa_meta():
     except OSError:
         pass
     return jsonify({"ok": True, "uoa": uoa, **meta[uoa]})
+
+
+@app.route("/api/scholar-meta", methods=["GET", "POST"])
+def api_scholar_meta():
+    """Per-person free-text institutional profile, keyed by a stable
+    person key (staff_id or scholar_id).
+      GET ?key=… → {profile}
+      POST {key, profile} → save."""
+    try:
+        with SCHOLAR_META_FILE.open() as f:
+            meta = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        meta = {}
+    if request.method == "GET":
+        return jsonify(meta.get(str(request.args.get("key") or ""), {"profile": ""}))
+    body = request.get_json(force=True, silent=True) or {}
+    key = str(body.get("key") or "")
+    if not key:
+        return jsonify({"error": "key required"}), 400
+    meta[key] = {"profile": (body.get("profile") or "")}
+    try:
+        SCHOLAR_META_FILE.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    except OSError:
+        pass
+    return jsonify({"ok": True, "key": key, **meta[key]})
 
 
 @app.route("/api/version")

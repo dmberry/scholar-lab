@@ -39,3 +39,4 @@ dist/
 
 # ── OS / editor ────────────────────────────────────────────
 .DS_Store
+scholar_meta.json

@@ -236,6 +236,13 @@ body {
 /* Live word counter (REF indicative limits). Red when over. */
 .wordcount { font-size: .7rem; font-weight: 400; color: var(--muted); margin-left: .4rem; }
 .wordcount.over { color: #a31818; font-weight: 700; }
+
+/* Institutional-profile editor in the person modal */
+.profile-block { margin: 1rem 0; }
+.profile-label { display: block; font-size: .9rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: .3rem; }
+.profile-text { width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.45; }
+.profile-save { margin-top: .4rem; }
+.profile-saved { font-size: .72rem; font-weight: 500; color: #1a7f3c; text-transform: none; letter-spacing: 0; margin-left: .4rem; }
 .cs-status {
   align-self: flex-start; font-size: .62rem; font-weight: 700; letter-spacing: .03em;
   text-transform: uppercase; padding: .2em .55em; border-radius: 999px;
