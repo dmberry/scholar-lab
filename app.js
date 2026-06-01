@@ -1702,6 +1702,7 @@ document.addEventListener("click", (e) => {
   // Toolbar unit-file controls
   if (e.target.closest("#tb-load-unit")) document.getElementById("data-load-input")?.click();
   if (e.target.closest("#tb-save-unit")) saveCurrentUnit();
+  if (e.target.closest("#tb-save-faculty")) saveFacultyBundle();
   if (e.target.closest("#tb-new-unit")) newUnitFlow();
   if (e.target.closest("#a-excl-open")) openExcludedModal();
   // Export menu — Print and Save-as-PDF both open the browser print
@@ -2327,6 +2328,9 @@ async function openRefReport() {
     ${stats}
     ${sections}`;
 
+  // Print = the live modal DOM, not a re-render: whatever is in this report
+  // above prints verbatim (only chrome is hidden by the print stylesheet).
+  // Keep it that way — see the "STALENESS GUARD" note in style.css @media print.
   body.querySelector("#rr-print")?.addEventListener("click", () => {
     document.body.classList.add("printing-ref-report");
     const done = () => { document.body.classList.remove("printing-ref-report"); window.removeEventListener("afterprint", done); };
@@ -2908,20 +2912,49 @@ function saveCurrentUnit() {
   downloadUnitFile(CURRENT_UNIT.slug);
 }
 
-// Save an entire UoA: units + cached pubs (with ratings) + impact case
-// studies + narrative, as one <name>_UoA.json bundle that Load re-ingests.
-function saveUoaBundle() {
-  const code = document.getElementById("uoa-select")?.value;
-  if (!code) { alert("Pick a UoA first — \"Save\" in UoA mode bundles the selected UoA."); return; }
-  const scope = currentScope();
-  const uoaName = UOA_BY_CODE[code]?.name || "";
-  const url = `/api/uoa-bundle.json?code=${encodeURIComponent(code)}`
+// Download a self-contained bundle for a scope: its unit files + cached pubs
+// (with ratings) + REF flags + profiles + impact case studies + UoA
+// narratives. One <name>_UoA.json / _Faculty.json that Load re-ingests.
+function saveBundle(scope) {
+  if (!scope || !scope.slugs || !scope.slugs.length) {
+    alert("Nothing to bundle in the current view.");
+    return;
+  }
+  const code = scope.kind === "uoa" ? (document.getElementById("uoa-select")?.value || "") : "";
+  const name = scope.label || scope.name || "";
+  const url = `/api/bundle.json?kind=${encodeURIComponent(scope.kind)}`
+            + `&code=${encodeURIComponent(code)}`
             + `&slugs=${encodeURIComponent(scope.slugs.join(","))}`
-            + `&name=${encodeURIComponent(uoaName)}`
+            + `&name=${encodeURIComponent(name)}`
             + `&file=${encodeURIComponent(scope.name)}`;
   const a = document.createElement("a");
   a.href = url; a.download = "";
   document.body.appendChild(a); a.click(); a.remove();
+}
+
+// UoA mode: bundle the selected UoA.
+function saveUoaBundle() {
+  const code = document.getElementById("uoa-select")?.value;
+  if (!code) { alert("Pick a UoA first — \"Save\" in UoA mode bundles the selected UoA."); return; }
+  saveBundle(currentScope());
+}
+
+// Faculty mode: bundle the current scope (whole faculty / school / everything).
+// A faculty bundle carries every unit in scope plus the case studies and
+// narratives for every UoA those units' staff belong to.
+function saveFacultyBundle() {
+  const scope = currentScope();
+  if (scope.kind === "unit") {
+    // A single unit is selected — a faculty bundle still makes sense for its
+    // whole faculty, so widen to the faculty it sits in.
+    const facSlug = document.getElementById("faculty-select")?.value;
+    if (facSlug && facSlug !== "__all__") {
+      const slugs = UNITS.filter(u => !u.disabled && u.slug !== "all-staff" && u._facultySlug === facSlug).map(u => u.slug);
+      const fac = FACULTIES.find(f => f.slug === facSlug);
+      return saveBundle({ kind: "faculty", label: fac?.name || facSlug, slugs, name: facSlug });
+    }
+  }
+  saveBundle(scope);
 }
 
 // Describe what the current view covers, for scope-aware Export. Returns
@@ -3135,23 +3168,28 @@ document.getElementById("data-load-input")?.addEventListener("change", async (e)
   status.className = "data-status";
   try {
     const text = await file.text();
-    // A complete-UoA bundle is JSON with our format marker; anything else
-    // is treated as a single unit Markdown file.
+    // A bundle (UoA or Faculty, current or legacy format) is JSON with our
+    // format marker; anything else is treated as a single unit Markdown file.
     let bundle = null;
     try {
       const j = JSON.parse(text);
-      if (j && j._meta && (j._meta.format === "scholar-dashboard-uoa-bundle" || j._meta.kind === "uoa-bundle")) bundle = j;
+      const fmt = j && j._meta && (j._meta.format || ""), kind = j && j._meta && (j._meta.kind || "");
+      if (fmt === "scholar-dashboard-bundle" || fmt === "scholar-dashboard-uoa-bundle"
+          || kind === "bundle" || kind === "uoa-bundle") bundle = j;
     } catch { /* not JSON → unit file */ }
 
     if (bundle) {
-      const r = await fetch("/api/uoa-bundle-import", {
+      const r = await fetch("/api/bundle-import", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: text,
       });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "bundle import failed");
-      (d.warnings || []).forEach(w => console.warn("uoa-bundle import:", w));
+      (d.warnings || []).forEach(w => console.warn("bundle import:", w));
       const s = d.summary || {};
-      let msg = `Imported UoA ${d.uoa || ""}: ${s.units || 0} unit(s), ${s.scholars || 0} cached profile(s), ${s.case_studies || 0} case stud${(s.case_studies === 1) ? "y" : "ies"}.`;
+      const what = d.kind === "uoa" ? `UoA ${(d.name || "").replace(/^UoA\s*/i, "")}`
+                 : (d.name || "bundle");
+      let msg = `Imported ${what}: ${s.units || 0} unit(s), ${s.scholars || 0} cached profile(s), `
+              + `${s.case_studies || 0} case stud${(s.case_studies === 1) ? "y" : "ies"}.`;
       if (d.warnings && d.warnings.length) msg += ` ⚠ ${d.warnings.length} warning(s) — see console.`;
       status.textContent = msg + " Reloading…";
       status.className = "data-status ok";
@@ -3665,8 +3703,9 @@ function applyViewMode(initialUnit) {
   applyFileMenuLabels();
 }
 
-// The File menu's Load / Save items act on a single unit in Faculty mode but
-// on a whole UoA bundle in UoA mode — reflect that in their labels.
+// The File menu is mode-aware. In UoA mode we only deal in bundles (that's
+// the shape of the material). In Faculty mode you can save a single unit or a
+// whole-faculty bundle, and Load takes a unit file or any bundle.
 function applyFileMenuLabels() {
   const uoa = VIEW_MODE === "uoa";
   const set = (id, label, hint) => {
@@ -3676,10 +3715,15 @@ function applyFileMenuLabels() {
     if (l) l.textContent = label;
     if (h) h.textContent = hint;
   };
-  set("tb-load-unit", uoa ? "Load…" : "Load unit file…",
-      uoa ? "Import a unit file or a complete UoA bundle" : "Import a unit Markdown file from disk");
+  set("tb-load-unit", "Load…",
+      uoa ? "Import a complete UoA or Faculty bundle"
+          : "Import a unit Markdown file or a complete bundle");
   set("tb-save-unit", uoa ? "Save UoA…" : "Save current unit…",
-      uoa ? "Download the whole UoA as one bundle (units, pubs, case studies)" : "Download this unit as Markdown");
+      uoa ? "Download the whole UoA as one bundle (units, pubs, case studies)"
+          : "Download this unit as Markdown");
+  // Faculty bundle save is meaningless in UoA mode (the UoA bundle covers it).
+  const fac = document.getElementById("tb-save-faculty");
+  if (fac) fac.hidden = uoa;
 }
 
 // Render the staff grid filtered to a single UoA code. Synthesises a unit-

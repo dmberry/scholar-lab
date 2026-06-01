@@ -107,7 +107,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.53"
+__version__ = "0.2.54"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -1744,21 +1744,30 @@ def api_export_units_zip():
     )
 
 
-# ── Complete-UoA bundle (load / save an entire UoA) ─────────────────────────
-# In UoA mode, "Save" exports one self-contained <name>_UoA.json carrying the
-# unit files, the cached Scholar payloads (so pubs travel offline), the REF
-# ratings, the institutional profiles, every impact case study, and the UoA
-# narrative. "Load" ingests it back. The bundle re-uses the existing per-unit
-# Markdown so unit data round-trips losslessly.
-_UOA_BUNDLE_FORMAT = "scholar-dashboard-uoa-bundle"
+# ── Complete bundles (load / save a whole UoA or a whole Faculty) ───────────
+# A bundle is one self-contained JSON carrying the unit files, the cached
+# Scholar payloads (so pubs travel offline), the REF ratings, the
+# institutional profiles, the impact case studies, and the UoA narratives for
+# a scope. "Load" ingests it back. Unit data round-trips through the canonical
+# per-unit Markdown. The scope is just which units (slugs) are included and,
+# for case studies / narratives, which UoAs those units' staff belong to.
+_BUNDLE_FORMAT = "scholar-dashboard-bundle"            # current
+_UOA_BUNDLE_FORMAT = "scholar-dashboard-uoa-bundle"    # legacy (still imported)
+_BUNDLE_FORMATS = {_BUNDLE_FORMAT, _UOA_BUNDLE_FORMAT}
 
 
-def _assemble_uoa_bundle(code: str, slugs: list[str], uoa_name: str = "") -> dict:
-    code = str(code)
-    want = {_slugify(s) for s in slugs if s and s.strip()} or None
+def _assemble_bundle(slugs: list[str], scope: dict) -> dict:
+    """Build a bundle for a set of unit slugs. scope = {kind, code, name}.
+    For a UoA bundle case studies/narratives are limited to that one UoA; for
+    a Faculty (or wider) bundle they cover every UoA represented by the
+    in-scope staff."""
+    kind = scope.get("kind", "")
+    code = str(scope.get("code") or "")
+    want = {_slugify(s) for s in slugs if s and str(s).strip()} or None
     units_md: list[dict] = []
     scholar_ids: set[str] = set()
     staff_keys: set[str] = set()
+    uoa_codes: set[str] = set()
 
     def _walk(units, fac, sch):
         for u in units:
@@ -1766,10 +1775,15 @@ def _assemble_uoa_bundle(code: str, slugs: list[str], uoa_name: str = "") -> dic
             if want is not None and slug not in want:
                 continue
             units_md.append({"slug": slug, "markdown": _unit_to_markdown(u, fac, sch)})
+            unit_uoa = u.get("uoa")
             for person in u.get("staff", []):
                 if person.get("scholar_id"):
                     scholar_ids.add(person["scholar_id"])
                 staff_keys.add(person.get("staff_id") or person.get("scholar_id") or person.get("name") or "")
+                pu = person.get("uoa")
+                eff = pu if pu is not None else unit_uoa
+                if eff:                      # 0 / None = no UoA
+                    uoa_codes.add(str(eff))
 
     staff_data = _load_staff()
     for fac in staff_data.get("faculties", []):
@@ -1797,54 +1811,84 @@ def _assemble_uoa_bundle(code: str, slugs: list[str], uoa_name: str = "") -> dic
         smeta = {}
     scholar_meta = {k: v for k, v in smeta.items() if k in staff_keys}
 
-    cases = [c for c in _load_case_studies().values() if str(c.get("uoa")) == code]
+    # A UoA bundle is exactly that UoA; a wider bundle covers every UoA its
+    # staff belong to.
+    uoa_filter = {code} if (kind == "uoa" and code) else uoa_codes
+    cases = [c for c in _load_case_studies().values() if str(c.get("uoa")) in uoa_filter]
 
     try:
         umeta = json.loads(UOA_META_FILE.read_text())
     except (OSError, ValueError):
         umeta = {}
+    uoa_meta = {c: umeta.get(c, {"narrative": ""}) for c in uoa_filter}
 
-    return {
-        "_meta": {**_export_meta(), "kind": "uoa-bundle", "format": _UOA_BUNDLE_FORMAT},
-        "uoa": {"code": code, "name": uoa_name},
+    bundle = {
+        "_meta": {**_export_meta(), "kind": "bundle", "format": _BUNDLE_FORMAT},
+        "scope": {"kind": kind, "code": code or None, "name": scope.get("name", "")},
         "units": units_md,
         "scholar_cache": scholar_cache,
         "ref_flags": ref_flags,
         "scholar_meta": scholar_meta,
         "case_studies": cases,
-        "uoa_meta": umeta.get(code, {"narrative": ""}),
+        "uoa_meta": uoa_meta,
     }
+    if kind == "uoa":   # back-compat: older readers expect a top-level `uoa`
+        bundle["uoa"] = {"code": code, "name": scope.get("name", "")}
+    return bundle
+
+
+def _bundle_filename(kind: str, base: str) -> str:
+    base = re.sub(r"[^A-Za-z0-9._-]+", "-", base or "bundle").strip("-") or "bundle"
+    suffix = {"uoa": "_UoA", "faculty": "_Faculty", "school": "_School"}.get(kind, "_bundle")
+    return f"{base}{suffix}.json"
+
+
+@app.route("/api/bundle.json")
+def api_bundle_get():
+    """Export a scope bundle. ?kind=uoa|faculty|school|all, ?code=NN (UoA),
+    ?slugs=a,b,c (the units in scope), ?name= (display), ?file= (filename base)."""
+    kind = (request.args.get("kind") or "uoa").strip()
+    code = (request.args.get("code") or request.args.get("uoa") or "").strip()
+    name = request.args.get("name", "")
+    slugs = [s for s in request.args.get("slugs", "").split(",") if s.strip()]
+    if not slugs:
+        return jsonify({"error": "no units in scope to bundle"}), 400
+    bundle = _assemble_bundle(slugs, {"kind": kind, "code": code, "name": name})
+    base = request.args.get("file") or (f"uoa-{code}" if kind == "uoa" else (name or kind))
+    body = json.dumps(bundle, indent=2, ensure_ascii=False)
+    return Response(body, mimetype="application/json",
+                    headers={"Content-Disposition": f'attachment; filename="{_bundle_filename(kind, base)}"'})
 
 
 @app.route("/api/uoa-bundle.json")
 def api_uoa_bundle_get():
-    """Export a complete UoA bundle. ?code=NN (the UoA), ?slugs=a,b,c (the
-    contributing unit slugs), ?name= (UoA display name). Filename ends _UoA."""
+    """Back-compat UoA export. Prefer /api/bundle.json?kind=uoa."""
     code = (request.args.get("code") or request.args.get("uoa") or "").strip()
     if not code:
         return jsonify({"error": "code (UoA) required"}), 400
     slugs = [s for s in request.args.get("slugs", "").split(",") if s.strip()]
-    bundle = _assemble_uoa_bundle(code, slugs, request.args.get("name", ""))
+    bundle = _assemble_bundle(slugs, {"kind": "uoa", "code": code, "name": request.args.get("name", "")})
     base = re.sub(r"[^A-Za-z0-9._-]+", "-", request.args.get("file") or f"uoa-{code}").strip("-") or f"uoa-{code}"
     body = json.dumps(bundle, indent=2, ensure_ascii=False)
     return Response(body, mimetype="application/json",
                     headers={"Content-Disposition": f'attachment; filename="{base}_UoA.json"'})
 
 
-@app.route("/api/uoa-bundle-import", methods=["POST"])
-def api_uoa_bundle_import():
-    """Ingest a UoA bundle (body = the bundle JSON). Non-destructive: unit
-    files are backed up before overwrite, and ref-flags / scholar-meta /
-    case studies are merged, not replaced wholesale."""
+@app.route("/api/bundle-import", methods=["POST"])
+@app.route("/api/uoa-bundle-import", methods=["POST"])   # legacy route alias
+def api_bundle_import():
+    """Ingest a bundle (UoA or Faculty; current or legacy format). Body = the
+    bundle JSON. Non-destructive: unit files are backed up before overwrite,
+    and ref-flags / scholar-meta / case studies / narratives are merged."""
     bundle = request.get_json(force=True, silent=True) or {}
     meta = bundle.get("_meta") or {}
-    if meta.get("format") != _UOA_BUNDLE_FORMAT and meta.get("kind") != "uoa-bundle":
-        return jsonify({"error": "this file is not a UoA bundle"}), 400
+    if meta.get("format") not in _BUNDLE_FORMATS and meta.get("kind") not in ("bundle", "uoa-bundle"):
+        return jsonify({"error": "this file is not a Scholar Dashboard bundle"}), 400
     warnings = []
     w = _format_warning(meta.get("format_version"))
     if w:
         warnings.append(w)
-    summary = {"units": 0, "scholars": 0, "case_studies": 0, "ref_flags": 0}
+    summary = {"units": 0, "scholars": 0, "case_studies": 0, "ref_flags": 0, "narratives": 0}
 
     # 1. Unit Markdown files (canonical text round-trips as-is).
     DATA_DIR.mkdir(exist_ok=True)
@@ -1898,21 +1942,34 @@ def api_uoa_bundle_import():
         summary["case_studies"] += 1
     _save_case_studies(data)
 
-    # 6. UoA narrative.
+    # 6. UoA narratives. Accept the new {code: {narrative}} map and the legacy
+    #    single {narrative} object (keyed by scope.code / uoa.code).
     um = bundle.get("uoa_meta") or {}
-    code = str((bundle.get("uoa") or {}).get("code") or "")
-    if code and (um.get("narrative") or "").strip():
-        try:
-            allmeta = json.loads(UOA_META_FILE.read_text())
-        except (OSError, ValueError):
-            allmeta = {}
-        allmeta[code] = {"narrative": um.get("narrative", "")}
+    try:
+        allmeta = json.loads(UOA_META_FILE.read_text())
+    except (OSError, ValueError):
+        allmeta = {}
+    pairs = []
+    if "narrative" in um:
+        code = str((bundle.get("scope") or {}).get("code") or (bundle.get("uoa") or {}).get("code") or "")
+        if code:
+            pairs.append((code, um))
+    else:
+        pairs = [(str(c), v) for c, v in um.items() if isinstance(v, dict)]
+    for c, v in pairs:
+        if (v.get("narrative") or "").strip():
+            allmeta[c] = {"narrative": v["narrative"]}
+            summary["narratives"] += 1
+    if summary["narratives"]:
         try:
             UOA_META_FILE.write_text(json.dumps(allmeta, indent=2, ensure_ascii=False))
         except OSError:
             pass
 
-    return jsonify({"ok": True, "uoa": code, "summary": summary, "warnings": warnings})
+    scope = bundle.get("scope") or {}
+    return jsonify({"ok": True, "summary": summary, "warnings": warnings,
+                    "kind": scope.get("kind") or ("uoa" if bundle.get("uoa") else "bundle"),
+                    "name": scope.get("name") or (bundle.get("uoa") or {}).get("name", "")})
 
 
 @app.route("/api/scholar-batch")

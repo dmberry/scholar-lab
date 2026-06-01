@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.53 · proof-of-concept.
+**Version:** 0.2.54 · proof-of-concept.
 
 ## What it does
 
@@ -41,10 +41,12 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
   version log; references picked by scholar → output; contributors auto-suggested
   from the referenced outputs' authors, then freely editable; Markdown
   import/export (+ template in `docs/`).
-- **Complete-UoA bundles**: in By-UoA view, *File → Save UoA…* writes one
-  self-contained `…_UoA.json` (units, cached publications with ratings, profiles,
-  case studies, narrative); *Load…* re-imports it. Every export carries a
-  version stamp and imports warn on a newer format.
+- **Complete bundles**: *File → Save UoA…* (in By-UoA view) or *Save Faculty
+  bundle…* (in By-Faculty view) writes one self-contained `…_UoA.json` /
+  `…_Faculty.json` — units, cached publications with ratings, profiles, every
+  impact case study and the UoA narratives for the scope; *Load…* re-imports
+  either. The File menu is mode-aware (UoA mode deals only in bundles). Every
+  export carries a version stamp and imports warn on a newer format.
 - **Configurable data folder**: relocate it from *Settings → Data & reset*
   (backup-first copy), with a **Show Folder** button to reveal it.
 - **Help menu**: an in-app guide to the whole workflow.

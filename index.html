@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.53</span>
+    <span class="tb-sub" id="tb-version">v0.2.54</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -34,6 +34,10 @@
         <button class="tb-menu-item" id="tb-save-unit" role="menuitem">
           <span class="tb-mi-label">Save current unit…</span>
           <span class="tb-mi-hint">Download this unit as Markdown</span>
+        </button>
+        <button class="tb-menu-item" id="tb-save-faculty" role="menuitem">
+          <span class="tb-mi-label">Save Faculty bundle…</span>
+          <span class="tb-mi-hint">Whole faculty as one bundle (units, pubs, case studies)</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item tb-menu-item-plain" id="tb-settings" role="menuitem">
@@ -186,7 +190,7 @@
         <option value="">Loading…</option>
       </select>
       <span class="unit-count"><span id="uoa-count">…</span> staff</span>
-      <button class="tb-btn" id="uoa-report-btn" title="Full UoA report — readiness dashboard, quality profile, selected outputs and every impact case study (printable)">📄 Report</button>
+      <button class="tb-btn uoa-report-btn" id="uoa-report-btn" title="Full UoA report — readiness dashboard, quality profile, selected outputs and every impact case study (printable)"><span aria-hidden="true">📄</span> UoA Report</button>
     </div>
   </section>
 

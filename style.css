@@ -539,6 +539,10 @@ h2 {
   padding: .55rem .8rem;
   margin-bottom: .4rem;
 }
+/* UoA picker has only label · select · count · Report — don't inherit the
+   7-column Faculty grid (which stretched the Report button across a 1fr track). */
+.view-uoa-picker { grid-template-columns: auto minmax(8em, 1fr) auto auto; }
+.uoa-report-btn { justify-self: start; white-space: nowrap; font-size: .82rem; padding: .35rem .7rem; }
 @media (max-width: 700px) {
   .unit-picker {
     grid-template-columns: auto 1fr;
@@ -1126,6 +1130,17 @@ h2 {
    and let everything inside scale together. Sizes in pt to keep the print
    engine from rescaling, colours forced so backgrounds survive. */
 @media print {
+  /* ⚠ STALENESS GUARD — READ BEFORE EDITING A REPORT.
+     Every report (Analytics, REF selection, UoA) PRINTS THE SAME LIVE MODAL
+     DOM the user sees — there is no separate print renderer, and there must
+     not be one (that's how prints drift out of sync with the screen). The
+     print path only: (1) hides chrome (close button, the Print button,
+     editor controls), and (2) un-clips the card for paper. So:
+       • Add new CONTENT to a report → it prints automatically, do nothing.
+       • Add new CHROME (a button, an editable control) → hide it below.
+       • If a report gains its own scroll container, reset it here too.
+     When you touch a report's markup, eyeball its print preview. */
+
   /* Zero @page margin → no room for the browser-injected header
      (localhost URL on top, date/page on bottom). Internal body padding
      restores a readable printable area. The user can also tick/untick
@@ -1133,6 +1148,12 @@ h2 {
   @page { margin: 0; size: A4; }
   html { font-size: 11pt; }
   body { background: #fff; color: #000; padding: 10mm 12mm; }
+
+  /* On screen the modal card is height-capped and scrolls (max-height:86vh;
+     overflow:auto). On paper that clipped everything below the fold, so the
+     printed report silently lost its tail — the "out of sync" bug. Never
+     clip a card when printing. */
+  .modal-card { max-height: none !important; overflow: visible !important; }
 
   /* ── Analytics-only print mode ──────────────────────────────────────
      Triggered by .printing-analytics on <body> (set by the modal's "⤓ PDF"
