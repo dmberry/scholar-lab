@@ -5286,9 +5286,28 @@ async function hydrateCardMetrics() {
   applySparkMode(localStorage.getItem("sd-spark-mode") || "cohort");
 }
 
+// Sticky person-modal header: name + job title, pinned to the top of the
+// scrolling card and condensed (smaller) once the body scrolls.
+function personHead(name, title, staleHTML = "") {
+  return `<div class="modal-head">
+      <h3>${escapeHTML(name)}${staleHTML}</h3>
+      ${title ? `<div class="affil">${escapeHTML(title)}</div>` : ""}
+    </div>`;
+}
+
 async function openPerson(p) {
   _CURRENT_PERSON = p;
   openModal();
+  // Condense the sticky header on scroll (wired once; the card element persists).
+  const _card = modalBody.parentElement;
+  if (_card && !_card._headShrinkWired) {
+    _card._headShrinkWired = true;
+    _card.addEventListener("scroll", () => {
+      const head = modalBody.querySelector(".modal-head");
+      if (head) head.classList.toggle("is-scrolled", _card.scrollTop > 8);
+    }, { passive: true });
+  }
+  if (_card) _card.scrollTop = 0;
   // Ensure REF-flag + impact-flag maps are loaded so the modal renders in
   // the right state on first open.
   await loadRefFlags();
@@ -5300,8 +5319,7 @@ async function openPerson(p) {
     ? `<span class="modal-uoa-chip" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="${uoaCode}" title="Click to change UoA (currently ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')})">UoA ${uoaCode} · ${escapeHTML(UOA_BY_CODE[uoaCode]?.name || '')}</span>`
     : `<span class="modal-uoa-chip is-none" data-uoa-chip data-staffid="${escapeAttr(p.staff_id || '')}" data-name="${escapeAttr(p.name)}" data-current="0" title="Click to assign a UoA">No UoA — click to assign</span>`;
   modalBody.innerHTML = `
-    <h3>${escapeHTML(p.name)}</h3>
-    <div class="affil">${escapeHTML(p.title)}</div>
+    ${personHead(p.name, p.title)}
     ${uoaChip}
     <p class="spinner">Fetching live from Google Scholar…</p>
   `;
@@ -5311,8 +5329,7 @@ async function openPerson(p) {
     let manualPubs = [];
     try { manualPubs = (await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(pkey))).json())[pkey]?.recent_publications || []; } catch {}
     modalBody.innerHTML = `
-      <h3>${escapeHTML(p.name)}</h3>
-      <div class="affil">${escapeHTML(p.title)}</div>
+      ${personHead(p.name, p.title)}
       ${uoaChip}
       <p class="missing-note"><strong>Missing on Google Scholar.</strong>
       No profile exists — or this person has chosen not to maintain one. You can
@@ -5332,8 +5349,7 @@ async function openPerson(p) {
 
   if (window.__STATIC_MODE__) {
     modalBody.innerHTML = `
-      <h3>${escapeHTML(p.name)}</h3>
-      <div class="affil">${escapeHTML(p.title)}</div>
+      ${personHead(p.name, p.title)}
       ${uoaChip}
       <p class="err"><strong>Preview mode:</strong> live Scholar fetch needs the
       Flask backend running (<code>python app.py</code>). This preview only
@@ -5412,8 +5428,7 @@ function renderPerson(p, d) {
     ? `<span class="stale-dot" title="${escapeAttr(staleDotTitle(p.scholar_id))}"></span>`
     : "";
   modalBody.innerHTML = `
-    <h3>${escapeHTML(d.name || p.name)}${staleDotHTML}</h3>
-    <div class="affil">${escapeHTML(cleanAffil(d.affiliation) || p.title)}</div>
+    ${personHead(d.name || p.name, cleanAffil(d.affiliation) || p.title, staleDotHTML)}
     ${uoaChip}
 
     <div class="metric-row">
@@ -5424,13 +5439,14 @@ function renderPerson(p, d) {
 
     ${sparkline(cpy)}
 
-    <div class="profile-block">
-      <label class="profile-label" for="profile-text">Institutional profile
-        <span class="profile-saved" id="profile-saved"></span></label>
-      <textarea id="profile-text" class="profile-text" rows="3"
-        placeholder="Institutional staff-page URL and/or a short bio for REF returns…"></textarea>
-      <button class="tb-btn profile-save" id="profile-save">Save profile</button>
-    </div>
+    <details class="profile-panel">
+      <summary>Institutional profile <span class="profile-saved" id="profile-saved"></span></summary>
+      <div class="profile-block">
+        <textarea id="profile-text" class="profile-text" rows="3"
+          placeholder="Institutional staff-page URL and/or a short bio for REF returns…"></textarea>
+        <button class="tb-btn profile-save" id="profile-save">Save profile</button>
+      </div>
+    </details>
 
     <label class="impact-toggle" title="Impact case studies (REF3) may draw on research from ${IMPACT_START_YEAR}. Marking someone widens their Scholar fetch to ${IMPACT_START_YEAR}–${REF_END_YEAR} on the next refresh, so older underpinning outputs appear and can be cited.">
       <input type="checkbox" class="data-detail-impact" ${isImpactResearcher(p.scholar_id) ? "checked" : ""}>

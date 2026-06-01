@@ -311,6 +311,17 @@ body {
 
 /* Institutional-profile editor in the person modal */
 .profile-block { margin: 1rem 0; }
+.profile-panel { margin: 1rem 0; border: 1px solid var(--border); border-radius: 8px; }
+.profile-panel > summary {
+  cursor: pointer; padding: .6rem .8rem; font-size: .9rem; color: var(--muted);
+  font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  list-style: none; display: flex; align-items: center; gap: .4rem;
+}
+.profile-panel > summary::-webkit-details-marker { display: none; }
+.profile-panel > summary::before { content: "▸"; font-size: .8em; transition: transform .12s ease; }
+.profile-panel[open] > summary::before { transform: rotate(90deg); }
+.profile-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
+.profile-panel .profile-block { margin: 0 .8rem .8rem; }
 .profile-label { display: block; font-size: .9rem; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin-bottom: .3rem; }
 .profile-text { width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.45; }
 .profile-save { margin-top: .4rem; }
@@ -1634,17 +1645,24 @@ h2 {
 }
 .modal h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
 .modal .affil { color: var(--muted); font-size: .9rem; margin-bottom: 1rem; }
-/* Person modal: keep the name pinned at the top (shrunk) while the body
-   scrolls, so it's always clear whose card you're looking at. */
+/* Person modal: name + job title pinned at the top while the body scrolls,
+   so it's always clear whose card you're looking at. The header starts at
+   full size and condenses (shrinks) once you scroll down. */
 #modal .modal-card { padding-top: 0; }   /* header provides top spacing instead */
-#modal-body > h3 {
+.modal-head {
   position: sticky; top: 0; z-index: 5;
-  margin: 0 -1.8rem .6rem; padding: .85rem 2.8rem .55rem 1.8rem;
-  background: #fff; font-size: .98rem; line-height: 1.25;
-  border-bottom: 1px solid var(--border);
+  margin: 0 -1.8rem .6rem; padding: 1.2rem 2.8rem .8rem 1.8rem;
+  background: #fff; border-bottom: 1px solid var(--border);
+  transition: padding .15s ease;
 }
-[data-dark] #modal-body > h3 { background: var(--card); }
-#modal .modal-card > .close { z-index: 6; top: .5rem; }   /* stay above the sticky name */
+[data-dark] .modal-head { background: var(--card); }
+.modal-head h3 { margin: 0; font-size: 1.3rem; line-height: 1.2; transition: font-size .15s ease; }
+.modal-head .affil { margin: .15rem 0 0; transition: font-size .15s ease, opacity .15s ease; }
+/* condensed state once scrolled */
+.modal-head.is-scrolled { padding-top: .65rem; padding-bottom: .55rem; }
+.modal-head.is-scrolled h3 { font-size: .98rem; }
+.modal-head.is-scrolled .affil { font-size: .76rem; opacity: .75; }
+#modal .modal-card > .close { z-index: 6; top: .5rem; }   /* stay above the sticky header */
 .modal-uoa-chip {
   display: inline-block;
   font-size: .72rem; font-weight: 600;
