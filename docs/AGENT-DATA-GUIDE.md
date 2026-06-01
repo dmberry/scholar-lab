@@ -95,10 +95,9 @@ Active: yes
    status `missing` or `unchecked`. A wrong profile is worse than none.
 3. **Never invent metrics.** Do not add citation counts, h-index, or publication
    lists. The app scrapes those from Scholar after loading.
-4. **UoA codes are 1–34** (REF 2029 Units of Assessment). Use the unit's
-   discipline to pick a sensible default `UoA:`; override individuals with
-   `uoa:NN` only where they genuinely belong to a different UoA. Use `uoa:0` for
-   people who should not be returned (e.g. administrators).
+4. **Don't assign UoAs.** Leave out the `UoA:` header and any `uoa:NN` on staff
+   lines — the user assigns Units of Assessment in the app afterwards (the file
+   format does allow them, but the agent should not guess them).
 5. **Keep titles real.** Prefer standard academic ranks so the role analytics
    work.
 6. **Slugs are unique, lower-case, hyphenated**, derived from the unit name.
@@ -151,10 +150,9 @@ Faculty-URL: <optional homepage>
 School: <optional mid-level grouping; omit if none>
 Unit: <department name>          # REQUIRED
 Slug: <lower-case-hyphenated-id> # unique per unit
-UoA: <default REF Unit of Assessment, a number 1–34; omit if unsure>
 Active: yes
 
-- Name | Title | Staff ID | Google Scholar URL | status | uoa:NN
+- Name | Title | Staff ID | Google Scholar URL | status
 
 STAFF LINE RULES:
 - Fields are pipe-separated, in that fixed order. Trailing fields are optional.
@@ -166,8 +164,6 @@ STAFF LINE RULES:
   (https://scholar.google.com/citations?user=...) or blank if none/uncertain.
 - status: "set" if a Scholar URL is present; "missing" if they genuinely have no
   profile; "unchecked" if not looked up.
-- uoa:NN: optional per-person override (1–34). uoa:0 = explicitly no UoA
-  (e.g. administrators). Omit to inherit the unit's UoA.
 - Lines starting with # are comments.
 
 HARD RULES:
@@ -177,8 +173,8 @@ HARD RULES:
 2. If you cannot confidently identify a person's real Scholar profile, leave the
    Scholar field blank and set status "missing" or "unchecked". A wrong profile
    is worse than none.
-3. UoA codes are 1–34 (REF 2029). Pick the unit default from its discipline;
-   override individuals only where justified.
+3. DO NOT assign Units of Assessment (no "UoA:" header, no "uoa:NN" on staff
+   lines). UoAs are set later in the app by the user.
 4. Output one fenced code block per unit, with the suggested filename
    "<slug>.md" on the line above each block. No commentary inside the block.
 

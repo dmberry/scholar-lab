@@ -1590,6 +1590,8 @@ function closeStaffDetailModal() {
 async function renderStaffDetailPayload(pane, scholarId, name) {
   pane.innerHTML = `<p class="spinner">Loading Scholar payload for ${escapeHTML(name)}…</p>`;
   try {
+    await loadImpactFlags();
+    const isImpact = isImpactResearcher(scholarId);
     const r = await fetch(`/api/scholar/${encodeURIComponent(scholarId)}`);
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "fetch failed");
@@ -1612,6 +1614,11 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
         </div>
       </div>
 
+      <label class="impact-toggle" title="Impact case studies (REF3) may draw on research from 2008. Marking someone widens their Scholar fetch to 2008–${REF_END_YEAR} so older underpinning outputs appear below and can be picked as case-study references.">
+        <input type="checkbox" class="data-detail-impact" ${isImpact ? "checked" : ""}>
+        Impact researcher <span class="impact-hint">— fetch outputs back to ${IMPACT_START_YEAR}</span>
+      </label>
+
       <div class="data-detail-metrics">
         <span><b>${fmt(d.citedby)}</b> citations</span>
         <span><b>${fmt(d.citedby5y)}</b> 5y</span>
@@ -1623,8 +1630,11 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
 
       ${sparkline(cpy)}
 
-      <h5>Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})</h5>
-      ${renderPubs((d.recent_publications || []).filter(p => (p.year || 0) >= REF_START_YEAR))}
+      <h5>${isImpact
+        ? `Publications (impact window, from ${IMPACT_START_YEAR})`
+        : `Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})`}</h5>
+      ${renderPubs((d.recent_publications || []).filter(p => (p.year || 0) >= (isImpact ? IMPACT_START_YEAR : REF_START_YEAR)))}
+      ${isImpact && !d.impact_window ? `<p class="impact-note">This profile was last fetched in the REF window only. Press <strong>↻ Force refresh</strong> to pull outputs back to ${IMPACT_START_YEAR}.</p>` : ""}
 
       <p class="cache-note">
         ${d._from_cache ? "Served from cache" : "Fresh fetch"} ·
@@ -1655,6 +1665,18 @@ async function renderStaffDetailPayload(pane, scholarId, name) {
         btn.disabled = false; btn.textContent = "↻ Force refresh";
         alert("Refresh failed: " + err.message);
       }
+    };
+    pane.querySelector(".data-detail-impact").onchange = async (e) => {
+      const on = e.currentTarget.checked;
+      const ok = await setImpactResearcher(scholarId, on);
+      if (!ok) { e.currentTarget.checked = !on; return; }
+      if (on && !d.impact_window) {
+        if (confirm(`Marked as impact researcher. Fetch ${name}'s outputs back to ${IMPACT_START_YEAR} now?\n\n`
+          + `(Hits Google Scholar once. Cancel to fetch later via Force refresh.)`)) {
+          await fetch(`/api/scholar/${encodeURIComponent(scholarId)}?refresh=1`).catch(() => {});
+        }
+      }
+      await renderStaffDetailPayload(pane, scholarId, name);
     };
     pane.querySelector(".data-detail-clear").onclick = async (e) => {
       const btn = e.currentTarget;
@@ -1981,10 +2003,9 @@ Faculty-URL: <optional homepage>
 School: <optional mid-level grouping; omit if none>
 Unit: <department name>          # REQUIRED
 Slug: <lower-case-hyphenated-id> # unique per unit
-UoA: <default REF Unit of Assessment, a number 1-34; omit if unsure>
 Active: yes
 
-- Name | Title | Staff ID | Google Scholar URL | status | uoa:NN
+- Name | Title | Staff ID | Google Scholar URL | status
 
 STAFF LINE RULES:
 - Fields are pipe-separated, in that fixed order. Trailing fields are optional.
@@ -1996,8 +2017,6 @@ STAFF LINE RULES:
   (https://scholar.google.com/citations?user=...) or blank if none/uncertain.
 - status: "set" if a Scholar URL is present; "missing" if they genuinely have no
   profile; "unchecked" if not looked up.
-- uoa:NN: optional per-person override (1-34). uoa:0 = explicitly no UoA
-  (e.g. administrators). Omit to inherit the unit's UoA.
 - Lines starting with # are comments.
 
 HARD RULES:
@@ -2007,8 +2026,8 @@ HARD RULES:
 2. If you cannot confidently identify a person's real Scholar profile, leave the
    Scholar field blank and set status "missing" or "unchecked". A wrong profile
    is worse than none.
-3. UoA codes are 1-34 (REF 2029). Pick the unit default from its discipline;
-   override individuals only where justified.
+3. DO NOT assign Units of Assessment (no "UoA:" header, no "uoa:NN" on staff
+   lines). UoAs are set later in the app by the user.
 4. Output one fenced code block per unit, with the suggested filename
    "<slug>.md" on the line above each block. No commentary inside the block.
 
@@ -2097,8 +2116,10 @@ function openHelp() {
 
     <h3 class="help-s">6 · Impact case studies (REF3)</h3>
     <p>In <strong>By UoA</strong> view a case-studies panel appears. Each case study follows the
-       REF3 shape. <em>References to the research</em> are picked by scholar → output (only your
-       rated outputs are offered). <em>Contributors</em> are the staff who did the underpinning
+       REF3 shape. <em>References to the research</em> are picked by scholar → output (your rated
+       outputs; for anyone marked an <strong>impact researcher</strong> on their profile, all their
+       outputs back to ${IMPACT_START_YEAR} are offered, since impact underpinning research can
+       predate the REF window). <em>Contributors</em> are the staff who did the underpinning
        research — use <em>＋ from references</em> to pull in the authors of the chosen outputs, then
        add or remove anyone. Case studies import/export as Markdown (a template is in
        <code>docs/</code>).</p>
@@ -3036,32 +3057,46 @@ async function openCaseStudyEditor(cs, uoaCode) {
              + `№${n} of ${required}${taken && !sel ? " — also “" + escapeHTML(takenSlots.get(n)) + "”" : ""}</option>`;
       })).join("");
 
-  // UoA scholars (current view) + their flagged outputs for the picker.
+  // UoA scholars (current view) + their outputs for the picker. We fetch
+  // cached payloads for anyone with a rated output OR flagged as an impact
+  // researcher (whose full 2008+ output list is offered as underpinning
+  // research, not just REF-rated outputs).
+  await loadImpactFlags();
   const scholars = [...new Map((STAFF || []).filter(p => p.scholar_id).map(p => [p.scholar_id, p])).values()];
-  const flaggedIds = scholars.filter(p => refFlagCount(p.scholar_id) > 0).map(p => p.scholar_id);
+  const pickerIds = scholars
+    .filter(p => refFlagCount(p.scholar_id) > 0 || isImpactResearcher(p.scholar_id))
+    .map(p => p.scholar_id);
   let batch = {};
-  if (flaggedIds.length) {
-    try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(flaggedIds.join(",")))).json(); } catch {}
+  if (pickerIds.length) {
+    try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(pickerIds.join(",")))).json(); } catch {}
   }
-  // Faceted Scholar → Output picker: only REF-rated outputs in this UoA.
+  // Faceted Scholar → Output picker: REF-rated outputs, plus (for impact
+  // researchers) all their fetched outputs back to the impact window.
   const ratingLabel = (r) => ({ 1: "1*", 2: "2*", 2.5: "2–3*", 3: "3*", 3.5: "3–4*", 4: "4*" }[r] || "");
   const refByScholar = [];          // [{ sid, name, outputs: [{id, label}] }]
   const refLabelById = new Map();   // id → display label (for the chosen list)
   for (const p of scholars) {
     const flags = refFlagsFor(p.scholar_id);
     const keys = Object.keys(flags);
-    if (!keys.length) continue;
-    const byKey = new Map(((batch[p.scholar_id]?.recent_publications) || []).map(pub => [pub.pub_key, pub]));
-    const outputs = keys.map(k => {
+    const impact = isImpactResearcher(p.scholar_id);
+    if (!keys.length && !impact) continue;
+    const pubs = (batch[p.scholar_id]?.recent_publications) || [];
+    const byKey = new Map(pubs.map(pub => [pub.pub_key, pub]));
+    const seen = new Set();
+    const outputs = [];
+    const pushOutput = (k, pub) => {
+      if (seen.has(k)) return; seen.add(k);
       const id = p.scholar_id + ":" + k;
-      const pub = byKey.get(k);
       const base = pub ? `${pub.title || "Untitled"} (${pub.year || "n.d."})` : deSlugTitle(k);
       const rl = ratingLabel(flags[k]);
       const label = rl ? `${base} · ${rl}` : base;
       refLabelById.set(id, label);
-      return { id, label };
-    });
-    refByScholar.push({ sid: p.scholar_id, name: p.name, outputs });
+      outputs.push({ id, label, year: pub?.year || 0 });
+    };
+    keys.forEach(k => pushOutput(k, byKey.get(k)));          // rated first
+    if (impact) pubs.forEach(pub => pushOutput(pub.pub_key, pub));   // then all fetched
+    outputs.sort((a, b) => (b.year || 0) - (a.year || 0));
+    refByScholar.push({ sid: p.scholar_id, name: p.name, outputs, impact });
   }
   // Working list of chosen reference ids (ordered); saved verbatim.
   const chosenRefs = [...(cs.references || [])];
@@ -3095,10 +3130,10 @@ async function openCaseStudyEditor(cs, uoaCode) {
       </div>
       <label class="cs-f">Summary of the impact <span class="wordcount" id="cs-summary-wc"></span><textarea id="cs-summary" rows="3">${escapeHTML(cs.summary || "")}</textarea></label>
       <label class="cs-f">Underpinning research<textarea id="cs-underpinning" rows="4">${escapeHTML(cs.underpinning_research || "")}</textarea></label>
-      <div class="cs-f"><span class="cs-f-label">References to the research (REF-flagged outputs)</span>
+      <div class="cs-f"><span class="cs-f-label">References to the research <span class="cs-f-hint">(REF-flagged outputs; impact researchers ★ show all outputs from ${IMPACT_START_YEAR})</span></span>
         ${refByScholar.length ? `<div class="cs-ref-picker">
           <select id="cs-ref-scholar" class="cs-ref-sel"><option value="">Scholar…</option>${
-            refByScholar.map((s, i) => `<option value="${i}">${escapeHTML(s.name)} (${s.outputs.length})</option>`).join("")}</select>
+            refByScholar.map((s, i) => `<option value="${i}">${s.impact ? "★ " : ""}${escapeHTML(s.name)} (${s.outputs.length})</option>`).join("")}</select>
           <select id="cs-ref-output" class="cs-ref-sel" disabled><option value="">Output…</option></select>
           <button type="button" class="tb-btn" id="cs-ref-add" disabled>Add</button>
         </div>
@@ -4160,6 +4195,7 @@ async function loadStaff() {
   // Load REF flags + the configured REF year/window in parallel with the
   // staff payload so per-card chips and labels are correct on first paint.
   loadRefFlags();
+  loadImpactFlags();
   loadRefConfig();
   let data;
   try {
@@ -4674,9 +4710,14 @@ function renderPeople() {
     const refCountChip = (status === "set" && p.scholar_id)
       ? `<span class="ref-count-chip${refCount === 0 ? " is-zero" : ""}" data-ref-chip-id="${escapeAttr(p.scholar_id)}" title="${refCount} publication${refCount === 1 ? "" : "s"} flagged for REF ${REF_YEAR}. Open the card to tick more.">REF: ${refCount}</span>`
       : ``;
-    // Stack REF toggle + REF count + UoA chip in the top-right corner.
-    const cornerChips = (refChip || refCountChip || uoaTag)
-      ? `<span class="card-corner">${refChip}${refCountChip}${uoaTag}</span>`
+    // Impact-researcher toggle chip — click to mark/unmark; widens the Scholar
+    // fetch to the impact window (2008+) on next refresh.
+    const impactChip = (status === "set" && p.scholar_id)
+      ? `<button class="impact-chip${isImpactResearcher(p.scholar_id) ? " on" : ""}" type="button" data-impact-chip="${escapeAttr(p.scholar_id)}" data-name="${escapeAttr(p.name)}" title="${isImpactResearcher(p.scholar_id) ? "Impact researcher — Scholar fetch widened to 2008+. Click to unmark." : "Mark as impact researcher (fetch outputs back to 2008 for case-study underpinning research)"}">★ Impact</button>`
+      : ``;
+    // Stack REF toggle + REF count + impact + UoA chip in the top-right corner.
+    const cornerChips = (refChip || refCountChip || impactChip || uoaTag)
+      ? `<span class="card-corner">${refChip}${refCountChip}${impactChip}${uoaTag}</span>`
       : ``;
     const staleTip = isStale ? staleDotTitle(p.scholar_id) : "";
     btn.innerHTML = `
@@ -4817,6 +4858,33 @@ document.addEventListener("click", (e) => {
   openUoaPicker(chip, p, current);
 }, true);
 
+// Global handler: clicking the ★ Impact chip on a card toggles the
+// impact-researcher flag, then (when turning it on) offers to refresh so the
+// Scholar fetch widens to 2008+.
+document.addEventListener("click", async (e) => {
+  const chip = e.target.closest("[data-impact-chip]");
+  if (!chip) return;
+  e.stopPropagation();
+  e.preventDefault();
+  const sid = chip.getAttribute("data-impact-chip");
+  const name = chip.dataset.name || "this researcher";
+  const turningOn = !chip.classList.contains("on");
+  chip.disabled = true;
+  const ok = await setImpactResearcher(sid, turningOn);
+  chip.disabled = false;
+  if (!ok) return;
+  chip.classList.toggle("on", turningOn);
+  chip.title = turningOn
+    ? "Impact researcher — Scholar fetch widened to 2008+. Click to unmark."
+    : "Mark as impact researcher (fetch outputs back to 2008 for case-study underpinning research)";
+  if (turningOn) {
+    if (confirm(`Marked ${name} as an impact researcher.\n\nFetch their outputs back to ${IMPACT_START_YEAR} now? `
+      + `(Hits Google Scholar once. Cancel to fetch later via the card's Refresh.)`)) {
+      try { await fetch(`/api/scholar/${encodeURIComponent(sid)}?refresh=1`); } catch {}
+    }
+  }
+}, true);
+
 // Render a single card's metrics from a Scholar payload. Pulled out so
 // both the batch path and the per-id fallback can share the rendering.
 function renderCardMetrics(slot, id, d) {
@@ -4949,6 +5017,7 @@ async function hydrateCardMetrics() {
 }
 
 async function openPerson(p) {
+  _CURRENT_PERSON = p;
   openModal();
   // Ensure REF-flag map is loaded so the modal renders checkboxes in
   // the right state on first open.
@@ -4967,20 +5036,25 @@ async function openPerson(p) {
   `;
   const personStatus = p.scholar_status || (p.scholar_id ? "set" : "unchecked");
   if (personStatus === "missing") {
+    const pkey = pkeyFor(p);
+    let manualPubs = [];
+    try { manualPubs = (await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(pkey))).json())[pkey]?.recent_publications || []; } catch {}
     modalBody.innerHTML = `
       <h3>${escapeHTML(p.name)}</h3>
       <div class="affil">${escapeHTML(p.title)}</div>
       ${uoaChip}
       <p class="missing-note"><strong>Missing on Google Scholar.</strong>
-      No profile exists — or this person has chosen not to maintain one.
-      Scholar metrics are not available, and on principle that absence should be
-      respected rather than worked around. The institutional repository
-      is the right place to find their outputs.</p>
+      No profile exists — or this person has chosen not to maintain one. You can
+      enter their outputs by hand below; these behave like any other output
+      (rate them for REF, cite them in case studies) and are kept as you typed them.</p>
       <p>
         ${profileLink(p)}
         <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(p.name)}"
            target="_blank" rel="noopener">search Scholar for ${escapeHTML(p.name)} ↗</a>
       </p>
+      <h4 class="pub-section-h">Publications (entered by hand)</h4>
+      <div class="pubs-list">${renderPubs(manualPubs, { editable: true })}</div>
+      <p><button class="tb-btn pub-add-btn" type="button">＋ Add publication</button></p>
     `;
     return;
   }
@@ -5091,7 +5165,9 @@ function renderPerson(p, d) {
       Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})
       <span class="ref-summary" id="ref-summary-${escapeAttr(p.scholar_id)}">${refFlagCount(p.scholar_id)} flagged for REF</span>
     </h4>
-    ${renderPubs(d.recent_publications || [], { scholarId: p.scholar_id, flags: refFlagsFor(p.scholar_id) })}
+    ${renderPubs(d.recent_publications || [], { scholarId: p.scholar_id, flags: refFlagsFor(p.scholar_id), editable: true })}
+    <p><button class="tb-btn pub-add-btn" type="button">＋ Add publication by hand</button>
+       <span class="pub-add-hint">Use the 🔒 on any output to keep it from changing when you refresh from Google.</span></p>
 
     <details class="deep">
       <summary>Deep dive: raw Scholar payload</summary>
@@ -5259,9 +5335,10 @@ window.forceRefresh = async (id, btn) => {
 };
 
 function renderPubs(pubs, opts = {}) {
-  if (!pubs.length) return `<p class="affil">No publications in the last two years on Scholar.</p>`;
+  if (!pubs.length) return `<p class="affil">${opts.editable ? "No publications yet — add one below." : "No publications in the last two years on Scholar."}</p>`;
   // `opts.scholarId` + `opts.flags` enable per-pub REF tick-boxes. Pubs
   // outside the REF 2029 window are still listed but not tickable.
+  // `opts.editable` adds per-pub lock / edit / delete tools (manual editing).
   const scholarId = opts.scholarId;
   const flags = opts.flags || {};
   return pubs.map(p => {
@@ -5279,17 +5356,111 @@ function renderPubs(pubs, opts = {}) {
            ${legacyOpt}${REF_RATING_OPTS.map(([v, l]) => `<option value="${v}" ${(!isLegacy && v === valStr) ? "selected" : ""}>${l}</option>`).join("")}
          </select>`
       : `<span class="pub-ref-spacer" aria-hidden="true"></span>`;
+    const tools = opts.editable ? `
+        <span class="pub-tools">
+          <button class="pub-tool pub-lock${p._locked ? " on" : ""}" type="button" data-pub-key="${escapeAttr(key)}"
+                  title="${p._locked ? "Locked — a Google refresh won't change this output. Click to unlock." : "Lock this output so a Google refresh can't change it"}">${p._locked ? "🔒" : "🔓"}</button>
+          <button class="pub-tool pub-edit" type="button" data-pub-key="${escapeAttr(key)}" title="Edit this publication">✎</button>
+          <button class="pub-tool pub-del" type="button" data-pub-key="${escapeAttr(key)}" title="Delete this publication">🗑</button>
+        </span>` : "";
+    const tags = `${p._manual ? `<span class="pub-tag pub-tag-manual" title="Entered by hand">manual</span>` : ""}${p._locked ? `<span class="pub-tag pub-tag-locked" title="Locked against Google refresh">locked</span>` : ""}`;
     return `
-      <div class="pub${flagged ? " pub-flagged" : ""}">
+      <div class="pub${flagged ? " pub-flagged" : ""}${p._locked ? " pub-locked" : ""}"
+           data-pub-key="${escapeAttr(key)}" data-pub-title="${escapeAttr(p.title || "")}"
+           data-pub-year="${escapeAttr(String(p.year || ""))}" data-pub-venue="${escapeAttr(p.venue || "")}"
+           data-pub-authors="${escapeAttr(p.authors || "")}" data-pub-cites="${escapeAttr(String(p.num_citations || 0))}"
+           data-pub-manual="${p._manual ? "1" : ""}">
         ${sel}
         <div class="pub-body">
-          <div class="pt">${escapeHTML(p.title || "Untitled")}</div>
+          <div class="pt">${escapeHTML(p.title || "Untitled")} ${tags}</div>
           <div class="pm">${escapeHTML(String(p.year || "n.d."))} · ${escapeHTML(p.venue || "")} · cited by ${fmt(p.num_citations)}</div>
         </div>
+        ${tools}
       </div>
     `;
   }).join("");
 }
+
+// ── Manual publication editing + per-pub locks ────────────────────────────
+// The person whose modal is open (so the delegated pub-tool handler knows
+// whose overrides to mutate).
+let _CURRENT_PERSON = null;
+function pkeyFor(p) {
+  return p && p.scholar_id ? p.scholar_id : ("staff:" + ((p && (p.staff_id || p.name)) || ""));
+}
+async function getPubOverrides(pkey) {
+  try {
+    const r = await fetch("/api/pub-overrides?key=" + encodeURIComponent(pkey));
+    const d = await r.json();
+    return { manual: d.manual || [], edits: d.edits || {}, hidden: d.hidden || [], locked: d.locked || [] };
+  } catch { return { manual: [], edits: {}, hidden: [], locked: [] }; }
+}
+async function savePubOverrides(pkey, patch) {
+  const r = await fetch("/api/pub-overrides", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: pkey, ...patch }),
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || "save failed");
+  return r.json();
+}
+// Re-render whichever modal is open for the current person.
+function reopenPerson() { if (_CURRENT_PERSON) openPerson(_CURRENT_PERSON); }
+
+document.addEventListener("click", async (e) => {
+  const lock = e.target.closest(".pub-lock");
+  const edit = e.target.closest(".pub-edit");
+  const del  = e.target.closest(".pub-del");
+  const add  = e.target.closest(".pub-add-btn");
+  if (!lock && !edit && !del && !add) return;
+  e.preventDefault();
+  const p = _CURRENT_PERSON;
+  if (!p) return;
+  const pkey = pkeyFor(p);
+  const rec = await getPubOverrides(pkey);
+  try {
+    if (lock) {
+      const k = lock.getAttribute("data-pub-key");
+      const i = rec.locked.indexOf(k);
+      if (i >= 0) rec.locked.splice(i, 1); else rec.locked.push(k);
+      await savePubOverrides(pkey, { locked: rec.locked });
+    } else if (del) {
+      const k = del.getAttribute("data-pub-key");
+      const row = del.closest(".pub");
+      if (!confirm(`Delete this publication?\n\n“${row?.dataset.pubTitle || ""}”\n\n`
+        + `Scraped outputs are hidden from the card (a future Google refresh won't bring them back unless you un-hide them in the data file). Manual entries are removed. No in-app undo.`)) return;
+      if (row?.dataset.pubManual) rec.manual = rec.manual.filter(m => m.pub_key !== k);
+      else if (!rec.hidden.includes(k)) rec.hidden.push(k);
+      rec.locked = rec.locked.filter(x => x !== k);
+      await savePubOverrides(pkey, { manual: rec.manual, hidden: rec.hidden, locked: rec.locked });
+    } else if (edit) {
+      const row = edit.closest(".pub");
+      const k = edit.getAttribute("data-pub-key");
+      const title = prompt("Title:", row?.dataset.pubTitle || ""); if (title === null) return;
+      const yearS = prompt("Year:", row?.dataset.pubYear || ""); if (yearS === null) return;
+      const venue = prompt("Venue / source:", row?.dataset.pubVenue || ""); if (venue === null) return;
+      const authors = prompt("Authors:", row?.dataset.pubAuthors || ""); if (authors === null) return;
+      const fields = { title: title.trim(), year: parseInt(yearS, 10) || null, venue: venue.trim(), authors: authors.trim() };
+      if (row?.dataset.pubManual) {
+        const m = rec.manual.find(x => x.pub_key === k);
+        if (m) Object.assign(m, fields);
+        await savePubOverrides(pkey, { manual: rec.manual });
+      } else {
+        rec.edits[k] = { ...(rec.edits[k] || {}), ...fields };
+        await savePubOverrides(pkey, { edits: rec.edits });
+      }
+    } else if (add) {
+      const title = prompt("Title of the publication:"); if (!title || !title.trim()) return;
+      const yearS = prompt("Year:", "");
+      const venue = prompt("Venue / source (journal, publisher, …):", "") || "";
+      const authors = prompt("Authors:", (p.name || "")) || "";
+      rec.manual.push({ title: title.trim(), year: parseInt(yearS, 10) || null, venue: venue.trim(), authors: authors.trim(), num_citations: 0 });
+      await savePubOverrides(pkey, { manual: rec.manual });
+    }
+    reopenPerson();
+  } catch (err) {
+    alert("Could not save: " + err.message);
+  }
+});
 
 // REF star ratings. Value is the number stored in ref_flags.json; the
 // X.5 values are the "X–Y*" bands. "" = Not REF (no rating → removed).
@@ -5319,6 +5490,36 @@ function refFlagsFor(scholarId) {
 }
 function refFlagCount(scholarId) {
   return Object.keys(refFlagsFor(scholarId)).length;
+}
+
+// Impact-researcher flags: {scholar_id: true}. A flagged person's Scholar
+// fetch is widened to the impact window (2008+) so older underpinning outputs
+// are available as case-study references.
+const IMPACT_FLAGS = new Map();
+let _impactFlagsLoaded = null;
+async function loadImpactFlags() {
+  if (_impactFlagsLoaded) return _impactFlagsLoaded;
+  _impactFlagsLoaded = (async () => {
+    try {
+      const r = await fetch("/api/impact-flags");
+      if (!r.ok) return;
+      const data = await r.json();
+      for (const sid in data) if (data[sid]) IMPACT_FLAGS.set(sid, true);
+    } catch (_) { /* offline / static mode */ }
+  })();
+  return _impactFlagsLoaded;
+}
+function isImpactResearcher(scholarId) { return IMPACT_FLAGS.get(scholarId) === true; }
+async function setImpactResearcher(scholarId, on) {
+  try {
+    const r = await fetch("/api/impact-flag", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scholar_id: scholarId, impact: !!on }),
+    });
+    if (!r.ok) throw new Error("save failed");
+    if (on) IMPACT_FLAGS.set(scholarId, true); else IMPACT_FLAGS.delete(scholarId);
+    return true;
+  } catch (e) { alert("Could not update impact flag: " + e.message); return false; }
 }
 
 // Set a publication's REF star rating (or remove it). rating is a number
@@ -5371,6 +5572,8 @@ document.addEventListener("change", (e) => {
 let REF_YEAR = 2029;
 let REF_START_YEAR = 2021;
 let REF_END_YEAR = 2028;
+// Impact underpinning-research window start (REF3): 1 Jan 2008.
+const IMPACT_START_YEAR = 2008;
 
 // Load the configured REF year/window from Settings and relabel the static
 // "REF 2029" UI bits. Called once at startup before the first render.

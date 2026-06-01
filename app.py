@@ -91,6 +91,8 @@ CACHE_DIR = USER_ROOT / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = USER_ROOT / "data"   # one Markdown file per unit lives here
 REF_FLAGS_FILE    = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: True}}
+IMPACT_FLAGS_FILE = USER_ROOT / "impact_flags.json"  # {scholar_id: true} — impact researchers
+PUB_OVERRIDES_FILE = USER_ROOT / "pub_overrides.json"  # {pkey: {manual[], edits{}, hidden[], locked[]}}
 REF_TARGETS_FILE  = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
 CASE_STUDIES_FILE = USER_ROOT / "case_studies.json"  # {id: {uoa, title, status, …, versions[]}}
 UOA_META_FILE     = USER_ROOT / "uoa_meta.json"      # {uoa_code: {narrative}}
@@ -109,7 +111,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "3.1.4"
+__version__ = "3.2.0"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -171,6 +173,10 @@ _SETTINGS_FILE = USER_ROOT / "settings.json"
 REF_YEAR = 2029
 REF_START_YEAR_PY = 2021
 REF_END_YEAR_PY   = 2028
+# Impact case studies (REF3) may draw on underpinning research published from
+# 1 Jan 2008 to 31 Dec 2028. People flagged as "impact researchers" get their
+# Scholar fetch widened to this window so older underpinning outputs are kept.
+IMPACT_START_YEAR_PY = 2008
 
 
 def _load_settings_overrides():
@@ -744,11 +750,15 @@ def _int_or_none(s):
     return int(s)
 
 
-def _fetch_scholar(scholar_id: str) -> dict:
+def _fetch_scholar(scholar_id: str, impact: bool = False) -> dict:
     """Fetch a Scholar profile page and parse out the bits we need.
     Single page of 100 most-recent pubs — enough to capture every REF 2029
     eligible publication (2021–2028 = at most ~8 years) for anyone short of
-    publishing 100 papers in that window."""
+    publishing 100 papers in that window.
+
+    When `impact` is True the publication list is widened to the impact
+    underpinning-research window (2008 onward) and more rows are kept, so an
+    impact researcher's older outputs are available as case-study references."""
     url = (f"https://scholar.google.com/citations?user={scholar_id}"
            f"&hl=en&pagesize=100&sortby=pubdate")
     r = requests.get(url, headers={"User-Agent": UA}, timeout=15)
@@ -835,8 +845,10 @@ def _fetch_scholar(scholar_id: str) -> dict:
     # 1 Jan 2021 onwards. Also drops poorly-entered items (no venue, blogs,
     # social posts) so the strip on the card and the list in the modal show
     # only assessable research outputs.
+    pub_start_year = IMPACT_START_YEAR_PY if impact else REF_START_YEAR_PY
+    pub_keep = 60 if impact else 15
     recent = [p for p in pubs
-              if p["year"] and p["year"] >= REF_START_YEAR_PY
+              if p["year"] and p["year"] >= pub_start_year
               and _is_ref_eligible_pub(p)]
     recent.sort(key=lambda p: (p["year"] or 0, p["num_citations"]), reverse=True)
     # REF 2029 publication window: 1 Jan 2021 – 31 Dec 2028.
@@ -863,7 +875,9 @@ def _fetch_scholar(scholar_id: str) -> dict:
         "i10index": i10index,
         "i10index5y": i10index5y,
         "cites_per_year": cites_per_year,
-        "recent_publications": recent[:15],
+        "recent_publications": recent[:pub_keep],
+        "impact_window": bool(impact),
+        "impact_start_year": pub_start_year,
         "ref_eligible_count": len(ref_eligible),
         "ref_excluded_count": len(ref_excluded),
         "ref_excluded_titles": [{"title": p["title"], "venue": p["venue"], "year": p["year"]}
@@ -926,6 +940,170 @@ def _load_ref_flags() -> dict:
 
 def _save_ref_flags(flags: dict) -> None:
     REF_FLAGS_FILE.write_text(json.dumps(flags, indent=2, sort_keys=True))
+
+
+def _load_impact_flags() -> dict:
+    """{scholar_id: true} — researchers whose work underpins an impact case
+    study. Their Scholar fetch is widened to the impact window (2008–2028)."""
+    try:
+        with IMPACT_FLAGS_FILE.open() as f:
+            return {k: bool(v) for k, v in (json.load(f) or {}).items() if v}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_impact_flags(flags: dict) -> None:
+    IMPACT_FLAGS_FILE.write_text(json.dumps(flags, indent=2, sort_keys=True))
+
+
+@app.route("/api/impact-flags", methods=["GET"])
+def api_impact_flags_get():
+    """Map of {scholar_id: true} for researchers marked as impact researchers."""
+    return jsonify(_load_impact_flags())
+
+
+@app.route("/api/impact-flag", methods=["POST"])
+def api_impact_flag_set():
+    """Set/clear the impact-researcher flag for one scholar.
+    Body: {scholar_id, impact: bool}."""
+    body = request.get_json(force=True, silent=True) or {}
+    sid = (body.get("scholar_id") or "").strip()
+    if not sid:
+        return jsonify({"error": "scholar_id required"}), 400
+    flags = _load_impact_flags()
+    if body.get("impact"):
+        flags[sid] = True
+    else:
+        flags.pop(sid, None)
+    _save_impact_flags(flags)
+    return jsonify({"ok": True, "scholar_id": sid, "impact": bool(body.get("impact"))})
+
+
+# ── Per-person publication overrides (manual pubs, edits, deletions, locks) ──
+# Keyed by a person key (`pkey`): the scholar_id when they have a profile, or
+# "staff:<staff_id>" for someone with no Scholar profile being entered by hand.
+#   manual:  [ {title, year, venue, authors, num_citations, pub_key, _manual} ]
+#   edits:   { pub_key: {title?, year?, venue?, authors?, num_citations?} }
+#   hidden:  [ pub_key ]   — scraped pubs the user deleted (hidden on display)
+#   locked:  [ pub_key ]   — pubs frozen against Google refresh
+_PUB_FIELDS = ("title", "year", "venue", "authors", "num_citations")
+
+
+def _load_pub_overrides() -> dict:
+    try:
+        with PUB_OVERRIDES_FILE.open() as f:
+            return json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_pub_overrides(data: dict) -> None:
+    PUB_OVERRIDES_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+def _norm_manual_pub(p: dict) -> dict:
+    """Coerce a user-entered publication and (re)derive its stable pub_key."""
+    q = {
+        "title": (p.get("title") or "").strip(),
+        "year": _int_or_none(p.get("year")),
+        "venue": (p.get("venue") or "").strip(),
+        "authors": (p.get("authors") or "").strip(),
+        "num_citations": _int_or_none(p.get("num_citations")) or 0,
+    }
+    # Preserve an existing manual key if present (so edits keep their identity),
+    # else derive one and tag it manual to avoid colliding with scraped keys.
+    q["pub_key"] = p.get("pub_key") or ("manual-" + (pub_key(q) or "untitled"))
+    q["_manual"] = True
+    return q
+
+
+def _overrides_for(pkey: str) -> dict:
+    rec = _load_pub_overrides().get(pkey) or {}
+    return {
+        "manual": rec.get("manual") or [],
+        "edits": rec.get("edits") or {},
+        "hidden": rec.get("hidden") or [],
+        "locked": rec.get("locked") or [],
+    }
+
+
+def _apply_pub_overrides(pkey: str, pubs: list) -> list:
+    """Layer the user's manual pubs / edits / deletions / locks onto a scraped
+    publication list for display. Does not mutate stored data."""
+    rec = _overrides_for(pkey)
+    hidden, edits, locked = set(rec["hidden"]), rec["edits"], set(rec["locked"])
+    out = []
+    for p in pubs or []:
+        k = p.get("pub_key")
+        if k in hidden:
+            continue
+        q = dict(p)
+        if k in edits and isinstance(edits[k], dict):
+            for f in _PUB_FIELDS:
+                if edits[k].get(f) not in (None, ""):
+                    q[f] = edits[k][f]
+        q["_locked"] = k in locked
+        q["_manual"] = False
+        out.append(q)
+    for m in rec["manual"]:
+        q = dict(m)
+        q["_manual"] = True
+        q["_locked"] = q.get("pub_key") in locked
+        out.append(q)
+    out.sort(key=lambda p: (p.get("year") or 0, p.get("num_citations") or 0), reverse=True)
+    return out
+
+
+def _freeze_locked(old_payload: dict, new_payload: dict, locked: set) -> None:
+    """On refresh, keep locked pubs exactly as they were: replace the freshly
+    scraped version with the old one (and re-add any that dropped out of the
+    new scrape). Mutates new_payload['recent_publications'] in place."""
+    if not locked or not old_payload:
+        return
+    old_by_key = {p.get("pub_key"): p for p in (old_payload.get("recent_publications") or [])}
+    pubs = new_payload.get("recent_publications") or []
+    seen = set()
+    for i, p in enumerate(pubs):
+        k = p.get("pub_key")
+        if k in locked and k in old_by_key:
+            pubs[i] = old_by_key[k]
+            seen.add(k)
+    for k in locked:
+        if k in old_by_key and k not in seen and k not in {p.get("pub_key") for p in pubs}:
+            pubs.append(old_by_key[k])
+    new_payload["recent_publications"] = pubs
+
+
+@app.route("/api/pub-overrides", methods=["GET", "POST"])
+def api_pub_overrides():
+    """GET ?key=<pkey> → the override record. POST {key, manual?, edits?,
+    hidden?, locked?} → replace the supplied fields for that key."""
+    if request.method == "GET":
+        key = (request.args.get("key") or "").strip()
+        if not key:
+            return jsonify({"error": "key required"}), 400
+        return jsonify(_overrides_for(key))
+    body = request.get_json(force=True, silent=True) or {}
+    key = (body.get("key") or "").strip()
+    if not key:
+        return jsonify({"error": "key required"}), 400
+    data = _load_pub_overrides()
+    rec = data.get(key) or {}
+    if "manual" in body and isinstance(body["manual"], list):
+        rec["manual"] = [_norm_manual_pub(p) for p in body["manual"] if (p.get("title") or "").strip()]
+    if "edits" in body and isinstance(body["edits"], dict):
+        rec["edits"] = body["edits"]
+    if "hidden" in body and isinstance(body["hidden"], list):
+        rec["hidden"] = [str(k) for k in body["hidden"]]
+    if "locked" in body and isinstance(body["locked"], list):
+        rec["locked"] = [str(k) for k in body["locked"]]
+    # Drop empty records so the file stays tidy.
+    if any(rec.get(f) for f in ("manual", "edits", "hidden", "locked")):
+        data[key] = rec
+    else:
+        data.pop(key, None)
+    _save_pub_overrides(data)
+    return jsonify({"ok": True, "key": key, **_overrides_for(key)})
 
 
 def _load_ref_targets() -> dict:
@@ -2093,6 +2271,8 @@ def _assemble_bundle(slugs: list[str], scope: dict) -> dict:
 
     flags = _load_ref_flags()
     ref_flags = {sid: flags[sid] for sid in scholar_ids if sid in flags}
+    iflags = _load_impact_flags()
+    impact_flags = {sid: True for sid in scholar_ids if sid in iflags}
 
     scholar_cache: dict = {}
     for sid in scholar_ids:
@@ -2126,6 +2306,7 @@ def _assemble_bundle(slugs: list[str], scope: dict) -> dict:
         "units": units_md,
         "scholar_cache": scholar_cache,
         "ref_flags": ref_flags,
+        "impact_flags": impact_flags,
         "scholar_meta": scholar_meta,
         "case_studies": cases,
         "uoa_meta": uoa_meta,
@@ -2248,6 +2429,14 @@ def api_bundle_import():
             summary["ref_flags"] += len(m)
     _save_ref_flags(flags)
 
+    # 3b. Impact-researcher flags — merge.
+    if bundle.get("impact_flags"):
+        iflags = _load_impact_flags()
+        for sid, v in bundle["impact_flags"].items():
+            if v:
+                iflags[sid] = True
+        _save_impact_flags(iflags)
+
     # 4. Institutional profiles — merge by key.
     try:
         smeta = json.loads(SCHOLAR_META_FILE.read_text())
@@ -2362,9 +2551,15 @@ def api_scholar_batch():
         cached = _read_cache(sid)
         if cached:
             cached = {**cached, "_from_cache": True}
+            cached["recent_publications"] = _apply_pub_overrides(sid, cached.get("recent_publications"))
             out[sid] = cached
         else:
-            out[sid] = {"error": "no fresh cache; refresh individually"}
+            # No scraped cache — but the person may still have hand-entered
+            # publications (manual overrides). Surface those so manual-only
+            # people appear in the picker / card.
+            ov = _apply_pub_overrides(sid, [])
+            out[sid] = {"recent_publications": ov, "_manual_only": True, "_from_cache": True} if ov \
+                else {"error": "no fresh cache; refresh individually"}
     return jsonify(out)
 
 
@@ -2417,11 +2612,18 @@ def api_scholar(scholar_id: str):
                 return jsonify({"error": f"could not delete cache: {e}"}), 500
         return jsonify({"ok": True, "cleared": existed, "scholar_id": scholar_id})
 
+    impact = scholar_id in _load_impact_flags()
     refresh = request.args.get("refresh") == "1"
     if not refresh:
         cached = _read_cache(scholar_id)
+        # Always serve a fresh-enough cache, even if an impact researcher's
+        # cache is still the narrow (REF-window) payload — we must never hit
+        # Scholar just because a modal opened. Widening to 2008+ happens only
+        # on an explicit refresh (the impact toggle prompts for it, and Force
+        # refresh does it); until then the UI shows a "refresh to widen" note.
         if cached:
             cached["_from_cache"] = True
+            cached["recent_publications"] = _apply_pub_overrides(scholar_id, cached.get("recent_publications"))
             return jsonify(cached)
 
     # About to hit Scholar — bail early if we're inside the cooldown window
@@ -2438,8 +2640,9 @@ def api_scholar(scholar_id: str):
             "cooldown_remaining_seconds": remaining,
         }), 429
 
+    old_cached = _read_cache(scholar_id)   # for freezing locked pubs across refresh
     try:
-        data = _fetch_scholar(scholar_id)
+        data = _fetch_scholar(scholar_id, impact=impact)
     except Exception as e:
         msg = str(e)
         # Detect 429 / captcha and trip the cooldown.
@@ -2452,8 +2655,13 @@ def api_scholar(scholar_id: str):
             }), 429
         return jsonify({"error": f"Scholar fetch failed: {e}"}), 502
 
+    # Locked pubs are frozen across refreshes: restore their pre-refresh values
+    # before caching, so a Google re-scrape can't change a marked REF output.
+    _freeze_locked(old_cached, data, set(_overrides_for(scholar_id)["locked"]))
     _write_cache(scholar_id, data)
     data["_from_cache"] = False
+    # Layer manual pubs / edits / deletions on for display (cache stays scraped).
+    data["recent_publications"] = _apply_pub_overrides(scholar_id, data.get("recent_publications"))
     return jsonify(data)
 
 
