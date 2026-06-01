@@ -2063,7 +2063,7 @@ function openHelp() {
          better known before our recent re-branding exercise) we pride ourselves on leading the field
          in the marketisation of higher education. We are pleased to support this new app
          (Mrs&nbsp;Dilworth. Please check what that is) and hope you find it useful.</p>
-      <p class="help-pop-foot">— The Vice-Chancellor, as reported in <span class="help-pop-mast">THE POPPL<span class="pop-red">ETONIAN</span></span>. <em>Finem respice!</em></p>
+      <p class="help-pop-foot">— The Vice-Chancellor. <em>Finem respice!</em></p>
     </div>`;
 }
 
