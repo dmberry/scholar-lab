@@ -40,3 +40,7 @@ dist/
 # ── OS / editor ────────────────────────────────────────────
 .DS_Store
 scholar_meta.json
+
+# Data-folder relocation pointer + move backups
+location.json
+backups/

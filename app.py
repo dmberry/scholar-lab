@@ -53,15 +53,34 @@ if _FROZEN:
     # PyInstaller unpacks bundled resources into sys._MEIPASS at runtime.
     STATIC_ROOT = Path(getattr(sys, "_MEIPASS", Path(sys.executable).parent))
     if sys.platform == "darwin":
-        USER_ROOT = Path.home() / "Library" / "Application Support" / "Scholar Dashboard"
+        _DEFAULT_USER_ROOT = Path.home() / "Library" / "Application Support" / "Scholar Dashboard"
     elif sys.platform == "win32":
-        USER_ROOT = Path(os.environ.get("APPDATA", Path.home())) / "Scholar Dashboard"
+        _DEFAULT_USER_ROOT = Path(os.environ.get("APPDATA", Path.home())) / "Scholar Dashboard"
     else:
-        USER_ROOT = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "scholar-dashboard"
+        _DEFAULT_USER_ROOT = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share")) / "scholar-dashboard"
 else:
     STATIC_ROOT = Path(__file__).parent
-    USER_ROOT   = Path(__file__).parent
+    _DEFAULT_USER_ROOT = Path(__file__).parent
 
+_DEFAULT_USER_ROOT.mkdir(parents=True, exist_ok=True)
+
+# The data folder can be relocated by the user. A small pointer file always
+# lives in the default location and records where the data actually is, so we
+# can always find the redirect (and fall back gracefully if it's gone).
+_LOCATION_FILE = _DEFAULT_USER_ROOT / "location.json"
+
+
+def _resolve_user_root() -> Path:
+    try:
+        p = Path(json.loads(_LOCATION_FILE.read_text())["data_root"]).expanduser()
+        if p.is_dir():
+            return p
+    except (OSError, ValueError, KeyError, json.JSONDecodeError):
+        pass
+    return _DEFAULT_USER_ROOT
+
+
+USER_ROOT = _resolve_user_root()
 USER_ROOT.mkdir(parents=True, exist_ok=True)
 
 # Back-compat alias — most of the existing code references ROOT for static
@@ -88,7 +107,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.52"
+__version__ = "0.2.53"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
@@ -1367,6 +1386,113 @@ def api_clear_cache():
             except OSError:
                 pass
     return jsonify({"ok": True, "removed": removed})
+
+
+# ── Data-folder location (choose / reveal / relocate) ───────────────────────
+@app.route("/api/data-location", methods=["GET", "POST"])
+def api_data_location():
+    """GET → where the data folder is and whether it's relocatable here.
+    POST {path} → relocate: back up the current folder, copy everything to the
+    new location, and update the pointer. A restart is needed to take effect."""
+    if request.method == "GET":
+        return jsonify({
+            "data_root":    str(USER_ROOT),
+            "default_root": str(_DEFAULT_USER_ROOT),
+            "is_custom":    USER_ROOT != _DEFAULT_USER_ROOT,
+            "can_choose":   sys.platform == "darwin",   # native folder picker
+        })
+
+    body = request.get_json(force=True, silent=True) or {}
+    raw = (body.get("path") or "").strip()
+    if not raw:
+        return jsonify({"error": "no path given"}), 400
+    target = Path(raw).expanduser()
+    if target == USER_ROOT:
+        return jsonify({"ok": True, "unchanged": True, "data_root": str(USER_ROOT)})
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+    except OSError as e:
+        return jsonify({"error": f"can't create that folder: {e}"}), 400
+
+    # Guard against clobbering an unrelated, non-empty folder.
+    looks_ours = (target / "data").exists() or (target / "ref_flags.json").exists()
+    if any(target.iterdir()) and not looks_ours:
+        return jsonify({"error": "That folder isn't empty and isn't an existing Scholar "
+                                 "Dashboard data folder. Choose an empty or previous folder."}), 400
+
+    import zipfile
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    backups = _DEFAULT_USER_ROOT / "backups"
+    backups.mkdir(exist_ok=True)
+    backup_zip = backups / f"data-backup-{ts}.zip"
+    try:
+        with zipfile.ZipFile(backup_zip, "w", zipfile.ZIP_DEFLATED) as zf:
+            for p in USER_ROOT.rglob("*"):
+                if p.is_file() and "backups" not in p.parts and ".bak" not in p.parts:
+                    zf.write(p, p.relative_to(USER_ROOT))
+    except OSError as e:
+        return jsonify({"error": f"backup failed, aborting move: {e}"}), 500
+
+    # Copy everything across (originals are left in place as a safety net).
+    try:
+        for p in USER_ROOT.iterdir():
+            if p.name == "backups":
+                continue
+            dest = target / p.name
+            if p.is_dir():
+                shutil.copytree(p, dest, dirs_exist_ok=True)
+            else:
+                shutil.copy2(p, dest)
+    except OSError as e:
+        return jsonify({"error": f"copy failed: {e}", "backup": str(backup_zip)}), 500
+
+    try:
+        _LOCATION_FILE.write_text(json.dumps({"data_root": str(target)}, indent=2))
+    except OSError as e:
+        return jsonify({"error": f"couldn't save the new location: {e}"}), 500
+
+    return jsonify({"ok": True, "data_root": str(target), "backup": str(backup_zip),
+                    "needs_restart": True})
+
+
+@app.route("/api/choose-folder")
+def api_choose_folder():
+    """Native macOS folder picker (osascript). Returns {path} or {cancelled}.
+    Non-macOS clients get {supported:false} and fall back to a typed path."""
+    if sys.platform != "darwin":
+        return jsonify({"supported": False})
+    import subprocess
+    script = ('POSIX path of (choose folder with prompt '
+              '"Choose a folder to hold the Scholar Dashboard data")')
+    try:
+        r = subprocess.run(["osascript", "-e", script],
+                           capture_output=True, text=True, timeout=180)
+    except Exception as e:   # noqa: BLE001 - surface any launcher failure
+        return jsonify({"error": str(e)}), 500
+    if r.returncode != 0:
+        return jsonify({"cancelled": True})
+    return jsonify({"path": r.stdout.strip()})
+
+
+@app.route("/api/open-folder", methods=["POST"])
+def api_open_folder():
+    """Reveal a folder in the OS file browser. Body {path?} defaults to the
+    data folder."""
+    body = request.get_json(silent=True) or {}
+    path = Path(body.get("path") or USER_ROOT).expanduser()
+    if not path.exists():
+        return jsonify({"error": "folder not found"}), 404
+    import subprocess
+    try:
+        if sys.platform == "darwin":
+            subprocess.run(["open", str(path)], check=False)
+        elif sys.platform == "win32":
+            os.startfile(str(path))   # type: ignore[attr-defined]  # noqa
+        else:
+            subprocess.run(["xdg-open", str(path)], check=False)
+    except Exception as e:   # noqa: BLE001
+        return jsonify({"error": str(e)}), 500
+    return jsonify({"ok": True})
 
 
 @app.route("/api/heartbeat")

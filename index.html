@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.52</span>
+    <span class="tb-sub" id="tb-version">v0.2.53</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -134,6 +134,21 @@
         </button>
       </div>
     </div>
+
+    <!-- Help: substantive guidance on using the system. -->
+    <div class="tb-menu" data-menu="help">
+      <button class="tb-menu-btn" id="tb-help-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Help</button>
+      <div class="tb-menu-pop" role="menu" aria-label="Help" hidden>
+        <button class="tb-menu-item" id="tb-help" role="menuitem">
+          <span class="tb-mi-label">How to use Scholar Dashboard…</span>
+          <span class="tb-mi-hint">Views, scraping, REF flagging &amp; ratings, case studies, reports</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-help-about" role="menuitem">
+          <span class="tb-mi-label">About Scholar Dashboard</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- Primary action kept one-click on the right. -->
@@ -171,6 +186,7 @@
         <option value="">Loading…</option>
       </select>
       <span class="unit-count"><span id="uoa-count">…</span> staff</span>
+      <button class="tb-btn" id="uoa-report-btn" title="Full UoA report — readiness dashboard, quality profile, selected outputs and every impact case study (printable)">📄 Report</button>
     </div>
   </section>
 
@@ -289,6 +305,14 @@
   <div class="modal-card ref-report-card">
     <button class="close" aria-label="Close" data-ref-report-close>×</button>
     <div id="ref-report-body"></div>
+  </div>
+</div>
+
+<!-- Help dialog -->
+<div id="help-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card help-card">
+    <button class="close" aria-label="Close" data-help-close>×</button>
+    <div id="help-body"></div>
   </div>
 </div>
 

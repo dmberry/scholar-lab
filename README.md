@@ -3,7 +3,7 @@
 A staff metrics dashboard that surfaces Google Scholar citations, h-index,
 and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 
-**Version:** 0.2.50 · proof-of-concept.
+**Version:** 0.2.53 · proof-of-concept.
 
 ## What it does
 
@@ -25,11 +25,34 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
 - **Copy-as-image**: every Staff-by-role card has a 📋 button that copies a
   PNG of the card to your clipboard (or downloads it).
 - **Hide emeritus** and **Hide visiting** toggles in the sort bar.
+- **REF flagging & star ratings**: on a person's card, rate each in-window
+  output *Not REF / 1\* / 2\* / 2–3\* / 3\* / 3–4\* / 4\** (the in-between bands
+  store as 2.5 / 3.5). The **REF** chip redraws each card's chart to show only
+  the years with a selected output (empty years show N/A). The REF *exercise
+  year* and window are configurable in Settings (year floored at 2029).
+- **GPA & quality profile**: reports compute a mean output GPA per scholar and
+  per UoA, plus a star-band profile (% at each band).
+- **Reports**: a **Report** button beside the UoA selector builds the full UoA
+  report — a colour-coded Red/Amber/Green readiness dashboard, quality profile,
+  narrative/environment, selected outputs with ratings, and every impact case
+  study (printable). **REF → REF selection report** lists flagged outputs and
+  GPA per scholar for the current view.
+- **Impact case studies (REF3)**: per-UoA editor with status workflow and a
+  version log; references picked by scholar → output; contributors auto-suggested
+  from the referenced outputs' authors, then freely editable; Markdown
+  import/export (+ template in `docs/`).
+- **Complete-UoA bundles**: in By-UoA view, *File → Save UoA…* writes one
+  self-contained `…_UoA.json` (units, cached publications with ratings, profiles,
+  case studies, narrative); *Load…* re-imports it. Every export carries a
+  version stamp and imports warn on a newer format.
+- **Configurable data folder**: relocate it from *Settings → Data & reset*
+  (backup-first copy), with a **Show Folder** button to reveal it.
+- **Help menu**: an in-app guide to the whole workflow.
 - **Analytics modal**: cross-unit visibility, citation totals, REF readiness,
   momentum, cross-listings, citation history.
 - **Data editor**: add / edit / remove faculties, schools, units, and staff.
-- **Toolbar Data menu** (Edit data / New unit / Load unit file / Save unit)
-  and an **Export menu** (Print / Save as PDF / Download JSON).
+- **Native menu bar**: File · View · Data · REF · Export · Help, plus a
+  one-click Analytics button.
 - Server-side Scholar cache (7-day TTL) in `.cache/`; force-refresh per card
   or the whole view. A **10-minute server cooldown** is auto-engaged after a
   Scholar 429 / captcha so repeated retries don't make things worse.
@@ -41,7 +64,9 @@ and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
   library is fingerprinted and blocked). Endpoints: `/api/staff`,
   `/api/scholar/<id>` (GET + DELETE), `/api/scholar-batch`,
   `/api/scholar-cache-index`, `/api/unit-file` (GET + POST),
-  `/api/version`, `/api/export.json`.
+  `/api/version`, `/api/export.json`, `/api/ref-flag`, `/api/ref-targets`,
+  `/api/case-study(.md)`, `/api/uoa-bundle.json` (+ import),
+  `/api/data-location`, `/api/choose-folder`, `/api/open-folder`.
 - `index.html` / `style.css` / `app.js` — framework-free static frontend,
   served by Flask.
 
@@ -171,7 +196,23 @@ shows them, untick "Headers and footers" in the print dialog.
 - **Not a research-quality bibliometric tool.** Scholar is noisy (duplicates,
   citation inflation, mis-attribution). Treat the numbers as indicative.
 
-## Recent additions (0.2.0)
+## Recent additions (0.2.51 – 0.2.53)
+
+- Per-output **REF star ratings** (Not REF / 1\* … 4\*, with 2–3\* and 3–4\*
+  bands stored as 2.5 / 3.5); REF chip charts flagged years only with N/A gaps.
+- Configurable **REF exercise year + window** (Settings), floored at 2029 with a
+  change warning.
+- **Mean GPA** per scholar / per UoA and a **quality profile** bar in both
+  reports; a colour-coded **Red/Amber/Green readiness dashboard** atop the UoA
+  report (outputs vs target, GPA, % rated, case-study progress).
+- **Faceted pickers** in the case-study editor: references by scholar → output,
+  contributors auto-suggested from the referenced authors then editable.
+- **Complete-UoA bundles** (`…_UoA.json`) for save/load; **version-stamped
+  exports** with import-time compatibility warnings.
+- **Report** button beside the UoA selector; **Help** menu with an in-app guide.
+- **Relocatable data folder** with backup-first copy and a Show-Folder reveal.
+
+## Earlier additions (0.2.0)
 
 - Markdown data layer (per-unit `data/*.md`, resilient parser, canonical
   re-serialiser, /api/unit-file Load/Save endpoints).
