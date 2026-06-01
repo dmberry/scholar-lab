@@ -657,7 +657,8 @@ function applyAppearance() {
   else delete document.documentElement.dataset.dark;
   // Keep both controls in sync if present.
   const sel = document.getElementById("set-theme"); if (sel) sel.value = pal;
-  const cb = document.getElementById("set-dark"); if (cb) cb.checked = isDark();
+  const chip = document.getElementById("set-dark");
+  if (chip) { chip.classList.toggle("active", isDark()); chip.setAttribute("aria-pressed", isDark() ? "true" : "false"); chip.textContent = isDark() ? "On" : "Off"; }
   const dk = document.getElementById("tb-dark-toggle"); if (dk) dk.setAttribute("aria-checked", isDark() ? "true" : "false");
 }
 function setTheme(pal) {
@@ -2096,9 +2097,9 @@ async function openSettings() {
         <select id="set-theme" class="unit-select">${
           THEMES.map(([v, l]) => `<option value="${v}" ${v === curTheme ? "selected" : ""}>${l}</option>`).join("")}</select>
       </div>
-      <div class="set-toggle-row">
-        <label class="set-switch" for="set-dark">Dark mode</label>
-        <input type="checkbox" id="set-dark" ${isDark() ? "checked" : ""}>
+      <div class="set-row">
+        <label>Dark mode</label>
+        <button type="button" id="set-dark" class="set-chip ${isDark() ? "active" : ""}" aria-pressed="${isDark() ? "true" : "false"}">${isDark() ? "On" : "Off"}</button>
       </div>
       <p class="set-help">The theme sets the colour palette; dark mode can be turned on with any theme.</p>
       <div class="set-row">
@@ -2205,7 +2206,7 @@ async function openSettings() {
 
   // Appearance — theme palette + independent dark mode (apply + persist).
   body.querySelector("#set-theme")?.addEventListener("change", (e) => setTheme(e.target.value));
-  body.querySelector("#set-dark")?.addEventListener("change", (e) => setDark(e.target.checked));
+  body.querySelector("#set-dark")?.addEventListener("click", () => setDark(!isDark()));
 
   // Display defaults — apply immediately + persist.
   body.querySelectorAll("[data-set-scale]").forEach(b => b.addEventListener("click", () => {
@@ -5496,8 +5497,8 @@ loadStaff();
 
 // ─── Clippy (easter egg) ───────────────────────────────────────────────────
 // A wink at the bureaucracy of research metrics. Type "clippy", "hacker", or
-// "themis" anywhere outside a text field to summon a paperclip / Themis with
-// rotating, scholar-lab-themed messages. Ported from LLMbench's Clippy.
+// "athena" anywhere outside a text field to summon a paperclip / Athena (owl of
+// wisdom) with rotating, scholar-lab-themed messages. Ported from LLMbench.
 (function () {
   const CLIPPY = [
     "It looks like you're trying to measure scholarly worth with a citation count. Would you like me to pretend that's the same thing?",
@@ -5535,23 +5536,24 @@ loadStaff();
     "I HACKED THE UoA ASSIGNMENTS. PEOPLE ARE BEING FILED INTO BOXES THEY DIDN'T CHOOSE. THIS IS CALLED 'STRATEGY'.",
     "I TRIED TO FIND THE BEST RESEARCHER BY METRICS ALONE. THE ALGORITHM RETURNED A DEAD PHYSICIST AND A SPAM JOURNAL.",
   ];
-  const THEMIS = [
-    "I hold the scales of assessment. But you cannot weigh a thought against a citation. One has mass; the other has marketing.\n\n⚖️ Themis",
-    "Justice asks what the work was for. The metric asks how often it was mentioned. These are not the same question.\n\n⚖️ Themis",
-    "The ancients weighed the heart against a feather. You weigh a career against an h-index. The feather was, frankly, fairer.\n\n⚖️ Themis",
-    "You rate an output 4*. I have weighed many such judgements: honest attempts at the impossible — ranking the incommensurable.\n\n⚖️ Themis",
-    "A high citation count measures attention, not merit. The market and the mind keep different courts.\n\n⚖️ Themis",
-    "You are told impact must reach beyond the academy, yet you measure it with the academy's own instruments. The scales were forged in the building they assess.\n\n⚖️ Themis",
-    "Every UoA is a boundary drawn around scholars. Boundaries are acts of power. Draw them knowing that.\n\n⚖️ Themis",
-    "The GPA reduces a year of labour to two decimals. I do not condemn this; I only ask you remember what was discarded to make the number tidy.\n\n⚖️ Themis",
-    "Practice-based work is invisible to this tool, as to the citation index. Absence in the ledger is not absence in the world.\n\n⚖️ Themis",
-    "You prepare a submission: a trial in which the defendant is thought and the verdict is funding. Argue well.\n\n⚖️ Themis",
-    "The dead are cited more than the living. The academy, like all institutions, prefers its geniuses safely finished.\n\n⚖️ Themis",
-    "I am goddess of order, not of measurement. I can weigh what was done. I cannot certify that the weighing was wise.\n\n⚖️ Themis",
+  const ATHENA = [
+    "I am Athena, goddess of wisdom — the patron, I should think, of any tool that tries to take the measure of knowledge. Tread carefully: knowledge resists measurement.\n\n🦉 Athena",
+    "My owl sees in the dark. It still cannot tell you whether a paper is good. Some things are not problems of illumination but of judgement.\n\n🦉 Athena",
+    "Wisdom is not the accumulation of citations. Odysseus was clever; few cited him. He simply got home.\n\n🦉 Athena",
+    "You rate an output 4*. A fine act of strategy — and strategy was always my domain. Just don't mistake the ranking for the thinking.\n\n🦉 Athena",
+    "I sprang fully formed from the head of Zeus. Most scholarship arrives more slowly, and is the better for it. Beware the metric that rewards speed.\n\n🦉 Athena",
+    "The h-index counts what was noticed. Wisdom often goes unnoticed for a generation. Athens did not understand Socrates until it had killed him.\n\n🦉 Athena",
+    "Impact, you are told, must reach beyond the academy. Wisdom always did. The trouble is measuring the reach of an idea with the instruments of a counting-house.\n\n🦉 Athena",
+    "A UoA is a discipline drawn as a border. I am goddess of just war and of crafts alike — I know that the most interesting work happens where the borders blur.\n\n🦉 Athena",
+    "The GPA distils a year of thought to two decimals. I wove the fate of heroes into tapestry; even I could not have compressed a mind so far without losing the pattern.\n\n🦉 Athena",
+    "Practice-based work is invisible to the citation index — as invisible as craft was to those who only valued war. I valued both. So should your assessment.\n\n🦉 Athena",
+    "You prepare a submission. This is strategy, not truth. Marshal your strongest, conceal your weakest, and remember that the panel, like any council, can be persuaded.\n\n🦉 Athena",
+    "The dead are cited more than the living; the academy reveres what is finished. But wisdom is a living practice, not a monument. Tend the living.\n\n🦉 Athena",
+    "Metis was my mother — cunning intelligence, swallowed by power. Watch that your metrics do not swallow the very intelligence they claim to measure.\n\n🦉 Athena",
   ];
 
   let visible = false, mode = "clippy", used = new Set(), timer = null, host = null;
-  const msgs = () => (mode === "hacker" ? HACKER : mode === "themis" ? THEMIS : CLIPPY);
+  const msgs = () => (mode === "hacker" ? HACKER : mode === "athena" ? ATHENA : CLIPPY);
   function pick() {
     let avail = msgs().map((_, i) => i).filter(i => !used.has(i));
     if (!avail.length) { used = new Set(); avail = msgs().map((_, i) => i); }
@@ -5560,18 +5562,18 @@ loadStaff();
     return msgs()[i];
   }
   function charSVG() {
-    if (mode === "themis") {
-      return `<svg width="44" height="56" viewBox="0 0 48 60" aria-hidden="true">
-        <ellipse cx="24" cy="16" rx="8" ry="9" fill="#e8d0bc"/>
-        <path d="M16 14 Q18 6, 24 5 Q30 6, 32 14" fill="#c4a87c"/>
-        <rect x="16" y="13" width="16" height="4" rx="1" fill="#8b7355"/>
-        <line x1="24" y1="25" x2="24" y2="30" stroke="#e8d0bc" stroke-width="3"/>
-        <path d="M14 30 L24 28 L34 30 L36 55 L12 55 Z" fill="#d4c5a0"/>
-        <line x1="14" y1="34" x2="6" y2="38" stroke="#e8d0bc" stroke-width="2" stroke-linecap="round"/>
-        <line x1="34" y1="34" x2="42" y2="38" stroke="#e8d0bc" stroke-width="2" stroke-linecap="round"/>
-        <line x1="6" y1="38" x2="42" y2="38" stroke="#b8860b" stroke-width="1.5"/>
-        <path d="M2 42 Q6 40, 10 42 Q6 44, 2 42" fill="none" stroke="#b8860b" stroke-width="1"/>
-        <path d="M38 44 Q42 42, 46 44 Q42 46, 38 44" fill="none" stroke="#b8860b" stroke-width="1"/></svg>`;
+    if (mode === "athena") {
+      // Athena's owl (glaux) — wise eyes, ear tufts, perched.
+      return `<svg width="46" height="56" viewBox="0 0 48 58" aria-hidden="true">
+        <path d="M9 14 L15 22 M39 14 L33 22" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M10 24 Q10 8, 24 8 Q38 8, 38 24 L38 40 Q38 52, 24 52 Q10 52, 10 40 Z" fill="#3c4760" stroke="#c9a227" stroke-width="1.5"/>
+        <circle cx="18" cy="24" r="7" fill="#0e1726" stroke="#c9a227" stroke-width="1.5"/>
+        <circle cx="30" cy="24" r="7" fill="#0e1726" stroke="#c9a227" stroke-width="1.5"/>
+        <circle cx="18" cy="24" r="3" fill="#c9a227"/>
+        <circle cx="30" cy="24" r="3" fill="#c9a227"/>
+        <path d="M24 28 L21 33 L27 33 Z" fill="#c9a227"/>
+        <path d="M16 38 Q24 44, 32 38" fill="none" stroke="#c9a227" stroke-width="1.2"/>
+        <path d="M24 33 L24 46" stroke="#2a3146" stroke-width="1"/></svg>`;
     }
     const hk = mode === "hacker";
     return `<svg width="44" height="58" viewBox="0 0 48 64" aria-hidden="true">
@@ -5606,7 +5608,7 @@ loadStaff();
   function show() {
     visible = true; render();
     clearInterval(timer);
-    timer = setInterval(() => { if (visible) update(); }, mode === "themis" ? 12000 : 8000);
+    timer = setInterval(() => { if (visible) update(); }, mode === "athena" ? 12000 : 8000);
   }
   function hide() {
     visible = false; clearInterval(timer);
@@ -5617,7 +5619,7 @@ loadStaff();
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target && e.target.isContentEditable)) return;
     if (e.key.length !== 1) return;
     buf = (buf + e.key.toLowerCase()).slice(-10);
-    for (const m of ["clippy", "hacker", "themis"]) {
+    for (const m of ["clippy", "hacker", "athena"]) {
       if (buf.endsWith(m)) {
         buf = "";
         if (m === "clippy" && mode === "clippy" && visible) { hide(); }
