@@ -574,13 +574,14 @@ function updateExcludedPill() {
 ].forEach(({ id, key, read, noun }) => {
   const btn = document.getElementById(id);
   if (!btn) return;
-  // Label states the action the click performs: when the group is
-  // currently shown the chip offers "Hide …"; when hidden it offers
-  // "Show …". Active fill = the hide-filter is engaged.
+  // Chip shows the group name; when the hide-filter is engaged it gains a
+  // 🚫 and the active fill ("Emeritus" → "Emeritus 🚫"). Tooltip explains.
+  const cap = noun.charAt(0).toUpperCase() + noun.slice(1);
   const sync = (on) => {
     btn.classList.toggle("active", on);
     btn.setAttribute("aria-pressed", on ? "true" : "false");
-    btn.textContent = (on ? "Show " : "Hide ") + noun;
+    btn.textContent = on ? `${cap} 🚫` : cap;
+    btn.title = on ? `${cap} hidden — click to show` : `Hide ${noun}`;
   };
   sync(read());
   btn.addEventListener("click", () => {
@@ -1757,6 +1758,11 @@ document.addEventListener("click", (e) => {
     e.preventDefault();
     if (btn.id === "tb-export-menu") refreshExportMenu();
     if (btn.id === "tb-data-menu") refreshDataMenu();
+    if (btn.id === "tb-ref-menu") {
+      const on = localStorage.getItem("sd-ref-all") === "1";
+      const lbl = document.getElementById("tb-ref-window-label");
+      if (lbl) lbl.textContent = on ? "Remove REF 2029 highlight" : "Highlight REF 2029 window";
+    }
     openToolbarMenu(btn.closest(".tb-menu"));
     return;
   }
@@ -1936,6 +1942,8 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-about"))    openAbout();
   if (e.target.closest("#tb-settings")) openSettings();
   if (e.target.closest("#tb-ref-report")) openRefReport();
+  if (e.target.closest("#tb-ref-targets")) openSettings();
+  if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
   if (e.target.closest("[data-settings-close]")) document.getElementById("settings-modal").classList.add("hidden");
   if (e.target.closest("[data-ref-report-close]")) document.getElementById("ref-report-modal").classList.add("hidden");
@@ -1991,15 +1999,28 @@ async function openRefReport() {
     batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(ids.join(",")))).json();
   } catch { /* fall back to slug-derived titles */ }
 
+  // Targets + case studies for the readiness summary.
+  let targets = { default: { multiplier: 2.5, min_per_person: 1, max_per_person: 5 } };
+  let cases = [];
+  try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
+  const uoaCodes = new Set(scholars.map(p => String((p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT)) || "")).filter(Boolean));
+  try {
+    const all = (await (await fetch("/api/case-studies")).json()).case_studies || [];
+    cases = all.filter(c => uoaCodes.has(String(c.uoa)));
+  } catch {}
+  const mult = (targets.default && targets.default.multiplier) || 2.5;
+
   let totalOutputs = 0;
   const sections = scholars.map(p => {
     const flags = refFlagsFor(p.scholar_id);
     const flaggedKeys = Object.keys(flags);
     const pubs = (batch[p.scholar_id]?.recent_publications) || [];
     const byKey = new Map(pubs.map(pub => [pub.pub_key, pub]));
+    let pubCites = 0;
     const rows = flaggedKeys.map(key => {
       const pub = byKey.get(key);
       if (pub) {
+        pubCites += (pub.num_citations || 0);
         return `<li><span class="rr-pt">${escapeHTML(pub.title || "Untitled")}</span>
           <span class="rr-pm">${escapeHTML(String(pub.year || "n.d."))}${pub.venue ? " · " + escapeHTML(pub.venue) : ""} · cited by ${fmt(pub.num_citations)}</span></li>`;
       }
@@ -2008,14 +2029,42 @@ async function openRefReport() {
     }).join("");
     totalOutputs += flaggedKeys.length;
     const uoa = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
+    const m = METRICS.get(p.scholar_id) || batch[p.scholar_id] || {};
     return `<div class="rr-scholar">
       <div class="rr-head">
         <span class="rr-name">${escapeHTML(p.name)}</span>
-        <span class="rr-meta">${escapeHTML(p.title || "")}${uoa ? " · UoA " + uoa : ""} · ${flaggedKeys.length} output${flaggedKeys.length === 1 ? "" : "s"}</span>
+        <span class="rr-meta">${escapeHTML(p.title || "")}${uoa ? " · UoA " + uoa : ""}</span>
+      </div>
+      <div class="rr-scholar-stats">
+        <span><strong>${flaggedKeys.length}</strong> REF pubs</span>
+        <span><strong>${fmt(pubCites)}</strong> cites (these)</span>
+        <span><strong>${fmt(m.citedby)}</strong> total cites</span>
+        <span><strong>${fmt(m.hindex)}</strong> h-index</span>
       </div>
       <ol class="rr-pubs">${rows}</ol>
     </div>`;
   }).join("");
+
+  // UoA readiness summary.
+  const required = Math.round(mult * scholars.length);
+  const onTarget = totalOutputs >= required;
+  const csByStatus = { not_started: 0, draft: 0, proof: 0, finished: 0 };
+  cases.forEach(c => { csByStatus[c.status] = (csByStatus[c.status] || 0) + 1; });
+  const stats = `
+    <div class="rr-stats">
+      <div class="rr-stat">
+        <span class="rr-stat-n">${totalOutputs}<span class="rr-stat-of"> / ${required}</span></span>
+        <span class="rr-stat-l">outputs flagged / target <span class="rr-readiness ${onTarget ? "ok" : "under"}">${onTarget ? "on target" : (required - totalOutputs) + " to go"}</span></span>
+      </div>
+      <div class="rr-stat">
+        <span class="rr-stat-n">${cases.length}</span>
+        <span class="rr-stat-l">case studies · ${csByStatus.finished} finished · ${csByStatus.proof} proof · ${csByStatus.draft} draft</span>
+      </div>
+      <div class="rr-stat">
+        <span class="rr-stat-n">${scholars.length}</span>
+        <span class="rr-stat-l">scholars with flagged outputs</span>
+      </div>
+    </div>`;
 
   body.innerHTML = `
     <div class="rr-top">
@@ -2025,6 +2074,7 @@ async function openRefReport() {
       </div>
       <button class="tb-btn primary" id="rr-print">Print / PDF</button>
     </div>
+    ${stats}
     ${sections}`;
 
   body.querySelector("#rr-print")?.addEventListener("click", () => {

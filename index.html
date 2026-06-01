@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.46</span>
+    <span class="tb-sub" id="tb-version">v0.2.47</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -85,20 +85,36 @@
       </div>
     </div>
 
-    <!-- Export: scope-aware print / PDF / shareable data / JSON. -->
-    <div class="tb-menu" data-menu="export">
-      <button class="tb-menu-btn" id="tb-export-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Export</button>
-      <div class="tb-menu-pop" role="menu" aria-label="Export" hidden>
-        <div class="tb-menu-scope" id="tb-export-scope">Current view</div>
+    <!-- REF: all REF 2029 functionality collected in one place. -->
+    <div class="tb-menu" data-menu="ref">
+      <button class="tb-menu-btn" id="tb-ref-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">REF</button>
+      <div class="tb-menu-pop" role="menu" aria-label="REF" hidden>
+        <button class="tb-menu-item" id="tb-ref-window" role="menuitem">
+          <span class="tb-mi-label" id="tb-ref-window-label">Highlight REF 2029 window</span>
+          <span class="tb-mi-hint">Fade citation years outside 2021–2028 on every card</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-ref-report" role="menuitem">
           <span class="tb-mi-label">REF selection report…</span>
-          <span class="tb-mi-hint">Flagged outputs only, grouped by scholar</span>
+          <span class="tb-mi-hint">Flagged outputs + readiness, grouped by scholar</span>
         </button>
         <button class="tb-menu-item" id="tb-uoa-report" role="menuitem">
           <span class="tb-mi-label">UoA report…</span>
           <span class="tb-mi-hint">Cover, narrative, selected outputs &amp; impact case studies</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item" id="tb-ref-targets" role="menuitem">
+          <span class="tb-mi-label">REF 2029 targets…</span>
+          <span class="tb-mi-hint">Output multiplier &amp; per-person min/max (Settings)</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Export: scope-aware print / PDF / shareable data / JSON. -->
+    <div class="tb-menu" data-menu="export">
+      <button class="tb-menu-btn" id="tb-export-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Export</button>
+      <div class="tb-menu-pop" role="menu" aria-label="Export" hidden>
+        <div class="tb-menu-scope" id="tb-export-scope">Current view</div>
         <button class="tb-menu-item" id="tb-print" role="menuitem">
           <span class="tb-mi-label">Print…</span>
           <span class="tb-mi-hint">Paginated — cards are never split across pages</span>

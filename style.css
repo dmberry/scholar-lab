@@ -297,6 +297,19 @@ body {
 .rr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; }
 .rr-top h3 { margin: 0; }
 .rr-sub { margin: .15rem 0 0; color: var(--muted); font-size: .82rem; }
+/* Keep the top action button clear of the modal's × close control. */
+#rr-print, #ur-print { margin-right: 2rem; flex: 0 0 auto; }
+/* Readiness summary strip */
+.rr-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: .6rem; margin: .8rem 0 1rem; }
+.rr-stat { background: var(--accent-soft); border-radius: 8px; padding: .55rem .7rem; }
+.rr-stat-n { display: block; font-size: 1.3rem; font-weight: 700; color: var(--accent); line-height: 1.1; }
+.rr-stat-of { font-size: .9rem; font-weight: 600; color: var(--muted); }
+.rr-stat-l { font-size: .72rem; color: var(--muted); }
+.rr-readiness { font-weight: 700; padding: .05em .45em; border-radius: 999px; margin-left: .2rem; }
+.rr-readiness.ok    { background: #d8f0df; color: #1a7f3c; }
+.rr-readiness.under { background: #fff0d6; color: #8a5a00; }
+.rr-scholar-stats { display: flex; flex-wrap: wrap; gap: .9rem; margin: .25rem 0 .35rem; font-size: .76rem; color: var(--muted); }
+.rr-scholar-stats strong { color: var(--accent); font-size: .9rem; }
 .rr-scholar { padding: .7rem 0; border-top: 1px solid var(--border); }
 .rr-scholar:first-of-type { border-top: 0; }
 .rr-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
