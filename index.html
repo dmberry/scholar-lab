@@ -11,23 +11,48 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.36</span>
+    <span class="tb-sub" id="tb-version">v0.2.37</span>
   </div>
-  <div class="tb-actions">
-    <div class="tb-group tb-zoom" title="Adjust card font size">
-      <button class="tb-btn tb-zoom-btn" data-zoom="-" aria-label="Smaller cards">A−</button>
-      <button class="tb-btn tb-zoom-btn" data-zoom="+" aria-label="Larger cards">A+</button>
-    </div>
-    <div class="tb-group">
-      <button class="tb-btn" id="tb-ref-all" title="Toggle REF 2029 window (2021–2028) on every card at once">REF 2029</button>
-      <button class="tb-btn" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">Analytics</button>
-      <button class="tb-btn" id="tb-refresh" title="Force-refresh every cached Scholar profile in the current view">Refresh</button>
+  <!-- Menu bar — native-app style: File · View · Data · Export. -->
+  <div class="tb-menubar" role="menubar">
+    <!-- File: unit-file I/O + Quit at the bottom. -->
+    <div class="tb-menu" data-menu="file">
+      <button class="tb-menu-btn" id="tb-file-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">File</button>
+      <div class="tb-menu-pop" role="menu" aria-label="File" hidden>
+        <button class="tb-menu-item" id="tb-load-unit" role="menuitem">
+          <span class="tb-mi-label">Load unit file…</span>
+          <span class="tb-mi-hint">Import a unit Markdown file from disk</span>
+        </button>
+        <button class="tb-menu-item" id="tb-save-unit" role="menuitem">
+          <span class="tb-mi-label">Save current unit…</span>
+          <span class="tb-mi-hint">Download this unit as Markdown</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-quit" role="menuitem">
+          <span class="tb-mi-label" id="tb-quit-label">Quit</span>
+        </button>
+      </div>
     </div>
 
-    <!-- Data menu — edit / create / load / save units. -->
-    <div class="tb-group tb-menu" data-menu="data">
-      <button class="tb-btn tb-menu-btn" id="tb-data-menu" aria-haspopup="true" aria-expanded="false"
-              title="Manage staff data and unit files">Data <span class="tb-caret" aria-hidden="true">▾</span></button>
+    <!-- View: card text size. -->
+    <div class="tb-menu" data-menu="view">
+      <button class="tb-menu-btn" id="tb-view-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">View</button>
+      <div class="tb-menu-pop" role="menu" aria-label="View" hidden>
+        <button class="tb-menu-item tb-menu-item-plain" data-zoom="+" role="menuitem">
+          <span class="tb-mi-label">Larger text</span>
+        </button>
+        <button class="tb-menu-item tb-menu-item-plain" data-zoom="-" role="menuitem">
+          <span class="tb-mi-label">Smaller text</span>
+        </button>
+        <button class="tb-menu-item tb-menu-item-plain" data-zoom="0" role="menuitem">
+          <span class="tb-mi-label">Reset text size</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Data: edit the dataset / create units. -->
+    <div class="tb-menu" data-menu="data">
+      <button class="tb-menu-btn" id="tb-data-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Data</button>
       <div class="tb-menu-pop" role="menu" aria-label="Data" hidden>
         <button class="tb-menu-item" id="tb-data" role="menuitem">
           <span class="tb-mi-label">Edit data…</span>
@@ -37,22 +62,12 @@
           <span class="tb-mi-label">New unit…</span>
           <span class="tb-mi-hint">Create a unit (faculty, school, name, UoA)</span>
         </button>
-        <div class="tb-menu-sep" role="separator"></div>
-        <button class="tb-menu-item" id="tb-load-unit" role="menuitem">
-          <span class="tb-mi-label">Load unit file…</span>
-          <span class="tb-mi-hint">Import a unit Markdown file from disk</span>
-        </button>
-        <button class="tb-menu-item" id="tb-save-unit" role="menuitem">
-          <span class="tb-mi-label">Save current unit…</span>
-          <span class="tb-mi-hint">Download this unit as Markdown</span>
-        </button>
       </div>
     </div>
 
-    <!-- Export menu — print / PDF / JSON. -->
-    <div class="tb-group tb-menu" data-menu="export">
-      <button class="tb-btn tb-menu-btn" id="tb-export-menu" aria-haspopup="true" aria-expanded="false"
-              title="Print or export the current view">Export <span class="tb-caret" aria-hidden="true">▾</span></button>
+    <!-- Export: print / PDF / JSON. -->
+    <div class="tb-menu" data-menu="export">
+      <button class="tb-menu-btn" id="tb-export-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Export</button>
       <div class="tb-menu-pop" role="menu" aria-label="Export" hidden>
         <button class="tb-menu-item" id="tb-print" role="menuitem">
           <span class="tb-mi-label">Print…</span>
@@ -69,10 +84,11 @@
         </a>
       </div>
     </div>
+  </div>
 
-    <div class="tb-group">
-      <button class="tb-btn tb-quit" id="tb-quit" title="Stop the local Scholar Dashboard server">Quit</button>
-    </div>
+  <!-- Primary action kept one-click on the right. -->
+  <div class="tb-actions">
+    <button class="tb-btn primary" id="tb-analytics" title="Cross-unit analytics: visibility, citation totals, REF readiness, momentum, cross-listings, citation history">Analytics</button>
   </div>
 </nav>
 
@@ -98,6 +114,7 @@
         <option value="">Loading…</option>
       </select>
       <span class="unit-count"><span id="unit-count">…</span> staff</span>
+      <button class="scope-refresh" id="tb-refresh" title="Force-refresh every cached Scholar profile in this scope">↻ Refresh</button>
     </div>
     <div class="unit-picker view-uoa-picker hidden">
       <label for="uoa-select" class="unit-label">UoA</label>
@@ -105,6 +122,7 @@
         <option value="">Loading…</option>
       </select>
       <span class="unit-count"><span id="uoa-count">…</span> staff</span>
+      <button class="scope-refresh" id="tb-refresh-uoa" title="Force-refresh every cached Scholar profile in this scope">↻ Refresh</button>
     </div>
   </section>
 
@@ -118,6 +136,9 @@
       <button class="sort-btn" data-sort="h5" title="Google Scholar's h5-index — h-index calculated only from citations in the last 5 years. The canonical 'recent impact' metric.">h5-index</button>
       <button class="sort-btn" data-sort="role" title="Group by academic role (Professor / Reader / Associate Professor / Senior Lecturer / Assistant Professor / Lecturer / Fellow / Other) with a distribution chart at the top.">Stack by role</button>
       <button class="sort-btn" data-sort="overview" title="One role-distribution card per unit (no individual people cards). Useful for school/faculty-wide views.">Overview</button>
+      <span class="sort-divider" aria-hidden="true"></span>
+      <span class="sort-label">Filter</span>
+      <button class="filter-btn" id="tb-ref-all" title="REF 2029 window (2021–2028): fade citation years outside the assessment window so the REF years stand out.">REF 2029</button>
       <label class="sort-toggle" title="Hide anyone whose title contains 'Emeritus'">
         <input type="checkbox" id="exclude-emeritus"> Hide emeritus
       </label>

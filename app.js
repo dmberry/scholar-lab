@@ -1740,13 +1740,16 @@ async function checkHeartbeat() {
 }
 function setServerDown(down) {
   SERVER_DOWN = down;
-  const btn = document.getElementById("tb-quit");
-  if (btn) {
-    btn.textContent = down ? "↻ Restart" : "⏻ Quit";
-    btn.title = down
+  // Quit lives in the File menu now; update just its label span so we
+  // don't clobber the menu-item markup.
+  const label = document.getElementById("tb-quit-label");
+  if (label) label.textContent = down ? "Restart…" : "Quit";
+  const item = document.getElementById("tb-quit");
+  if (item) {
+    item.title = down
       ? "Local server has stopped (idle timeout). Click for restart instructions."
       : "Stop the local Scholar Dashboard server";
-    btn.classList.toggle("tb-restart", down);
+    item.classList.toggle("tb-restart", down);
   }
   let banner = document.getElementById("server-down-banner");
   if (down) {
@@ -2058,11 +2061,14 @@ function applyZoom() {
   localStorage.setItem("sd-zoom", ZOOM_STEPS[zoomIdx]);
 }
 applyZoom();
+const ZOOM_RESET_IDX = 3;   // the 1.0 step
 document.addEventListener("click", (e) => {
-  const btn = e.target.closest(".tb-zoom-btn");
+  const btn = e.target.closest("[data-zoom]");
   if (!btn) return;
-  if (btn.dataset.zoom === "+") zoomIdx = Math.min(zoomIdx + 1, ZOOM_STEPS.length - 1);
-  else                          zoomIdx = Math.max(zoomIdx - 1, 0);
+  const dir = btn.dataset.zoom;
+  if (dir === "+")      zoomIdx = Math.min(zoomIdx + 1, ZOOM_STEPS.length - 1);
+  else if (dir === "-") zoomIdx = Math.max(zoomIdx - 1, 0);
+  else                  zoomIdx = ZOOM_RESET_IDX;   // "0" = reset
   applyZoom();
 });
 
@@ -2113,7 +2119,10 @@ function closeRefreshModal() {
   document.getElementById("refresh-modal").classList.add("hidden");
 }
 
-document.getElementById("tb-refresh")?.addEventListener("click", async () => {
+// Force-refresh every set staff member in the current scope. Bound to the
+// per-scope ↻ Refresh buttons that sit beside the staff count in both the
+// Faculty and UoA pickers.
+async function runScopeRefresh() {
   const ids = STAFF.filter(p => p.scholar_id && (p.scholar_status || "set") === "set")
                    .map(p => p.scholar_id);
   if (!ids.length) return;
@@ -2157,6 +2166,10 @@ document.getElementById("tb-refresh")?.addEventListener("click", async () => {
   }
   document.getElementById("refresh-eta").textContent = "Done — reloading…";
   setTimeout(() => location.reload(), 600);
+}
+// Both scope pickers (Faculty + UoA) carry a ↻ Refresh button.
+document.addEventListener("click", (e) => {
+  if (e.target.closest(".scope-refresh")) runScopeRefresh();
 });
 
 async function loadStaff() {

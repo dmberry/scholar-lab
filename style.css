@@ -24,13 +24,28 @@ body {
 /* Toolbar — sticky, wraps gracefully on narrow widths. */
 .toolbar {
   position: sticky; top: 0; z-index: 30;
-  display: flex; align-items: center; justify-content: space-between;
-  gap: .8rem 1rem; padding: .5rem 1rem;
+  display: flex; align-items: center; justify-content: flex-start;
+  gap: .4rem 1rem; padding: .5rem 1rem;
   background: #ffffffee; backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
   font-size: .85rem;
-  flex-wrap: wrap;          /* allow brand + actions to wrap to a 2nd line */
+  flex-wrap: wrap;          /* allow brand + menus to wrap to a 2nd line */
 }
+/* Native-app-style menu bar: File · View · Data · Export, left-aligned
+   after the brand. Primary actions (Analytics) sit on the far right. */
+.tb-menubar { display: flex; align-items: center; gap: .1rem; }
+.tb-actions { margin-left: auto; }
+.tb-menu-btn {
+  font: inherit; font-size: .82rem; color: var(--ink);
+  background: none; border: 1px solid transparent; border-radius: 6px;
+  padding: .3rem .6rem; cursor: pointer; white-space: nowrap;
+  transition: background .12s ease, color .12s ease;
+}
+.tb-menu-btn:hover { background: var(--accent-soft); color: var(--accent); }
+.tb-menu.open .tb-menu-btn { background: var(--accent-soft); color: var(--accent); }
+/* Plain menu items (label only, no hint) keep the base column layout —
+   they just have a single label child, which left-aligns via text-align. */
+.tb-menu-item.tb-restart .tb-mi-label { color: var(--accent); font-weight: 600; }
 .tb-brand {
   display: flex; align-items: baseline; gap: .5rem;
   min-width: 0; flex: 0 1 auto; overflow: hidden;
@@ -119,7 +134,7 @@ body {
 }
 .tb-menu.open .tb-caret { transform: rotate(180deg); opacity: 1; }
 .tb-menu-pop {
-  position: absolute; top: calc(100% + .35rem); right: 0; z-index: 200;
+  position: absolute; top: calc(100% + .35rem); left: 0; z-index: 200;
   min-width: 16rem;
   background: #fff;
   border: 1px solid var(--border); border-radius: 8px;
@@ -198,6 +213,18 @@ h2 {
   cursor: not-allowed;
   background: #fff; color: var(--ink); border-color: var(--border);
 }
+/* Filter toggle (REF 2029, and future filters) mirrors .sort-btn / .scale-btn
+   styling but is NOT a .sort-btn so it doesn't trigger the sort handler. */
+.filter-btn {
+  font: inherit; font-size: .75rem; cursor: pointer;
+  background: #fff; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 5px;
+  padding: .2rem .55rem;
+  transition: background .12s ease, color .12s ease, border-color .12s ease;
+}
+.filter-btn:hover { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+.filter-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* Scale-by toggle mirrors the .sort-btn group so the two read as siblings. */
 .scale-btn {
   font: inherit; font-size: .75rem; cursor: pointer;
@@ -288,6 +315,15 @@ h2 {
   padding: .2rem .55rem; border-radius: 4px;
   font-weight: 600; white-space: nowrap;
 }
+/* Per-scope Scholar refresh — sits beside the staff count in each picker. */
+.scope-refresh {
+  font: inherit; font-size: .76rem; cursor: pointer;
+  background: #fff; color: var(--ink);
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: .25rem .6rem; white-space: nowrap; margin-left: .35rem;
+  transition: background .12s ease, border-color .12s ease, color .12s ease;
+}
+.scope-refresh:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
 
 /* People */
 .people-grid {
