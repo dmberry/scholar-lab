@@ -2053,7 +2053,28 @@ function openHelp() {
        <em>Show Folder</em> reveals it in Finder.</p>
 
     <p class="help-foot">Scholar metrics are noisy and under-represent practice-based and
-       non-indexed work — treat them as indicative, not definitive.</p>`;
+       non-indexed work — treat them as indicative, not definitive.</p>
+
+    <div class="help-poppleton">
+      <p class="help-pop-head">A few words from the University of Poppleton</p>
+      <ul class="help-pop-list">
+        <li><strong>On targets.</strong> The Vice-Chancellor reminds colleagues that any figure
+            inconvenient to the institution is a methodological artefact, and any figure flattering to
+            it a triumph of strategy. Plan accordingly.</li>
+        <li><strong>On case studies.</strong> Jamie Targett (Corporate Affairs) advises that a strong
+            impact narrative should "touch lives", "shift the conversation" and "unlock measurable
+            stakeholder value". The actual research may go on page nine, in small print.</li>
+        <li><strong>On star ratings.</strong> Ted Chippings (TEF Submissions) notes that words mean
+            precisely what we choose them to mean. A 2* output is therefore "outstanding" once the
+            relevant buzz-word has been applied.</li>
+        <li><strong>On the GPA.</strong> Jennifer Doubleday (Personal Development) cautions that the
+            moment you are satisfied with your quality profile is the moment you stop growing. Breathe.
+            Imagine yourself as a tree.</li>
+        <li><strong>On rankings.</strong> Brand Management confirms we are comfortably in the global
+            top 1 per cent, once benchmarked against every institution that has never been ranked.</li>
+      </ul>
+      <p class="help-pop-foot">— <span class="help-pop-mast">THE POPPL<span class="pop-red">ETONIAN</span></span>, the official weekly newsletter. <em>Finem respice!</em></p>
+    </div>`;
 }
 
 async function openSettings() {

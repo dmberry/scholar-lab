@@ -176,6 +176,17 @@ body {
 .help-card code { background: #efeae0; padding: .05em .35em; border-radius: 4px; font-size: .85em; }
 .help-foot { margin-top: 1.2rem; padding-top: .7rem; border-top: 1px solid var(--border);
   color: var(--muted); font-size: .8rem; font-style: italic; }
+/* Poppleton aside in the help box — redbrick-on-cream, tongue firmly in cheek. */
+.help-poppleton { margin-top: 1.3rem; padding: .9rem 1rem; background: #f6f1e9;
+  border: 1px solid #d8cdbb; border-left: 4px solid #6b2734; border-radius: 6px; color: #2e2228; }
+.help-pop-head { margin: 0 0 .5rem; font-size: .82rem; font-weight: 700; letter-spacing: .02em;
+  text-transform: uppercase; color: #6b2734; }
+.help-pop-list { margin: 0; padding-left: 1.1rem; }
+.help-pop-list li { font-size: .84rem; line-height: 1.5; margin: .35rem 0; }
+.help-pop-foot { margin: .7rem 0 0; font-size: .8rem; color: #6b2734; }
+.help-pop-mast { font-family: "Arial Narrow", "Helvetica Neue", Impact, sans-serif; font-weight: 900;
+  font-stretch: condensed; letter-spacing: -.3px; color: #111; }
+.help-pop-mast .pop-red { color: #d81e2c; }
 /* Danger zone — GitHub-style red-bordered destructive section. */
 .set-danger h4 { color: #a31818; }
 .dz-box { border: 1px solid #e0b4b4; border-radius: 8px; }
