@@ -4710,14 +4710,11 @@ function renderPeople() {
     const refCountChip = (status === "set" && p.scholar_id)
       ? `<span class="ref-count-chip${refCount === 0 ? " is-zero" : ""}" data-ref-chip-id="${escapeAttr(p.scholar_id)}" title="${refCount} publication${refCount === 1 ? "" : "s"} flagged for REF ${REF_YEAR}. Open the card to tick more.">REF: ${refCount}</span>`
       : ``;
-    // Impact-researcher toggle chip — click to mark/unmark; widens the Scholar
-    // fetch to the impact window (2008+) on next refresh.
-    const impactChip = (status === "set" && p.scholar_id)
-      ? `<button class="impact-chip${isImpactResearcher(p.scholar_id) ? " on" : ""}" type="button" data-impact-chip="${escapeAttr(p.scholar_id)}" data-name="${escapeAttr(p.name)}" title="${isImpactResearcher(p.scholar_id) ? "Impact researcher — Scholar fetch widened to 2008+. Click to unmark." : "Mark as impact researcher (fetch outputs back to 2008 for case-study underpinning research)"}">★ Impact</button>`
-      : ``;
-    // Stack REF toggle + REF count + impact + UoA chip in the top-right corner.
-    const cornerChips = (refChip || refCountChip || impactChip || uoaTag)
-      ? `<span class="card-corner">${refChip}${refCountChip}${impactChip}${uoaTag}</span>`
+    // (Impact-researcher toggle lives in the person modal, not the card — the
+    // corner was getting crowded.)
+    // Stack REF toggle + REF count + UoA chip in the top-right corner.
+    const cornerChips = (refChip || refCountChip || uoaTag)
+      ? `<span class="card-corner">${refChip}${refCountChip}${uoaTag}</span>`
       : ``;
     const staleTip = isStale ? staleDotTitle(p.scholar_id) : "";
     btn.innerHTML = `
@@ -4727,11 +4724,13 @@ function renderPeople() {
       ${unitTag}
       ${metricsSlot}
       ${badge}
+      ${(status !== "set" && p.staff_id) ? `<span class="card-manual-pubs" data-pkey="staff:${escapeAttr(p.staff_id)}"></span>` : ""}
     `;
     btn.addEventListener("click", () => openPerson(p));
     grid.appendChild(btn);
   }
   hydrateCardMetrics();
+  hydrateManualPubs();
 }
 
 // ────────────────────────────────────────────────────────────────────────
@@ -4858,32 +4857,6 @@ document.addEventListener("click", (e) => {
   openUoaPicker(chip, p, current);
 }, true);
 
-// Global handler: clicking the ★ Impact chip on a card toggles the
-// impact-researcher flag, then (when turning it on) offers to refresh so the
-// Scholar fetch widens to 2008+.
-document.addEventListener("click", async (e) => {
-  const chip = e.target.closest("[data-impact-chip]");
-  if (!chip) return;
-  e.stopPropagation();
-  e.preventDefault();
-  const sid = chip.getAttribute("data-impact-chip");
-  const name = chip.dataset.name || "this researcher";
-  const turningOn = !chip.classList.contains("on");
-  chip.disabled = true;
-  const ok = await setImpactResearcher(sid, turningOn);
-  chip.disabled = false;
-  if (!ok) return;
-  chip.classList.toggle("on", turningOn);
-  chip.title = turningOn
-    ? "Impact researcher — Scholar fetch widened to 2008+. Click to unmark."
-    : "Mark as impact researcher (fetch outputs back to 2008 for case-study underpinning research)";
-  if (turningOn) {
-    if (confirm(`Marked ${name} as an impact researcher.\n\nFetch their outputs back to ${IMPACT_START_YEAR} now? `
-      + `(Hits Google Scholar once. Cancel to fetch later via the card's Refresh.)`)) {
-      try { await fetch(`/api/scholar/${encodeURIComponent(sid)}?refresh=1`); } catch {}
-    }
-  }
-}, true);
 
 // Render a single card's metrics from a Scholar payload. Pulled out so
 // both the batch path and the per-id fallback can share the rendering.
@@ -4925,6 +4898,28 @@ function renderCardMetrics(slot, id, d) {
         </span>`;
     }).join("");
     slot.insertAdjacentElement("afterend", recentEl);
+  }
+}
+
+// For people with no Scholar profile, list any hand-entered publications on
+// the card itself, under the "Missing on Google Scholar" message.
+async function hydrateManualPubs() {
+  if (window.__STATIC_MODE__) return;
+  const slots = [...document.querySelectorAll(".card-manual-pubs[data-pkey]")];
+  if (!slots.length) return;
+  const keys = [...new Set(slots.map(s => s.dataset.pkey))];
+  let batch = {};
+  try {
+    const r = await fetch("/api/scholar-batch?ids=" + encodeURIComponent(keys.join(",")));
+    if (r.ok) batch = await r.json();
+  } catch { return; }
+  for (const s of slots) {
+    const pubs = (batch[s.dataset.pkey]?.recent_publications) || [];
+    if (!pubs.length) continue;
+    const top = pubs.slice(0, 5);
+    s.innerHTML = `<span class="cmp-head">Publications (entered by hand)</span>` +
+      top.map(p => `<span class="cmp-row"><span class="cmp-yr">${escapeHTML(String(p.year || "n.d."))}</span> ${escapeHTML(p.title || "Untitled")}</span>`).join("") +
+      (pubs.length > top.length ? `<span class="cmp-more">+${pubs.length - top.length} more</span>` : "");
   }
 }
 
@@ -5019,9 +5014,10 @@ async function hydrateCardMetrics() {
 async function openPerson(p) {
   _CURRENT_PERSON = p;
   openModal();
-  // Ensure REF-flag map is loaded so the modal renders checkboxes in
+  // Ensure REF-flag + impact-flag maps are loaded so the modal renders in
   // the right state on first open.
   await loadRefFlags();
+  await loadImpactFlags();
   // Effective UoA — surfaced in every modal branch so it's visible whether
   // the person is set / missing / unchecked / static-mode.
   const uoaCode = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
@@ -5161,8 +5157,14 @@ function renderPerson(p, d) {
       <button class="tb-btn profile-save" id="profile-save">Save profile</button>
     </div>
 
+    <label class="impact-toggle" title="Impact case studies (REF3) may draw on research from ${IMPACT_START_YEAR}. Marking someone widens their Scholar fetch to ${IMPACT_START_YEAR}–${REF_END_YEAR} on the next refresh, so older underpinning outputs appear and can be cited.">
+      <input type="checkbox" class="data-detail-impact" ${isImpactResearcher(p.scholar_id) ? "checked" : ""}>
+      Impact researcher <span class="impact-hint">— fetch outputs back to ${IMPACT_START_YEAR}</span>
+    </label>
+    ${isImpactResearcher(p.scholar_id) && !d.impact_window ? `<p class="impact-note">Refresh (below) to pull outputs back to ${IMPACT_START_YEAR}.</p>` : ""}
+
     <h4 style="margin:1rem 0 .4rem;font-size:.9rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)">
-      Recent publications (REF ${REF_YEAR} window, from ${REF_START_YEAR})
+      Publications ${isImpactResearcher(p.scholar_id) ? `(impact window, from ${IMPACT_START_YEAR})` : `(REF ${REF_YEAR} window, from ${REF_START_YEAR})`}
       <span class="ref-summary" id="ref-summary-${escapeAttr(p.scholar_id)}">${refFlagCount(p.scholar_id)} flagged for REF</span>
     </h4>
     ${renderPubs(d.recent_publications || [], { scholarId: p.scholar_id, flags: refFlagsFor(p.scholar_id), editable: true })}
@@ -5196,6 +5198,20 @@ function renderPerson(p, d) {
   });
   // Institutional profile — load + wire save (keyed by staff_id/scholar_id).
   wireProfileEditor(modalBody, p);
+  // Impact-researcher toggle — set the flag, then offer to widen the fetch.
+  const imp = modalBody.querySelector(".data-detail-impact");
+  if (imp) imp.addEventListener("change", async (e) => {
+    const on = e.currentTarget.checked;
+    const ok = await setImpactResearcher(p.scholar_id, on);
+    if (!ok) { e.currentTarget.checked = !on; return; }
+    if (on && !d.impact_window) {
+      if (confirm(`Marked ${p.name} as an impact researcher.\n\nFetch their outputs back to ${IMPACT_START_YEAR} now? `
+        + `(Hits Google Scholar once. Cancel to fetch later via Refresh.)`)) {
+        try { await fetch(`/api/scholar/${encodeURIComponent(p.scholar_id)}?refresh=1`); } catch {}
+      }
+    }
+    openPerson(p);
+  });
 }
 
 // A stable per-person key for the institutional-profile store.

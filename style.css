@@ -1211,6 +1211,15 @@ h2 {
 .impact-chip:hover { color: #9a7d1f; border-color: #c9a227; }
 .impact-chip.on { color: #fff; background: #c9a227; border-color: #c9a227; }
 .impact-chip:disabled { opacity: .6; cursor: wait; }
+/* Hand-entered publications listed on a no-Scholar card. */
+.card-manual-pubs { display: block; margin-top: .4em; }
+.card-manual-pubs:empty { display: none; }
+.card-manual-pubs .cmp-head { display: block; font-size: .62em; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--muted); margin-bottom: .2em; }
+.card-manual-pubs .cmp-row { display: block; font-size: .72em; line-height: 1.35; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card-manual-pubs .cmp-yr { color: var(--muted); font-variant-numeric: tabular-nums; }
+.card-manual-pubs .cmp-more { display: block; font-size: .66em; color: var(--muted); margin-top: .1em; }
 .ref-chip.active {
   color: #fff; background: var(--accent); border-color: var(--accent);
 }

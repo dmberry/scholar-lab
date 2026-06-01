@@ -1,1 +1,15 @@
-{}
+{
+  "staff:216263": {
+    "manual": [
+      {
+        "title": "Test",
+        "year": 2021,
+        "venue": "Test2",
+        "authors": "Adrian Goycoolea",
+        "num_citations": 0,
+        "pub_key": "manual-2021-test",
+        "_manual": true
+      }
+    ]
+  }
+}
