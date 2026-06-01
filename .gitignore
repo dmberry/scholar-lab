@@ -17,6 +17,7 @@ staff.bak.*.json
 ref_flags.json
 ref_targets.json
 settings.json
+case_studies.json
 
 # Exports
 scholar-dashboard-*.json

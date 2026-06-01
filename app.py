@@ -71,8 +71,9 @@ ROOT = STATIC_ROOT
 CACHE_DIR = USER_ROOT / ".cache"
 CACHE_DIR.mkdir(exist_ok=True)
 DATA_DIR = USER_ROOT / "data"   # one Markdown file per unit lives here
-REF_FLAGS_FILE   = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: True}}
-REF_TARGETS_FILE = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
+REF_FLAGS_FILE    = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: True}}
+REF_TARGETS_FILE  = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
+CASE_STUDIES_FILE = USER_ROOT / "case_studies.json"  # {id: {uoa, title, status, …, versions[]}}
 
 # First-run seed: if the user has no data/ yet, copy the bundled
 # data.example/ so they see a working dashboard immediately rather than
@@ -85,7 +86,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.43"
+__version__ = "0.2.44"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -873,6 +874,90 @@ def api_ref_targets():
     targets[uoa] = rec
     _save_ref_targets(targets)
     return jsonify({"ok": True, "uoa": uoa, "target": rec})
+
+
+# ──────────────────────────────────────────────────────────────────────────
+# REF impact case studies. Persisted in case_studies.json (USER_ROOT),
+# keyed by id. Mirrors the REF3 template; states track authoring progress
+# (not_started → draft → proof → finished) with an ISO-stamped version log
+# on each status change. See docs/REF-CASE-STUDIES-PLAN.md.
+# ──────────────────────────────────────────────────────────────────────────
+
+_CASE_STUDY_STATES = ("not_started", "draft", "proof", "finished")
+_CASE_STUDY_FIELDS = ("title", "period", "summary", "underpinning_research",
+                      "details")
+_CASE_STUDY_LISTS = ("references", "corroborating_sources", "contributors")
+
+
+def _load_case_studies() -> dict:
+    try:
+        with CASE_STUDIES_FILE.open() as f:
+            return json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def _save_case_studies(data: dict) -> None:
+    CASE_STUDIES_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False))
+
+
+@app.route("/api/case-studies", methods=["GET"])
+def api_case_studies_get():
+    """All case studies, or those for one UoA via ?uoa=NN."""
+    data = _load_case_studies()
+    uoa = request.args.get("uoa")
+    if uoa:
+        data = {k: v for k, v in data.items() if str(v.get("uoa")) == str(uoa)}
+    # Return as a list sorted by updated_at desc for easy rendering.
+    items = sorted(data.values(), key=lambda c: c.get("updated_at", ""), reverse=True)
+    return jsonify({"case_studies": items})
+
+
+@app.route("/api/case-study", methods=["POST", "DELETE"])
+def api_case_study_write():
+    """Create or update (POST) / remove (DELETE) a single case study.
+    POST body: {id?, uoa, title, status, period, summary,
+    underpinning_research, details, references[], corroborating_sources[],
+    contributors[], note?}. A new id is minted when absent. Each status
+    change appends a stamped entry to the version log."""
+    body = request.get_json(force=True, silent=True) or {}
+    data = _load_case_studies()
+
+    if request.method == "DELETE":
+        cid = body.get("id") or request.args.get("id")
+        existed = data.pop(cid, None) is not None
+        _save_case_studies(data)
+        return jsonify({"ok": True, "removed": existed, "id": cid})
+
+    now = datetime.now(timezone.utc).isoformat()
+    cid = body.get("id")
+    rec = data.get(cid) if cid else None
+    if rec is None:
+        cid = "cs-" + datetime.now().strftime("%Y%m%d%H%M%S%f")
+        rec = {"id": cid, "created_at": now, "versions": []}
+
+    prev_status = rec.get("status")
+    status = body.get("status") if body.get("status") in _CASE_STUDY_STATES else (prev_status or "not_started")
+
+    rec["uoa"] = str(body.get("uoa") or rec.get("uoa") or "")
+    for f in _CASE_STUDY_FIELDS:
+        if f in body:
+            rec[f] = body[f]
+    for f in _CASE_STUDY_LISTS:
+        if f in body and isinstance(body[f], list):
+            rec[f] = body[f]
+    rec["status"] = status
+    rec["updated_at"] = now
+    # Stamp the version log on creation or any status transition.
+    if status != prev_status:
+        rec.setdefault("versions", []).append({
+            "ts": now, "status": status,
+            "note": (body.get("note") or "").strip(),
+        })
+
+    data[cid] = rec
+    _save_case_studies(data)
+    return jsonify({"ok": True, "case_study": rec})
 
 
 @app.route("/api/version")
