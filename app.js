@@ -5422,6 +5422,97 @@ async function savePubOverrides(pkey, patch) {
 // Re-render whichever modal is open for the current person.
 function reopenPerson() { if (_CURRENT_PERSON) openPerson(_CURRENT_PERSON); }
 
+// Minimal BibTeX → fields parser (title / year / venue / authors).
+function parseBibtex(s) {
+  const field = (name) => {
+    const m = (s || "").match(new RegExp(name + "\\s*=\\s*[{\"]([\\s\\S]*?)[}\"]\\s*,?", "i"));
+    return m ? m[1].replace(/[{}]/g, "").replace(/\s+/g, " ").trim() : "";
+  };
+  const year = (field("year").match(/\d{4}/) || [])[0] || "";
+  const venue = field("journal") || field("booktitle") || field("publisher") || field("school") || field("howpublished") || "";
+  let authors = field("author");
+  if (authors) authors = authors.split(/\s+and\s+/i).map(a => {
+    a = a.trim();
+    if (a.includes(",")) { const [l, f] = a.split(","); return (f.trim() + " " + l.trim()).trim(); }
+    return a;
+  }).join(", ");
+  return { title: field("title"), year, venue, authors };
+}
+
+// One modal form for adding / editing a publication (replaces sequential
+// prompts), with an optional BibTeX paste to fill the fields.
+function openPubForm({ heading, prefill = {}, onSave }) {
+  const back = document.createElement("div");
+  back.className = "pubform-back";
+  back.innerHTML = `
+    <div class="pubform" role="dialog" aria-modal="true">
+      <h3>${escapeHTML(heading)}</h3>
+      <label class="pf-f">Title<input id="pf-title" type="text" value="${escapeAttr(prefill.title || "")}"></label>
+      <div class="pf-row">
+        <label class="pf-f">Year<input id="pf-year" type="number" value="${escapeAttr(String(prefill.year || ""))}"></label>
+        <label class="pf-f">Citations<input id="pf-cites" type="number" min="0" value="${escapeAttr(String(prefill.num_citations || 0))}"></label>
+      </div>
+      <label class="pf-f">Venue / source<input id="pf-venue" type="text" value="${escapeAttr(prefill.venue || "")}"></label>
+      <label class="pf-f">Authors<input id="pf-authors" type="text" value="${escapeAttr(prefill.authors || "")}"></label>
+      <details class="pf-bib"><summary>Paste BibTeX to fill the fields</summary>
+        <textarea id="pf-bibtex" placeholder="@article{key, title={…}, author={Last, First and …}, year={2020}, journal={…} }"></textarea>
+        <button type="button" class="tb-btn" id="pf-bib-parse">Fill from BibTeX</button>
+      </details>
+      <div class="pf-actions">
+        <button type="button" class="tb-btn" id="pf-cancel">Cancel</button>
+        <button type="button" class="tb-btn primary" id="pf-save">Save</button>
+      </div>
+    </div>`;
+  document.body.appendChild(back);
+  const q = (sel) => back.querySelector(sel);
+  const close = () => back.remove();
+  q("#pf-cancel").onclick = close;
+  back.addEventListener("click", (e) => { if (e.target === back) close(); });
+  document.addEventListener("keydown", function esc(ev) { if (ev.key === "Escape") { close(); document.removeEventListener("keydown", esc); } });
+  q("#pf-bib-parse").onclick = () => {
+    const f = parseBibtex(q("#pf-bibtex").value);
+    if (f.title) q("#pf-title").value = f.title;
+    if (f.year) q("#pf-year").value = f.year;
+    if (f.venue) q("#pf-venue").value = f.venue;
+    if (f.authors) q("#pf-authors").value = f.authors;
+  };
+  q("#pf-save").onclick = async () => {
+    const fields = {
+      title: q("#pf-title").value.trim(),
+      year: parseInt(q("#pf-year").value, 10) || null,
+      venue: q("#pf-venue").value.trim(),
+      authors: q("#pf-authors").value.trim(),
+      num_citations: parseInt(q("#pf-cites").value, 10) || 0,
+    };
+    if (!fields.title) { q("#pf-title").focus(); return; }
+    q("#pf-save").disabled = true;
+    try { await onSave(fields); close(); }
+    catch (err) { q("#pf-save").disabled = false; alert("Could not save: " + err.message); }
+  };
+  q("#pf-title").focus();
+}
+
+// Update one pub row's lock state in place (no full modal re-render, so the
+// scroll position is preserved and nothing flashes).
+function reflectLockInRow(row, btn, locked) {
+  if (btn) {
+    btn.classList.toggle("on", locked);
+    btn.textContent = locked ? "🔒" : "🔓";
+    btn.title = locked
+      ? "Locked — a Google refresh won't change this output. Click to unlock."
+      : "Lock this output so a Google refresh can't change it";
+  }
+  if (row) {
+    row.classList.toggle("pub-locked", locked);
+    const pt = row.querySelector(".pt");
+    if (pt) {
+      const tag = pt.querySelector(".pub-tag-locked");
+      if (locked && !tag) pt.insertAdjacentHTML("beforeend", ' <span class="pub-tag pub-tag-locked" title="Locked against Google refresh">locked</span>');
+      else if (!locked && tag) tag.remove();
+    }
+  }
+}
+
 document.addEventListener("click", async (e) => {
   const lock = e.target.closest(".pub-lock");
   const edit = e.target.closest(".pub-edit");
@@ -5432,47 +5523,55 @@ document.addEventListener("click", async (e) => {
   const p = _CURRENT_PERSON;
   if (!p) return;
   const pkey = pkeyFor(p);
-  const rec = await getPubOverrides(pkey);
   try {
     if (lock) {
+      // Toggle + save + update the row in place (no re-render → no flash/jump).
       const k = lock.getAttribute("data-pub-key");
+      const rec = await getPubOverrides(pkey);
       const i = rec.locked.indexOf(k);
-      if (i >= 0) rec.locked.splice(i, 1); else rec.locked.push(k);
+      const willLock = i < 0;
+      if (willLock) rec.locked.push(k); else rec.locked.splice(i, 1);
+      lock.disabled = true;
       await savePubOverrides(pkey, { locked: rec.locked });
+      lock.disabled = false;
+      reflectLockInRow(lock.closest(".pub"), lock, willLock);
     } else if (del) {
       const k = del.getAttribute("data-pub-key");
       const row = del.closest(".pub");
       if (!confirm(`Delete this publication?\n\n“${row?.dataset.pubTitle || ""}”\n\n`
-        + `Scraped outputs are hidden from the card (a future Google refresh won't bring them back unless you un-hide them in the data file). Manual entries are removed. No in-app undo.`)) return;
+        + `Scraped outputs are hidden from the card (a future Google refresh won't bring them back unless you un-hide them). Manual entries are removed. No in-app undo.`)) return;
+      const rec = await getPubOverrides(pkey);
       if (row?.dataset.pubManual) rec.manual = rec.manual.filter(m => m.pub_key !== k);
       else if (!rec.hidden.includes(k)) rec.hidden.push(k);
       rec.locked = rec.locked.filter(x => x !== k);
       await savePubOverrides(pkey, { manual: rec.manual, hidden: rec.hidden, locked: rec.locked });
+      row?.remove();   // drop the row in place, no full re-render
     } else if (edit) {
       const row = edit.closest(".pub");
       const k = edit.getAttribute("data-pub-key");
-      const title = prompt("Title:", row?.dataset.pubTitle || ""); if (title === null) return;
-      const yearS = prompt("Year:", row?.dataset.pubYear || ""); if (yearS === null) return;
-      const venue = prompt("Venue / source:", row?.dataset.pubVenue || ""); if (venue === null) return;
-      const authors = prompt("Authors:", row?.dataset.pubAuthors || ""); if (authors === null) return;
-      const fields = { title: title.trim(), year: parseInt(yearS, 10) || null, venue: venue.trim(), authors: authors.trim() };
-      if (row?.dataset.pubManual) {
-        const m = rec.manual.find(x => x.pub_key === k);
-        if (m) Object.assign(m, fields);
-        await savePubOverrides(pkey, { manual: rec.manual });
-      } else {
-        rec.edits[k] = { ...(rec.edits[k] || {}), ...fields };
-        await savePubOverrides(pkey, { edits: rec.edits });
-      }
+      const manual = !!row?.dataset.pubManual;
+      openPubForm({
+        heading: "Edit publication",
+        prefill: { title: row?.dataset.pubTitle, year: row?.dataset.pubYear, venue: row?.dataset.pubVenue, authors: row?.dataset.pubAuthors, num_citations: row?.dataset.pubCites },
+        onSave: async (fields) => {
+          const rec = await getPubOverrides(pkey);
+          if (manual) { const m = rec.manual.find(x => x.pub_key === k); if (m) Object.assign(m, fields); await savePubOverrides(pkey, { manual: rec.manual }); }
+          else { rec.edits[k] = { ...(rec.edits[k] || {}), ...fields }; await savePubOverrides(pkey, { edits: rec.edits }); }
+          reopenPerson();
+        },
+      });
     } else if (add) {
-      const title = prompt("Title of the publication:"); if (!title || !title.trim()) return;
-      const yearS = prompt("Year:", "");
-      const venue = prompt("Venue / source (journal, publisher, …):", "") || "";
-      const authors = prompt("Authors:", (p.name || "")) || "";
-      rec.manual.push({ title: title.trim(), year: parseInt(yearS, 10) || null, venue: venue.trim(), authors: authors.trim(), num_citations: 0 });
-      await savePubOverrides(pkey, { manual: rec.manual });
+      openPubForm({
+        heading: "Add publication",
+        prefill: { authors: p.name || "" },
+        onSave: async (fields) => {
+          const rec = await getPubOverrides(pkey);
+          rec.manual.push({ ...fields });
+          await savePubOverrides(pkey, { manual: rec.manual });
+          reopenPerson();
+        },
+      });
     }
-    reopenPerson();
   } catch (err) {
     alert("Could not save: " + err.message);
   }

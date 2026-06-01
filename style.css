@@ -1703,6 +1703,20 @@ h2 {
 .pub-tag-locked { background: #faf6ec; color: #9a7d1f; }
 .pub-section-h { margin: 1rem 0 .4rem; font-size: .9rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
 .pub-add-hint { font-size: .72rem; color: var(--muted); margin-left: .5rem; }
+/* Add / edit publication form modal. */
+.pubform-back { position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 1200;
+  display: flex; align-items: center; justify-content: center; padding: 1rem; }
+.pubform { background: var(--card); color: var(--ink); border-radius: 10px; padding: 1.1rem 1.2rem;
+  width: min(460px, 96vw); max-height: 92vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,.3); }
+.pubform h3 { margin: 0 0 .7rem; font-size: 1.05rem; }
+.pf-f { display: flex; flex-direction: column; gap: .2rem; font-size: .82rem; font-weight: 600; margin-bottom: .6rem; }
+.pf-f input { font: inherit; font-weight: 400; padding: .4rem .5rem; border: 1px solid var(--border); border-radius: 6px; }
+.pf-row { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.pf-bib { margin: .2rem 0 .8rem; }
+.pf-bib summary { cursor: pointer; font-size: .8rem; color: var(--accent); }
+.pf-bib textarea { width: 100%; min-height: 6rem; margin: .4rem 0; font: 12px/1.45 ui-monospace, Menlo, monospace;
+  padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; }
+.pf-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: .4rem; }
 .pub.pub-flagged .pub-ref-tag { background: var(--accent); color: #fff; border-color: var(--accent); }
 /* REF tick-box: small pill button styled like the UoA / REF chips so the
    list reads as "a row with a ticked tag", not "a form". Click anywhere
