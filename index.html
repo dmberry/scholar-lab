@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.56</span>
+    <span class="tb-sub" id="tb-version">v0.2.57</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -74,10 +74,6 @@
           <span class="tb-mi-label">New unit…</span>
           <span class="tb-mi-hint">Create a unit (faculty, school, name, UoA)</span>
         </button>
-        <button class="tb-menu-item" id="tb-cs-manager" role="menuitem">
-          <span class="tb-mi-label">Manage impact case studies…</span>
-          <span class="tb-mi-hint">Reassign between UoAs, track unassigned, delete</span>
-        </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-refresh" role="menuitem">
           <span class="tb-mi-label" id="tb-refresh-label">Refresh Scholar data…</span>
@@ -102,6 +98,10 @@
         <button class="tb-menu-item" id="tb-uoa-report" role="menuitem">
           <span class="tb-mi-label">UoA report…</span>
           <span class="tb-mi-hint">Cover, narrative, selected outputs &amp; impact case studies</span>
+        </button>
+        <button class="tb-menu-item" id="tb-cs-manager" role="menuitem">
+          <span class="tb-mi-label">Manage impact case studies…</span>
+          <span class="tb-mi-hint">Reassign between UoAs, track unassigned, delete</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-ref-targets" role="menuitem">
@@ -136,7 +136,22 @@
       </div>
     </div>
 
-    <!-- Help: substantive guidance on using the system. -->
+    <!-- Analytics: choose the lens. -->
+    <div class="tb-menu" data-menu="analytics">
+      <button class="tb-menu-btn" id="tb-analytics-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Analytics</button>
+      <div class="tb-menu-pop" role="menu" aria-label="Analytics" hidden>
+        <button class="tb-menu-item" id="tb-analytics-faculty" role="menuitem">
+          <span class="tb-mi-label">Faculty analytics…</span>
+          <span class="tb-mi-hint">Citation metrics + REF readiness cards, grouped by unit</span>
+        </button>
+        <button class="tb-menu-item" id="tb-analytics-uoa" role="menuitem">
+          <span class="tb-mi-label">UoA analytics…</span>
+          <span class="tb-mi-hint">REF ranking metrics + readiness cards, grouped by UoA</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Help: substantive guidance on using the system. Kept furthest right. -->
     <div class="tb-menu" data-menu="help">
       <button class="tb-menu-btn" id="tb-help-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Help</button>
       <div class="tb-menu-pop" role="menu" aria-label="Help" hidden>
@@ -150,21 +165,6 @@
         </button>
         <button class="tb-menu-item tb-menu-item-plain" id="tb-help-about" role="menuitem">
           <span class="tb-mi-label">About Scholar Dashboard</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Analytics: choose the lens. -->
-    <div class="tb-menu" data-menu="analytics">
-      <button class="tb-menu-btn" id="tb-analytics-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Analytics</button>
-      <div class="tb-menu-pop" role="menu" aria-label="Analytics" hidden>
-        <button class="tb-menu-item" id="tb-analytics-faculty" role="menuitem">
-          <span class="tb-mi-label">Faculty analytics…</span>
-          <span class="tb-mi-hint">Citation metrics + REF readiness cards, grouped by unit</span>
-        </button>
-        <button class="tb-menu-item" id="tb-analytics-uoa" role="menuitem">
-          <span class="tb-mi-label">UoA analytics…</span>
-          <span class="tb-mi-hint">REF ranking metrics + readiness cards, grouped by UoA</span>
         </button>
       </div>
     </div>
