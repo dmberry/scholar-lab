@@ -39,8 +39,8 @@ the unit files from your data folder.
 - *School of Media, Culture and Society*
   - **Department of Media and Cultural Studies** (UoA 99) — Professor Gordon
     Lapping (HoD) and Ted Odgers, whose practice-based outputs and barricaded
-    office anchor the case studies, plus **Maureen** the long-suffering
-    departmental secretary (no research profile).
+    office anchor the case studies, plus **Maureen** the departmental secretary,
+    who, it turns out, co-authored half of it.
   - **Department of Social Psychology** (UoA 98) — Professor G. W. Tipping, of
     two-way-mirror fame.
 
@@ -51,13 +51,23 @@ the unit files from your data folder.
   Jennifer Doubleday (Wellbeing / "Thought for the Week") and Keith Ponting (30),
   the staff reporter.
 
-It is deliberately administrator-heavy, because most named Poppleton figures are
-managers — and the dashboard showing them with **no research profile** is itself
-the point. It exercises:
+Every named figure now carries a (deliberately comic) Scholar profile, so the
+demo is dense with cards to explore. The managers' profiles are the joke: the
+Vice-Chancellor has an enormous citation count but an h-index of 4 (his strategy
+documents mostly cite each other); Maureen the secretary quietly out-publishes
+the professors she types for; Doubleday and Trouncing both rope Professor Tipping
+into co-authorships. They sit at `uoa:0`, outside the REF units, so they show as
+citation cards in Faculty view but are excluded from any UoA submission, the
+satirical point being that the people with the metrics are the ones who can't be
+returned. It exercises:
 
-- **All three Scholar states** — `set` (the three research-active academics),
-  `missing` (the managers), and `unchecked` (Keith Ponting).
+- **Two Scholar states** — `set` (everyone with a profile, academics and the
+  comically-profiled managers) and `unchecked` (Keith Ponting (30), perpetually
+  un-assessed). To see the `missing` state, clear any one profile in the Data
+  editor.
 - **No-UoA staff** — the whole Directorate sits outside the REF units (`uoa:0`).
+- **A co-authorship graph** — Maureen ↔ Lapping/Odgers, Doubleday ↔ Tipping,
+  Trouncing ↔ Tipping, Bimpson ↔ Targett.
 - **REF star ratings** across the 1\*–4\* bands (including the 2–3\* / 3–4\*
   in-between bands), so the quality profile, mean GPA and Red/Amber/Green
   readiness scorecard populate for UoA 99 and UoA 98.

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "app": "Scholar Dashboard",
-    "app_version": "3.1",
+    "app_version": "3.1.1",
     "format_version": 1,
     "exported_at": "2026-06-01T09:00:00+00:00",
     "kind": "bundle",
@@ -19,7 +19,7 @@
   "units": [
     {
       "slug": "media-cultural-studies",
-      "markdown": "Generator: Scholar Dashboard v3.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 99\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 |  | missing | uoa:0\n"
+      "markdown": "Generator: Scholar Dashboard v3.1.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 99\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 | https://scholar.google.com/citations?user=ppltn_maureen&hl=en | set | uoa:0\n"
     }
   ],
   "scholar_cache": {
@@ -179,6 +179,89 @@
           "num_citations": 22,
           "authors": "T Odgers",
           "pub_key": "2015-surplus-value-in-the-seminar-room"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_maureen": {
+      "scholar_id": "ppltn_maureen",
+      "name": "Maureen",
+      "affiliation": "Departmental Secretary, Department of Media and Cultural Studies, University of Poppleton",
+      "interests": [
+        "Departmental Administration",
+        "Minute-Taking",
+        "Practice-based Research (uncredited)",
+        "Photocopier Maintenance"
+      ],
+      "url_picture": "",
+      "citedby": 1043,
+      "citedby5y": 402,
+      "hindex": 18,
+      "hindex5y": 11,
+      "i10index": 21,
+      "i10index5y": 10,
+      "cites_per_year": {
+        "2009": 11,
+        "2010": 19,
+        "2011": 28,
+        "2012": 37,
+        "2013": 46,
+        "2014": 55,
+        "2015": 63,
+        "2016": 71,
+        "2017": 78,
+        "2018": 74,
+        "2019": 69,
+        "2020": 64,
+        "2021": 68,
+        "2022": 72,
+        "2023": 76,
+        "2024": 70,
+        "2025": 52,
+        "2026": 23
+      },
+      "recent_publications": [
+        {
+          "title": "Dogsbody and Vassal (durational performance, 14 months)",
+          "year": 2024,
+          "venue": "Practice-based output · Poppleton Biennial; Room 4.12 (barricaded) — rota organised by M Maureen",
+          "num_citations": 6,
+          "authors": "M Maureen, G Lapping, T Odgers",
+          "pub_key": "2024-dogsbody-and-vassal-durational-performance-14-months"
+        },
+        {
+          "title": "Who Actually Wrote It: Authorship and the Departmental Secretary",
+          "year": 2023,
+          "venue": "Journal of Academic Labour 5 (1), 1-19",
+          "num_citations": 34,
+          "authors": "M Maureen",
+          "pub_key": "2023-who-actually-wrote-it-authorship-and-the-departmental-secretary"
+        },
+        {
+          "title": "Minutes of the Staff Meeting, 2009–2024: A Longitudinal Study",
+          "year": 2024,
+          "venue": "Qualitative Inquiry 30 (4), 511-540",
+          "num_citations": 12,
+          "authors": "M Maureen",
+          "pub_key": "2024-minutes-of-the-staff-meeting-2009-2024-a-longitudinal-study"
+        },
+        {
+          "title": "The Photocopier as Apparatus: Twenty Years at the Machine",
+          "year": 2021,
+          "venue": "New Media & Society 23 (8), 2210-2231",
+          "num_citations": 19,
+          "authors": "M Maureen, T Odgers",
+          "pub_key": "2021-the-photocopier-as-apparatus-twenty-years-at-the-machine"
+        },
+        {
+          "title": "I Took the Minutes: Invisible Labour in the Academy",
+          "year": 2018,
+          "venue": "Gender, Work & Organization 25 (6), 633-655",
+          "num_citations": 41,
+          "authors": "M Maureen, G Lapping",
+          "pub_key": "2018-i-took-the-minutes-invisible-labour-in-the-academy"
         }
       ],
       "_fetched_at": 4102444800,

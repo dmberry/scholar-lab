@@ -40,7 +40,7 @@ import re
 from pathlib import Path
 
 UNIVERSITY = "University of Poppleton"
-APP_VERSION = "3.1"
+APP_VERSION = "3.1.1"
 FORMAT_VERSION = 1
 
 FAC_ARTS = "Faculty of Arts and Social Sciences"
@@ -172,7 +172,29 @@ rate("ppltn_odgers", "The Picket Line as Pedagogic Space", 2023, 2.5)
 rate("ppltn_odgers", "Against the Student-as-Consumer: A Polemic", 2021, 2)
 
 add_person("media-cultural-studies", "Maureen",
-           "Departmental Secretary", "PUP0003", None, status="missing", uoa=0)
+           "Departmental Secretary", "PUP0003", "ppltn_maureen", uoa=0)
+set_profile("ppltn_maureen",
+    name="Maureen",
+    affiliation="Departmental Secretary, Department of Media and Cultural Studies, University of Poppleton",
+    interests=["Departmental Administration", "Minute-Taking",
+               "Practice-based Research (uncredited)", "Photocopier Maintenance"],
+    citedby=1043, citedby5y=402, hindex=18, hindex5y=11, i10=21, i10_5y=10,
+    curve={2009:11,2010:19,2011:28,2012:37,2013:46,2014:55,2015:63,2016:71,
+           2017:78,2018:74,2019:69,2020:64,2021:68,2022:72,2023:76,2024:70,
+           2025:52,2026:23},
+    pubs=[
+        pub("Dogsbody and Vassal (durational performance, 14 months)", 2024,
+            "Practice-based output · Poppleton Biennial; Room 4.12 (barricaded) — rota organised by M Maureen", 6,
+            "M Maureen, G Lapping, T Odgers"),
+        pub("Who Actually Wrote It: Authorship and the Departmental Secretary", 2023,
+            "Journal of Academic Labour 5 (1), 1-19", 34, "M Maureen"),
+        pub("Minutes of the Staff Meeting, 2009–2024: A Longitudinal Study", 2024,
+            "Qualitative Inquiry 30 (4), 511-540", 12, "M Maureen"),
+        pub("The Photocopier as Apparatus: Twenty Years at the Machine", 2021,
+            "New Media & Society 23 (8), 2210-2231", 19, "M Maureen, T Odgers"),
+        pub("I Took the Minutes: Invisible Labour in the Academy", 2018,
+            "Gender, Work & Organization 25 (6), 633-655", 41, "M Maureen, G Lapping"),
+    ])
 
 
 # ── Social Psychology (UoA 98) ───────────────────────────────────────────────
@@ -203,21 +225,140 @@ rate("ppltn_tipping", "Blue-Skies Research and the Lessons of the Laser", 2022, 
 rate("ppltn_tipping", "The Observed Self: Surveillance in the Senior Common Room", 2020, 3)
 
 
-# ── Directorate & Professional Services (no UoA; managers, no Scholar profile) ─
+# ── Directorate & Professional Services (no UoA; managers with comic profiles) ─
+# These are uoa:0 (explicitly outside the REF units), so their citation cards
+# appear in Faculty view but they are excluded from any UoA submission. Keith
+# Ponting is left 'unchecked' to keep that Scholar state demonstrated.
 add_person("directorate", "The Vice-Chancellor", "Vice-Chancellor", "PUP0021",
-           None, status="missing", uoa=0)
+           "ppltn_vc", uoa=0)
+set_profile("ppltn_vc",
+    name="The Vice-Chancellor",
+    affiliation="Vice-Chancellor, University of Poppleton",
+    interests=["Strategic Vision", "Stakeholder Value", "League Tables", "Institutional Branding"],
+    citedby=3187, citedby5y=2104, hindex=4, hindex5y=4, i10=5, i10_5y=5,
+    curve={2014:88,2015:121,2016:164,2017:203,2018:248,2019:271,2020:266,
+           2021:312,2022:358,2023:401,2024:372,2025:284,2026:118},
+    pubs=[
+        pub("Towards a Top-20 Poppleton: A Roadmap (Fourth Revised Edition)", 2025,
+            "Office of the Vice-Chancellor · Poppleton Strategic Review", 412, "The Vice-Chancellor"),
+        pub("Excellence as a Core Value: Excellence, Impact, Excellence", 2024,
+            "Office of the Vice-Chancellor · Poppleton Strategic Review", 388, "The Vice-Chancellor"),
+        pub("On the Methodological Artefact: Why Inconvenient Figures Are Mistaken", 2023,
+            "Office of the Vice-Chancellor · Poppleton Strategic Review", 305, "The Vice-Chancellor"),
+        pub("Finem Respice: A Vision for the Decade Ahead", 2022,
+            "Office of the Vice-Chancellor · Poppleton Strategic Review", 277, "The Vice-Chancellor"),
+        pub("The Heraldic Logo and the Strategic Brand", 2021,
+            "Office of the Vice-Chancellor · Poppleton Strategic Review", 251, "The Vice-Chancellor"),
+    ])
+
 add_person("directorate", "Jamie Targett", "Director of Corporate Affairs", "PUP0022",
-           None, status="missing", uoa=0)
+           "ppltn_targett", uoa=0)
+set_profile("ppltn_targett",
+    name="Jamie Targett",
+    affiliation="Director of Corporate Affairs, University of Poppleton",
+    interests=["Strategic Communications", "Change Management", "Workspace Optimisation", "Synergy"],
+    citedby=146, citedby5y=98, hindex=6, hindex5y=5, i10=5, i10_5y=4,
+    curve={2018:6,2019:11,2020:15,2021:18,2022:21,2023:23,2024:20,2025:15,2026:7},
+    pubs=[
+        pub("The Underheated Open-Plan Office and the Enhanced Collegial Environment", 2024,
+            "Journal of Workspace Studies 11 (2), 88-109", 14, "J Targett"),
+        pub("Realising a Strategic Estate Consolidation", 2023,
+            "Higher Education Management Quarterly 39 (4), 410-428", 9, "J Targett"),
+        pub("Goodbye and Good Luck: Reframing Closure as Opportunity", 2022,
+            "Public Relations Review 48 (3), 102-119", 12, "J Targett"),
+        pub("The Research Visibility Journey: A Communications Framework", 2021,
+            "Corporate Communications 26 (1), 33-51", 8, "J Targett"),
+    ])
+
 add_person("directorate", "Georgina Edsel", "Deputy Head of Brand Management", "PUP0023",
-           None, status="missing", uoa=0)
+           "ppltn_edsel", uoa=0)
+set_profile("ppltn_edsel",
+    name="Georgina Edsel",
+    affiliation="Deputy Head of Brand Management, University of Poppleton",
+    interests=["Brand Management", "Rankings Optimisation", "Reputation Management", "Public Relations"],
+    citedby=73, citedby5y=58, hindex=4, hindex5y=4, i10=3, i10_5y=3,
+    curve={2020:5,2021:8,2022:11,2023:14,2024:16,2025:12,2026:6},
+    pubs=[
+        pub("We Are in the Global Top 1%: A Benchmarking Methodology", 2024,
+            "Journal of Marketing for Higher Education 34 (2), 201-220", 11, "G Edsel"),
+        pub("The Ethical Relativism of Progressive Public Relations", 2023,
+            "Public Relations Inquiry 12 (3), 277-295", 9, "G Edsel"),
+        pub("Recommended by Eight out of Ten: Comparative Claims in HE Marketing", 2022,
+            "International Journal of Advertising 41 (5), 880-901", 7, "G Edsel"),
+    ])
+
 add_person("directorate", "Louise Bimpson", "Director of Human Resources", "PUP0024",
-           None, status="missing", uoa=0)
+           "ppltn_bimpson", uoa=0)
+set_profile("ppltn_bimpson",
+    name="Louise Bimpson",
+    affiliation="Director of Human Resources, University of Poppleton",
+    interests=["Human Resources", "Organisational Restructuring", "Change Management", "Heritage Monetisation"],
+    citedby=112, citedby5y=80, hindex=5, hindex5y=5, i10=4, i10_5y=4,
+    curve={2019:7,2020:11,2021:14,2022:17,2023:19,2024:18,2025:13,2026:6},
+    pubs=[
+        pub("The Silver Lining: Restructuring as Opportunity", 2024,
+            "Human Resource Management Journal 34 (3), 455-474", 13, "L Bimpson, J Targett"),
+        pub("From Barricaded Corridor to Paying Attraction: The Higher Education Experience", 2023,
+            "Tourism Management Perspectives 47, 101122", 10, "L Bimpson"),
+        pub("Voluntary Severance and the Engaged Workforce", 2022,
+            "Work, Employment and Society 36 (4), 712-730", 8, "L Bimpson"),
+    ])
+
 add_person("directorate", "Ted Chippings", "Head of TEF Submissions", "PUP0025",
-           None, status="missing", uoa=0)
-add_person("directorate", "Brigadier T. W. Trouncing", "Head of Security", "PUP0026",
-           None, status="missing", uoa=0)
+           "ppltn_chippings", uoa=0)
+set_profile("ppltn_chippings",
+    name="Ted Chippings",
+    affiliation="Head of TEF Submissions, University of Poppleton",
+    interests=["Teaching Excellence Framework", "Educational Metrics", "Lexicography", "Strategic Buzz-words"],
+    citedby=164, citedby5y=121, hindex=6, hindex5y=6, i10=6, i10_5y=5,
+    curve={2018:8,2019:13,2020:17,2021:21,2022:25,2023:27,2024:24,2025:17,2026:7},
+    pubs=[
+        pub("The Gross Teaching Quotient: Towards a Single Number", 2024,
+            "Assessment & Evaluation in Higher Education 49 (5), 640-661", 16, "T Chippings"),
+        pub("Words Mean What We Choose Them to Mean: A Humpty-Dumpty Approach to the TEF", 2023,
+            "Studies in Higher Education 48 (8), 1190-1209", 13, "T Chippings"),
+        pub("Outstanding, Fusion, Creative: A Working Lexicon", 2022,
+            "Higher Education Policy 35 (2), 300-318", 11, "T Chippings"),
+        pub("Bronze as the New Gold: Reframing the Award", 2021,
+            "Quality in Higher Education 27 (1), 44-62", 9, "T Chippings"),
+    ])
+
+add_person("directorate", "Brigadier T. W. Trouncing", "Head of Campus Security", "PUP0026",
+           "ppltn_trouncing", uoa=0)
+set_profile("ppltn_trouncing",
+    name="Brigadier T. W. Trouncing",
+    affiliation="Head of Campus Security, University of Poppleton",
+    interests=["Campus Security", "Surveillance", "Discipline", "Logistics and Sanctions"],
+    citedby=58, citedby5y=44, hindex=4, hindex5y=3, i10=2, i10_5y=2,
+    curve={2020:4,2021:6,2022:9,2023:12,2024:13,2025:9,2026:5},
+    pubs=[
+        pub("Discipline and Punish: Outsourcing Academic Sanctions to HM Prison Service", 2024,
+            "Security Journal 37 (2), 188-206", 9, "T W Trouncing"),
+        pub("Surveillance Positions at Key Points on Campus", 2023,
+            "Surveillance & Society 21 (3), 301-319", 12, "T W Trouncing, G W Tipping"),
+        pub("The Withdrawal of Photocopying Rights as a Deterrent", 2022,
+            "Crime Prevention and Community Safety 24 (4), 410-427", 7, "T W Trouncing"),
+    ])
+
 add_person("directorate", "Jennifer Doubleday", "Wellbeing Coordinator (Thought for the Week)",
-           "PUP0027", None, status="missing", uoa=0)
+           "PUP0027", "ppltn_doubleday", uoa=0)
+set_profile("ppltn_doubleday",
+    name="Jennifer Doubleday",
+    affiliation="Wellbeing Coordinator, University of Poppleton",
+    interests=["Personal Development", "Mindfulness", "Wellbeing", "Aromatherapy"],
+    citedby=204, citedby5y=151, hindex=7, hindex5y=6, i10=8, i10_5y=6,
+    curve={2017:9,2018:14,2019:19,2020:23,2021:27,2022:30,2023:31,2024:27,2025:20,2026:9},
+    pubs=[
+        pub("Imagine Yourself as a Tree: Mindfulness for the Watched Subject", 2024,
+            "Mindfulness 15 (4), 880-899", 18, "J Doubleday, G W Tipping"),
+        pub("Know Yourself and Grow Yourself: A Personal Development Curriculum", 2023,
+            "Journal of Further and Higher Education 47 (6), 720-738", 12, "J Doubleday"),
+        pub("Thought for the Week: A Decade of Apercus", 2022,
+            "Wellbeing in Higher Education 8 (2), 145-163", 10, "J Doubleday"),
+        pub("The Moment You Are Satisfied Is the Moment You Stop Growing", 2021,
+            "International Journal of Wellbeing 11 (3), 55-72", 14, "J Doubleday"),
+    ])
+
 add_person("directorate", "Keith Ponting", "Staff Reporter, The Poppletonian", "PUP0028",
            None, status="unchecked", uoa=0)
 

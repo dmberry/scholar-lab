@@ -1,7 +1,7 @@
 {
   "_meta": {
     "app": "Scholar Dashboard",
-    "app_version": "3.1",
+    "app_version": "3.1.1",
     "format_version": 1,
     "exported_at": "2026-06-01T09:00:00+00:00",
     "kind": "bundle",
@@ -15,15 +15,15 @@
   "units": [
     {
       "slug": "media-cultural-studies",
-      "markdown": "Generator: Scholar Dashboard v3.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 99\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 |  | missing | uoa:0\n"
+      "markdown": "Generator: Scholar Dashboard v3.1.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 99\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor Gordon Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0002 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Maureen | Departmental Secretary | PUP0003 | https://scholar.google.com/citations?user=ppltn_maureen&hl=en | set | uoa:0\n"
     },
     {
       "slug": "social-psychology",
-      "markdown": "Generator: Scholar Dashboard v3.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Social Psychology\nSlug: social-psychology\nUoA: 98\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor G. W. Tipping | Head of Department · Professor of Social Psychology | PUP0011 | https://scholar.google.com/citations?user=ppltn_tipping&hl=en | set\n"
+      "markdown": "Generator: Scholar Dashboard v3.1.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Social Psychology\nSlug: social-psychology\nUoA: 98\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor G. W. Tipping | Head of Department · Professor of Social Psychology | PUP0011 | https://scholar.google.com/citations?user=ppltn_tipping&hl=en | set\n"
     },
     {
       "slug": "directorate",
-      "markdown": "Generator: Scholar Dashboard v3.1 (format 1)\nUniversity: University of Poppleton\nFaculty: University Directorate and Professional Services\nUnit: Senior Management and Professional Services\nSlug: directorate\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- The Vice-Chancellor | Vice-Chancellor | PUP0021 |  | missing | uoa:0\n- Jamie Targett | Director of Corporate Affairs | PUP0022 |  | missing | uoa:0\n- Georgina Edsel | Deputy Head of Brand Management | PUP0023 |  | missing | uoa:0\n- Louise Bimpson | Director of Human Resources | PUP0024 |  | missing | uoa:0\n- Ted Chippings | Head of TEF Submissions | PUP0025 |  | missing | uoa:0\n- Brigadier T. W. Trouncing | Head of Security | PUP0026 |  | missing | uoa:0\n- Jennifer Doubleday | Wellbeing Coordinator (Thought for the Week) | PUP0027 |  | missing | uoa:0\n- Keith Ponting | Staff Reporter, The Poppletonian | PUP0028 |  | unchecked | uoa:0\n"
+      "markdown": "Generator: Scholar Dashboard v3.1.1 (format 1)\nUniversity: University of Poppleton\nFaculty: University Directorate and Professional Services\nUnit: Senior Management and Professional Services\nSlug: directorate\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- The Vice-Chancellor | Vice-Chancellor | PUP0021 | https://scholar.google.com/citations?user=ppltn_vc&hl=en | set | uoa:0\n- Jamie Targett | Director of Corporate Affairs | PUP0022 | https://scholar.google.com/citations?user=ppltn_targett&hl=en | set | uoa:0\n- Georgina Edsel | Deputy Head of Brand Management | PUP0023 | https://scholar.google.com/citations?user=ppltn_edsel&hl=en | set | uoa:0\n- Louise Bimpson | Director of Human Resources | PUP0024 | https://scholar.google.com/citations?user=ppltn_bimpson&hl=en | set | uoa:0\n- Ted Chippings | Head of TEF Submissions | PUP0025 | https://scholar.google.com/citations?user=ppltn_chippings&hl=en | set | uoa:0\n- Brigadier T. W. Trouncing | Head of Campus Security | PUP0026 | https://scholar.google.com/citations?user=ppltn_trouncing&hl=en | set | uoa:0\n- Jennifer Doubleday | Wellbeing Coordinator (Thought for the Week) | PUP0027 | https://scholar.google.com/citations?user=ppltn_doubleday&hl=en | set | uoa:0\n- Keith Ponting | Staff Reporter, The Poppletonian | PUP0028 |  | unchecked | uoa:0\n"
     }
   ],
   "scholar_cache": {
@@ -189,6 +189,89 @@
       "_fetched_iso": "2026-06-01T09:00:00+00:00",
       "_from_cache": true
     },
+    "ppltn_maureen": {
+      "scholar_id": "ppltn_maureen",
+      "name": "Maureen",
+      "affiliation": "Departmental Secretary, Department of Media and Cultural Studies, University of Poppleton",
+      "interests": [
+        "Departmental Administration",
+        "Minute-Taking",
+        "Practice-based Research (uncredited)",
+        "Photocopier Maintenance"
+      ],
+      "url_picture": "",
+      "citedby": 1043,
+      "citedby5y": 402,
+      "hindex": 18,
+      "hindex5y": 11,
+      "i10index": 21,
+      "i10index5y": 10,
+      "cites_per_year": {
+        "2009": 11,
+        "2010": 19,
+        "2011": 28,
+        "2012": 37,
+        "2013": 46,
+        "2014": 55,
+        "2015": 63,
+        "2016": 71,
+        "2017": 78,
+        "2018": 74,
+        "2019": 69,
+        "2020": 64,
+        "2021": 68,
+        "2022": 72,
+        "2023": 76,
+        "2024": 70,
+        "2025": 52,
+        "2026": 23
+      },
+      "recent_publications": [
+        {
+          "title": "Dogsbody and Vassal (durational performance, 14 months)",
+          "year": 2024,
+          "venue": "Practice-based output · Poppleton Biennial; Room 4.12 (barricaded) — rota organised by M Maureen",
+          "num_citations": 6,
+          "authors": "M Maureen, G Lapping, T Odgers",
+          "pub_key": "2024-dogsbody-and-vassal-durational-performance-14-months"
+        },
+        {
+          "title": "Who Actually Wrote It: Authorship and the Departmental Secretary",
+          "year": 2023,
+          "venue": "Journal of Academic Labour 5 (1), 1-19",
+          "num_citations": 34,
+          "authors": "M Maureen",
+          "pub_key": "2023-who-actually-wrote-it-authorship-and-the-departmental-secretary"
+        },
+        {
+          "title": "Minutes of the Staff Meeting, 2009–2024: A Longitudinal Study",
+          "year": 2024,
+          "venue": "Qualitative Inquiry 30 (4), 511-540",
+          "num_citations": 12,
+          "authors": "M Maureen",
+          "pub_key": "2024-minutes-of-the-staff-meeting-2009-2024-a-longitudinal-study"
+        },
+        {
+          "title": "The Photocopier as Apparatus: Twenty Years at the Machine",
+          "year": 2021,
+          "venue": "New Media & Society 23 (8), 2210-2231",
+          "num_citations": 19,
+          "authors": "M Maureen, T Odgers",
+          "pub_key": "2021-the-photocopier-as-apparatus-twenty-years-at-the-machine"
+        },
+        {
+          "title": "I Took the Minutes: Invisible Labour in the Academy",
+          "year": 2018,
+          "venue": "Gender, Work & Organization 25 (6), 633-655",
+          "num_citations": 41,
+          "authors": "M Maureen, G Lapping",
+          "pub_key": "2018-i-took-the-minutes-invisible-labour-in-the-academy"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
     "ppltn_tipping": {
       "scholar_id": "ppltn_tipping",
       "name": "Professor G. W. Tipping",
@@ -267,6 +350,452 @@
           "num_citations": 60,
           "authors": "G W Tipping",
           "pub_key": "2014-reactivity-and-the-watched-subject"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_vc": {
+      "scholar_id": "ppltn_vc",
+      "name": "The Vice-Chancellor",
+      "affiliation": "Vice-Chancellor, University of Poppleton",
+      "interests": [
+        "Strategic Vision",
+        "Stakeholder Value",
+        "League Tables",
+        "Institutional Branding"
+      ],
+      "url_picture": "",
+      "citedby": 3187,
+      "citedby5y": 2104,
+      "hindex": 4,
+      "hindex5y": 4,
+      "i10index": 5,
+      "i10index5y": 5,
+      "cites_per_year": {
+        "2014": 88,
+        "2015": 121,
+        "2016": 164,
+        "2017": 203,
+        "2018": 248,
+        "2019": 271,
+        "2020": 266,
+        "2021": 312,
+        "2022": 358,
+        "2023": 401,
+        "2024": 372,
+        "2025": 284,
+        "2026": 118
+      },
+      "recent_publications": [
+        {
+          "title": "Towards a Top-20 Poppleton: A Roadmap (Fourth Revised Edition)",
+          "year": 2025,
+          "venue": "Office of the Vice-Chancellor · Poppleton Strategic Review",
+          "num_citations": 412,
+          "authors": "The Vice-Chancellor",
+          "pub_key": "2025-towards-a-top-20-poppleton-a-roadmap-fourth-revised-edition"
+        },
+        {
+          "title": "Excellence as a Core Value: Excellence, Impact, Excellence",
+          "year": 2024,
+          "venue": "Office of the Vice-Chancellor · Poppleton Strategic Review",
+          "num_citations": 388,
+          "authors": "The Vice-Chancellor",
+          "pub_key": "2024-excellence-as-a-core-value-excellence-impact-excellence"
+        },
+        {
+          "title": "On the Methodological Artefact: Why Inconvenient Figures Are Mistaken",
+          "year": 2023,
+          "venue": "Office of the Vice-Chancellor · Poppleton Strategic Review",
+          "num_citations": 305,
+          "authors": "The Vice-Chancellor",
+          "pub_key": "2023-on-the-methodological-artefact-why-inconvenient-figures-are-mistaken"
+        },
+        {
+          "title": "Finem Respice: A Vision for the Decade Ahead",
+          "year": 2022,
+          "venue": "Office of the Vice-Chancellor · Poppleton Strategic Review",
+          "num_citations": 277,
+          "authors": "The Vice-Chancellor",
+          "pub_key": "2022-finem-respice-a-vision-for-the-decade-ahead"
+        },
+        {
+          "title": "The Heraldic Logo and the Strategic Brand",
+          "year": 2021,
+          "venue": "Office of the Vice-Chancellor · Poppleton Strategic Review",
+          "num_citations": 251,
+          "authors": "The Vice-Chancellor",
+          "pub_key": "2021-the-heraldic-logo-and-the-strategic-brand"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_targett": {
+      "scholar_id": "ppltn_targett",
+      "name": "Jamie Targett",
+      "affiliation": "Director of Corporate Affairs, University of Poppleton",
+      "interests": [
+        "Strategic Communications",
+        "Change Management",
+        "Workspace Optimisation",
+        "Synergy"
+      ],
+      "url_picture": "",
+      "citedby": 146,
+      "citedby5y": 98,
+      "hindex": 6,
+      "hindex5y": 5,
+      "i10index": 5,
+      "i10index5y": 4,
+      "cites_per_year": {
+        "2018": 6,
+        "2019": 11,
+        "2020": 15,
+        "2021": 18,
+        "2022": 21,
+        "2023": 23,
+        "2024": 20,
+        "2025": 15,
+        "2026": 7
+      },
+      "recent_publications": [
+        {
+          "title": "The Underheated Open-Plan Office and the Enhanced Collegial Environment",
+          "year": 2024,
+          "venue": "Journal of Workspace Studies 11 (2), 88-109",
+          "num_citations": 14,
+          "authors": "J Targett",
+          "pub_key": "2024-the-underheated-open-plan-office-and-the-enhanced-collegial-environment"
+        },
+        {
+          "title": "Realising a Strategic Estate Consolidation",
+          "year": 2023,
+          "venue": "Higher Education Management Quarterly 39 (4), 410-428",
+          "num_citations": 9,
+          "authors": "J Targett",
+          "pub_key": "2023-realising-a-strategic-estate-consolidation"
+        },
+        {
+          "title": "Goodbye and Good Luck: Reframing Closure as Opportunity",
+          "year": 2022,
+          "venue": "Public Relations Review 48 (3), 102-119",
+          "num_citations": 12,
+          "authors": "J Targett",
+          "pub_key": "2022-goodbye-and-good-luck-reframing-closure-as-opportunity"
+        },
+        {
+          "title": "The Research Visibility Journey: A Communications Framework",
+          "year": 2021,
+          "venue": "Corporate Communications 26 (1), 33-51",
+          "num_citations": 8,
+          "authors": "J Targett",
+          "pub_key": "2021-the-research-visibility-journey-a-communications-framework"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_edsel": {
+      "scholar_id": "ppltn_edsel",
+      "name": "Georgina Edsel",
+      "affiliation": "Deputy Head of Brand Management, University of Poppleton",
+      "interests": [
+        "Brand Management",
+        "Rankings Optimisation",
+        "Reputation Management",
+        "Public Relations"
+      ],
+      "url_picture": "",
+      "citedby": 73,
+      "citedby5y": 58,
+      "hindex": 4,
+      "hindex5y": 4,
+      "i10index": 3,
+      "i10index5y": 3,
+      "cites_per_year": {
+        "2020": 5,
+        "2021": 8,
+        "2022": 11,
+        "2023": 14,
+        "2024": 16,
+        "2025": 12,
+        "2026": 6
+      },
+      "recent_publications": [
+        {
+          "title": "We Are in the Global Top 1%: A Benchmarking Methodology",
+          "year": 2024,
+          "venue": "Journal of Marketing for Higher Education 34 (2), 201-220",
+          "num_citations": 11,
+          "authors": "G Edsel",
+          "pub_key": "2024-we-are-in-the-global-top-1-a-benchmarking-methodology"
+        },
+        {
+          "title": "The Ethical Relativism of Progressive Public Relations",
+          "year": 2023,
+          "venue": "Public Relations Inquiry 12 (3), 277-295",
+          "num_citations": 9,
+          "authors": "G Edsel",
+          "pub_key": "2023-the-ethical-relativism-of-progressive-public-relations"
+        },
+        {
+          "title": "Recommended by Eight out of Ten: Comparative Claims in HE Marketing",
+          "year": 2022,
+          "venue": "International Journal of Advertising 41 (5), 880-901",
+          "num_citations": 7,
+          "authors": "G Edsel",
+          "pub_key": "2022-recommended-by-eight-out-of-ten-comparative-claims-in-he-marketing"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_bimpson": {
+      "scholar_id": "ppltn_bimpson",
+      "name": "Louise Bimpson",
+      "affiliation": "Director of Human Resources, University of Poppleton",
+      "interests": [
+        "Human Resources",
+        "Organisational Restructuring",
+        "Change Management",
+        "Heritage Monetisation"
+      ],
+      "url_picture": "",
+      "citedby": 112,
+      "citedby5y": 80,
+      "hindex": 5,
+      "hindex5y": 5,
+      "i10index": 4,
+      "i10index5y": 4,
+      "cites_per_year": {
+        "2019": 7,
+        "2020": 11,
+        "2021": 14,
+        "2022": 17,
+        "2023": 19,
+        "2024": 18,
+        "2025": 13,
+        "2026": 6
+      },
+      "recent_publications": [
+        {
+          "title": "The Silver Lining: Restructuring as Opportunity",
+          "year": 2024,
+          "venue": "Human Resource Management Journal 34 (3), 455-474",
+          "num_citations": 13,
+          "authors": "L Bimpson, J Targett",
+          "pub_key": "2024-the-silver-lining-restructuring-as-opportunity"
+        },
+        {
+          "title": "From Barricaded Corridor to Paying Attraction: The Higher Education Experience",
+          "year": 2023,
+          "venue": "Tourism Management Perspectives 47, 101122",
+          "num_citations": 10,
+          "authors": "L Bimpson",
+          "pub_key": "2023-from-barricaded-corridor-to-paying-attraction-the-higher-education-experience"
+        },
+        {
+          "title": "Voluntary Severance and the Engaged Workforce",
+          "year": 2022,
+          "venue": "Work, Employment and Society 36 (4), 712-730",
+          "num_citations": 8,
+          "authors": "L Bimpson",
+          "pub_key": "2022-voluntary-severance-and-the-engaged-workforce"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_chippings": {
+      "scholar_id": "ppltn_chippings",
+      "name": "Ted Chippings",
+      "affiliation": "Head of TEF Submissions, University of Poppleton",
+      "interests": [
+        "Teaching Excellence Framework",
+        "Educational Metrics",
+        "Lexicography",
+        "Strategic Buzz-words"
+      ],
+      "url_picture": "",
+      "citedby": 164,
+      "citedby5y": 121,
+      "hindex": 6,
+      "hindex5y": 6,
+      "i10index": 6,
+      "i10index5y": 5,
+      "cites_per_year": {
+        "2018": 8,
+        "2019": 13,
+        "2020": 17,
+        "2021": 21,
+        "2022": 25,
+        "2023": 27,
+        "2024": 24,
+        "2025": 17,
+        "2026": 7
+      },
+      "recent_publications": [
+        {
+          "title": "The Gross Teaching Quotient: Towards a Single Number",
+          "year": 2024,
+          "venue": "Assessment & Evaluation in Higher Education 49 (5), 640-661",
+          "num_citations": 16,
+          "authors": "T Chippings",
+          "pub_key": "2024-the-gross-teaching-quotient-towards-a-single-number"
+        },
+        {
+          "title": "Words Mean What We Choose Them to Mean: A Humpty-Dumpty Approach to the TEF",
+          "year": 2023,
+          "venue": "Studies in Higher Education 48 (8), 1190-1209",
+          "num_citations": 13,
+          "authors": "T Chippings",
+          "pub_key": "2023-words-mean-what-we-choose-them-to-mean-a-humpty-dumpty-approach-to-the-tef"
+        },
+        {
+          "title": "Outstanding, Fusion, Creative: A Working Lexicon",
+          "year": 2022,
+          "venue": "Higher Education Policy 35 (2), 300-318",
+          "num_citations": 11,
+          "authors": "T Chippings",
+          "pub_key": "2022-outstanding-fusion-creative-a-working-lexicon"
+        },
+        {
+          "title": "Bronze as the New Gold: Reframing the Award",
+          "year": 2021,
+          "venue": "Quality in Higher Education 27 (1), 44-62",
+          "num_citations": 9,
+          "authors": "T Chippings",
+          "pub_key": "2021-bronze-as-the-new-gold-reframing-the-award"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_trouncing": {
+      "scholar_id": "ppltn_trouncing",
+      "name": "Brigadier T. W. Trouncing",
+      "affiliation": "Head of Campus Security, University of Poppleton",
+      "interests": [
+        "Campus Security",
+        "Surveillance",
+        "Discipline",
+        "Logistics and Sanctions"
+      ],
+      "url_picture": "",
+      "citedby": 58,
+      "citedby5y": 44,
+      "hindex": 4,
+      "hindex5y": 3,
+      "i10index": 2,
+      "i10index5y": 2,
+      "cites_per_year": {
+        "2020": 4,
+        "2021": 6,
+        "2022": 9,
+        "2023": 12,
+        "2024": 13,
+        "2025": 9,
+        "2026": 5
+      },
+      "recent_publications": [
+        {
+          "title": "Discipline and Punish: Outsourcing Academic Sanctions to HM Prison Service",
+          "year": 2024,
+          "venue": "Security Journal 37 (2), 188-206",
+          "num_citations": 9,
+          "authors": "T W Trouncing",
+          "pub_key": "2024-discipline-and-punish-outsourcing-academic-sanctions-to-hm-prison-service"
+        },
+        {
+          "title": "Surveillance Positions at Key Points on Campus",
+          "year": 2023,
+          "venue": "Surveillance & Society 21 (3), 301-319",
+          "num_citations": 12,
+          "authors": "T W Trouncing, G W Tipping",
+          "pub_key": "2023-surveillance-positions-at-key-points-on-campus"
+        },
+        {
+          "title": "The Withdrawal of Photocopying Rights as a Deterrent",
+          "year": 2022,
+          "venue": "Crime Prevention and Community Safety 24 (4), 410-427",
+          "num_citations": 7,
+          "authors": "T W Trouncing",
+          "pub_key": "2022-the-withdrawal-of-photocopying-rights-as-a-deterrent"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_doubleday": {
+      "scholar_id": "ppltn_doubleday",
+      "name": "Jennifer Doubleday",
+      "affiliation": "Wellbeing Coordinator, University of Poppleton",
+      "interests": [
+        "Personal Development",
+        "Mindfulness",
+        "Wellbeing",
+        "Aromatherapy"
+      ],
+      "url_picture": "",
+      "citedby": 204,
+      "citedby5y": 151,
+      "hindex": 7,
+      "hindex5y": 6,
+      "i10index": 8,
+      "i10index5y": 6,
+      "cites_per_year": {
+        "2017": 9,
+        "2018": 14,
+        "2019": 19,
+        "2020": 23,
+        "2021": 27,
+        "2022": 30,
+        "2023": 31,
+        "2024": 27,
+        "2025": 20,
+        "2026": 9
+      },
+      "recent_publications": [
+        {
+          "title": "Imagine Yourself as a Tree: Mindfulness for the Watched Subject",
+          "year": 2024,
+          "venue": "Mindfulness 15 (4), 880-899",
+          "num_citations": 18,
+          "authors": "J Doubleday, G W Tipping",
+          "pub_key": "2024-imagine-yourself-as-a-tree-mindfulness-for-the-watched-subject"
+        },
+        {
+          "title": "Know Yourself and Grow Yourself: A Personal Development Curriculum",
+          "year": 2023,
+          "venue": "Journal of Further and Higher Education 47 (6), 720-738",
+          "num_citations": 12,
+          "authors": "J Doubleday",
+          "pub_key": "2023-know-yourself-and-grow-yourself-a-personal-development-curriculum"
+        },
+        {
+          "title": "Thought for the Week: A Decade of Apercus",
+          "year": 2022,
+          "venue": "Wellbeing in Higher Education 8 (2), 145-163",
+          "num_citations": 10,
+          "authors": "J Doubleday",
+          "pub_key": "2022-thought-for-the-week-a-decade-of-apercus"
+        },
+        {
+          "title": "The Moment You Are Satisfied Is the Moment You Stop Growing",
+          "year": 2021,
+          "venue": "International Journal of Wellbeing 11 (3), 55-72",
+          "num_citations": 14,
+          "authors": "J Doubleday",
+          "pub_key": "2021-the-moment-you-are-satisfied-is-the-moment-you-stop-growing"
         }
       ],
       "_fetched_at": 4102444800,
