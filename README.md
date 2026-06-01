@@ -319,4 +319,7 @@ shows them, untick "Headers and footers" in the print dialog.
 ---
 
 <sub>It looks like you're trying to assess research. There may be a helpful paperclip
-who has opinions about that — try typing its name.</sub>
+who has opinions about that — try typing its name. It is not the only thing listening:
+a certain goddess of wisdom answers to hers, and somewhere a redbrick university you may
+recognise from the back pages of <i>Times Higher Education</i> is only too glad to offer
+its counsel on the matter. Finem respice!</sub>
