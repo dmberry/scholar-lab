@@ -1743,6 +1743,38 @@ h2 {
 .opt-pubs { margin: .2rem 0; padding-left: 1.1rem; font-size: .82rem; line-height: 1.45; }
 .opt-yr { color: var(--muted); }
 .opt-dropped { font-size: .74rem; color: var(--muted); margin: .15rem 0 .4rem; }
+.opt-delta { font-size: .72rem; font-weight: 600; }
+.opt-delta.neg { color: #b42318; }
+.opt-delta.pos { color: #1a7f37; }
+.opt-sc-date { color: var(--muted); font-size: .72rem; }
+.opt-sc-del { border: none; background: none; cursor: pointer; color: var(--muted); font-size: .85rem; }
+.opt-sc-del:hover { color: #b42318; }
+/* Reusable hover info box (ⓘ). */
+.info-tip { position: relative; display: inline-block; cursor: help; color: var(--accent);
+  font-weight: 400; font-size: .8em; }
+.info-tip-box {
+  display: none; position: absolute; left: 50%; transform: translateX(-50%); top: 1.5em; z-index: 50;
+  width: 240px; max-width: 70vw; text-align: left; font-weight: 400; white-space: normal;
+  background: var(--card); color: var(--ink); border: 1px solid var(--border);
+  border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.18); padding: .6rem .7rem;
+  font-size: .76rem; line-height: 1.45; text-transform: none; letter-spacing: normal;
+}
+.info-tip:hover .info-tip-box, .info-tip:focus .info-tip-box, .info-tip:focus-within .info-tip-box { display: block; }
+/* Scenario compare control. */
+.opt-cmp-label { display: block; font-size: .8rem; color: var(--ink); margin: .6rem 0 .3rem; }
+.opt-cmp-label select { margin: 0 .25rem; }
+/* Collapsible "Scenarios & compare" panel. */
+.opt-panel { margin: 1rem 0; border: 1px solid var(--border); border-radius: 8px; }
+.opt-panel > summary {
+  cursor: pointer; padding: .6rem .8rem; font-size: .95rem; color: var(--accent);
+  font-weight: 600; list-style: none; display: flex; align-items: center; gap: .4rem;
+}
+.opt-panel > summary::-webkit-details-marker { display: none; }
+.opt-panel > summary::before { content: "▸"; font-size: .8em; transition: transform .12s ease; }
+.opt-panel[open] > summary::before { transform: rotate(90deg); }
+.opt-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
+.opt-panel > *:not(summary) { margin-left: .8rem; margin-right: .8rem; }
+.opt-panel > *:last-child { margin-bottom: .8rem; }
 .pub.pub-flagged .pub-ref-tag { background: var(--accent); color: #fff; border-color: var(--accent); }
 /* REF tick-box: small pill button styled like the UoA / REF chips so the
    list reads as "a row with a ticked tag", not "a form". Click anywhere

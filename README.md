@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 3.3.0 · proof-of-concept.
+**Version:** 3.4.0 · proof-of-concept.
 
 ## What it does
 
@@ -62,6 +62,13 @@ read as indicative rather than definitive.
   per UoA, plus a star-band profile (% at each band). The **Analytics** REF
   readiness scorecard (which defaults to grouping by UoA) counts the actual
   selected outputs and impact case studies — not a venue heuristic.
+- **Decision support** (**REF → Optimise selection…**): computes the GPA-maximising valid
+  submission for a UoA — gives each person their floor, then fills to the volume target with the
+  highest-rated outputs without exceeding the per-person cap. Shows optimised vs all-submitted GPA,
+  a per-person table with each researcher's marginal contribution (**GPA without**), and a
+  collapsible **Scenarios & compare** panel to snapshot states and diff two of them person by person.
+  Every metric has a hover ⓘ. Indicative only — REF 2029 decouples outputs from individuals and
+  outputs are non-portable; verify against current guidance.
 - **Text / rich-text reports**: the REF selection and UoA reports have a
   *Text version* button that renders the data as text (charts → text) to copy
   (as rich text or Markdown) into other documents. All reports are datestamped.

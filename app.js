@@ -2826,16 +2826,42 @@ async function openOptimiser() {
   const gpaAll = mean(allRatings), gpaSel = mean(selRatings);
   const totalAvail = allRatings.length;
   const band = (r) => `<span class="rr-band band-${String(r).replace(".", "_")}">${REF_BAND_LABELS[r] || r}</span>`;
+  const tip = (txt) => ` <span class="info-tip" tabindex="0" aria-label="More info">ⓘ<span class="info-tip-box">${txt}</span></span>`;
+
+  // Staff-mobility sensitivity: optimised UoA GPA with each person removed
+  // (their leaving shrinks N and the volume target too). Big negative deltas =
+  // load-bearing people.
+  const optimisedGpaOf = (ppl) => {
+    if (!ppl.length) return null;
+    const r = optimiseSelection(ppl, mult, minPer, maxPer);
+    const s = ppl.flatMap(p => p.outputs.filter(o => r.chosen.has(p.sid + "|" + o.key)).map(o => o.rating));
+    return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null;
+  };
+  const leaveOut = {};
+  if (people.length > 1) people.forEach((p, i) => { leaveOut[p.sid] = optimisedGpaOf(people.filter((_, j) => j !== i)); });
+
+  // Per-person snapshot of the CURRENT optimised selection — stored with a
+  // scenario so two snapshots can be compared person by person later.
+  const nowPeople = people.map(p => {
+    const so = p.outputs.filter(o => res.chosen.has(p.sid + "|" + o.key));
+    return { name: p.name, rated: p.outputs.length, submit: so.length,
+             gpa: so.length ? so.reduce((a, o) => a + o.rating, 0) / so.length : null };
+  });
 
   const rows = people.map(p => {
     const sel = p.outputs.filter(o => res.chosen.has(p.sid + "|" + o.key));
     const over = p.outputs.length > maxPer;
     const under = sel.length < minPer && p.outputs.length >= minPer;
+    const lo = leaveOut[p.sid];
+    const delta = (lo != null && gpaSel != null) ? lo - gpaSel : null;
+    const loCell = lo == null ? "—"
+      : `${lo.toFixed(2)}${delta != null ? ` <span class="opt-delta ${delta < 0 ? "neg" : (delta > 0 ? "pos" : "")}">${delta >= 0 ? "+" : ""}${delta.toFixed(2)}</span>` : ""}`;
     return `<tr class="${over ? "opt-over" : ""}${under ? " opt-under" : ""}">
       <td>${escapeHTML(p.name)}</td>
       <td class="num">${p.outputs.length}</td>
       <td class="num"><strong>${sel.length}</strong></td>
       <td class="num">${maxPer}</td>
+      <td class="num" title="UoA optimised GPA computed without this person's outputs — their marginal contribution to the average">${loCell}</td>
       <td>${over ? `<span class="opt-flag">over cap — ${p.outputs.length - sel.length} dropped</span>` : ""}${under ? `<span class="opt-flag">under min</span>` : ""}</td>
     </tr>`;
   }).join("");
@@ -2857,22 +2883,136 @@ async function openOptimiser() {
        per-person cap. Volume = ${mult} × ${res.N} staff with rated outputs = <strong>${res.volume}</strong> outputs;
        cap ${maxPer}/person, floor ${minPer}/person.</p>
     <div class="opt-kpis">
-      <div class="opt-kpi"><div class="opt-k">Optimised GPA</div><div class="opt-v rag-${gpaRag(gpaSel)}">${gpaSel == null ? "—" : gpaSel.toFixed(2)}</div></div>
-      <div class="opt-kpi"><div class="opt-k">GPA if all submitted</div><div class="opt-v">${gpaAll == null ? "—" : gpaAll.toFixed(2)}</div></div>
-      <div class="opt-kpi"><div class="opt-k">Selected / target</div><div class="opt-v">${selRatings.length} / ${res.volume}</div></div>
-      <div class="opt-kpi"><div class="opt-k">Rated available</div><div class="opt-v">${totalAvail}</div></div>
+      <div class="opt-kpi"><div class="opt-k">Optimised GPA${tip("The mean star rating of the best selection that hits the volume target without exceeding any person's cap. Higher is better; this is what you'd submit.")}</div><div class="opt-v rag-${gpaRag(gpaSel)}">${gpaSel == null ? "—" : gpaSel.toFixed(2)}</div></div>
+      <div class="opt-kpi"><div class="opt-k">GPA if all submitted${tip("The mean star rating if every rated output were submitted (no curation). The comparison baseline — if Optimised GPA is higher, dropping your weakest-rated outputs to the target lifts the average.")}</div><div class="opt-v">${gpaAll == null ? "—" : gpaAll.toFixed(2)}</div></div>
+      <div class="opt-kpi"><div class="opt-k">Selected / target${tip("Outputs the optimiser would submit, against the volume target (multiplier × staff with rated outputs). Equal means you have exactly enough; below target means a shortfall.")}</div><div class="opt-v">${selRatings.length} / ${res.volume}</div></div>
+      <div class="opt-kpi"><div class="opt-k">Rated available${tip("Total rated outputs across the cohort to choose from. The more you rate, the more room the optimiser has to raise the GPA.")}</div><div class="opt-v">${totalAvail}</div></div>
     </div>
     ${shortfall ? `<p class="opt-note opt-warn">Short of the volume target by ${res.volume - totalAvail}: rate more outputs, or this UoA can't reach the target.</p>` : ""}
     ${over ? `<p class="opt-note opt-warn">The per-person floor (${minPer}/person) already exceeds the volume target, so the floor is submitted (over target).</p>` : ""}
     <table class="opt-table">
-      <thead><tr><th>Researcher</th><th class="num">Rated</th><th class="num">Submit</th><th class="num">Cap</th><th></th></tr></thead>
+      <thead><tr><th>Researcher</th>
+        <th class="num">Rated${tip("How many of this person's outputs you've given a star rating.")}</th>
+        <th class="num">Submit${tip("How many of their outputs the optimiser would put in the submission.")}</th>
+        <th class="num">Cap${tip("The most outputs one person may contribute (Settings → REF 2029 targets).")}</th>
+        <th class="num">GPA without <span class="info-tip" tabindex="0" aria-label="What GPA without means">ⓘ<span class="info-tip-box">
+          <strong>GPA without</strong> = the UoA's optimised GPA computed without this person's outputs
+          (their marginal contribution). A red drop marks a load-bearing researcher; a green rise means
+          their work sits below the average.<br><br>
+          Under REF 2029 <em>non-portability</em>, outputs the institution supported remain submittable
+          even if the researcher leaves, so this is a contribution lens, not a “what if they leave” forecast.
+        </span></span></th><th></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+
+    <details class="opt-panel">
+      <summary>Scenarios &amp; compare</summary>
+      <p class="opt-note">Snapshot the current optimised picture and compare as you curate ratings over time.</p>
+      <div class="opt-scenarios" id="opt-scenarios"></div>
+      <p><button class="tb-btn" id="opt-save-scenario">Save this scenario</button></p>
+      <div class="opt-compare-ctl" id="opt-compare-ctl"></div>
+      <div class="opt-compare" id="opt-compare"></div>
+    </details>
+
     <h3 class="help-s">Suggested submission</h3>
     ${detail}
-    <p class="help-foot">Indicative only. Verify the volume rule, the per-person cap, and output
-       eligibility against the current REF 2029 guidance — the parameters are configurable in
-       Settings → REF 2029 targets.</p>`;
+    <p class="help-foot">Indicative planning aid, not the submission model. REF 2029 <em>decouples</em>
+       outputs from named individuals (the volume is HESA/FTE-derived, here approximated as
+       multiplier × staff) and outputs are <em>non-portable</em> (attributed to the institution that
+       supported the research, not the current employer). This per-person view helps you curate;
+       verify the volume rule, any per-person cap, and eligibility against current REF 2029 guidance
+       (some operational detail, volume thresholds, cross-institution co-authored outputs, is still
+       being finalised). Parameters: Settings → REF 2029 targets.</p>`;
+
+  // ── Scenario snapshots (localStorage, per scope) ──
+  const scopeKey = document.getElementById("uoa-select")?.value || scope.label || "all";
+  const scEl = body.querySelector("#opt-scenarios");
+  const loadSc = () => { try { return JSON.parse(localStorage.getItem("sd-scenario-" + scopeKey)) || []; } catch { return []; } };
+  const saveSc = (arr) => localStorage.setItem("sd-scenario-" + scopeKey, JSON.stringify(arr));
+  const cmpCtl = body.querySelector("#opt-compare-ctl");
+  const cmpOut = body.querySelector("#opt-compare");
+  const peopleOf = (idx) => idx === -1 ? nowPeople : (loadSc()[idx]?.people || null);
+  const labelOf = (idx) => idx === -1 ? "Now" : (loadSc()[idx]?.label || "—");
+  const gpaOf = (idx) => idx === -1 ? gpaSel : (loadSc()[idx]?.gpa ?? null);
+  const fmtG = (g) => g == null ? "—" : g.toFixed(2);
+
+  // Scenario list.
+  function renderSc() {
+    const arr = loadSc();
+    if (!arr.length) { scEl.innerHTML = `<p class="opt-note">No saved scenarios yet.</p>`; return; }
+    scEl.innerHTML = `<table class="opt-table"><thead><tr><th>Scenario</th><th class="num">GPA</th><th class="num">Δ vs now</th><th class="num">Outputs</th><th></th></tr></thead><tbody>` +
+      arr.map((s, i) => {
+        const d = (gpaSel != null && s.gpa != null) ? s.gpa - gpaSel : null;
+        return `<tr><td>${escapeHTML(s.label)} <span class="opt-sc-date">${escapeHTML(new Date(s.ts).toLocaleDateString())}</span></td>
+          <td class="num">${fmtG(s.gpa)}</td>
+          <td class="num">${d == null ? "" : `<span class="opt-delta ${d < 0 ? "neg" : (d > 0 ? "pos" : "")}">${d >= 0 ? "+" : ""}${d.toFixed(2)}</span>`}</td>
+          <td class="num">${s.selected}/${s.volume}</td>
+          <td><button class="opt-sc-del" data-i="${i}" title="Delete scenario">✕</button></td></tr>`;
+      }).join("") + `</tbody></table>`;
+    scEl.querySelectorAll(".opt-sc-del").forEach(b => b.onclick = () => { const a = loadSc(); a.splice(+b.dataset.i, 1); saveSc(a); refreshScenarios(); });
+  }
+
+  const volOf = (idx) => idx === -1 ? res.volume : (loadSc()[idx]?.volume ?? null);
+  const selOf = (idx) => idx === -1 ? selRatings.length : (loadSc()[idx]?.selected ?? null);
+
+  // Richer compare: pick two snapshots (or "Now") and diff them person by person.
+  // Falls back to a totals-only comparison if a chosen snapshot predates the
+  // per-person data (so it always shows something useful).
+  function renderCompare(ai, bi) {
+    const A = peopleOf(ai), B = peopleOf(bi);
+    let rows = "", note = "";
+    if (A && B) {
+      const byName = new Map();
+      A.forEach(p => byName.set(p.name, { a: p }));
+      B.forEach(p => { const e = byName.get(p.name) || {}; e.b = p; byName.set(p.name, e); });
+      rows = [...byName.entries()].sort((x, y) => x[0].localeCompare(y[0])).map(([name, e]) => {
+        const a = e.a, b = e.b, dSubmit = (a && b) ? b.submit - a.submit : null;
+        const dCls = dSubmit > 0 ? "pos" : (dSubmit < 0 ? "neg" : "");
+        return `<tr><td>${escapeHTML(name)}</td>
+          <td class="num">${a ? a.submit : "—"}</td>
+          <td class="num">${b ? b.submit : "—"}</td>
+          <td class="num">${dSubmit == null ? "" : `<span class="opt-delta ${dCls}">${dSubmit >= 0 ? "+" : ""}${dSubmit}</span>`}</td>
+          <td class="num">${a ? fmtG(a.gpa) : "—"} → ${b ? fmtG(b.gpa) : "—"}</td></tr>`;
+      }).join("");
+    } else {
+      const which = !A ? labelOf(ai) : labelOf(bi);
+      note = `<p class="opt-note">Per-person detail isn't stored for “${escapeHTML(which)}” (saved before per-person compare) — showing totals only. Re-save that scenario to compare person by person.</p>`;
+    }
+    cmpOut.innerHTML = note + `<table class="opt-table">
+      <thead><tr><th>${rows ? "Researcher" : ""}</th><th class="num">${escapeHTML(labelOf(ai))}</th><th class="num">${escapeHTML(labelOf(bi))}</th><th class="num">${rows ? "Δ submit" : ""}</th><th class="num">${rows ? "GPA A→B" : ""}</th></tr></thead>
+      <tbody>${rows}</tbody>
+      <tfoot>
+        <tr><td><strong>UoA GPA</strong></td><td class="num"><strong>${fmtG(gpaOf(ai))}</strong></td><td class="num"><strong>${fmtG(gpaOf(bi))}</strong></td><td class="num" colspan="2"></td></tr>
+        <tr><td>Outputs (selected / target)</td><td class="num">${selOf(ai) ?? "—"} / ${volOf(ai) ?? "—"}</td><td class="num">${selOf(bi) ?? "—"} / ${volOf(bi) ?? "—"}</td><td class="num" colspan="2"></td></tr>
+      </tfoot>
+    </table>`;
+  }
+
+  // Compare control (only once there's something to compare against "Now").
+  function renderCmpCtl() {
+    const arr = loadSc();
+    if (!arr.length) { cmpCtl.innerHTML = ""; cmpOut.innerHTML = ""; return; }
+    const opts = (sel) => `<option value="-1"${sel === -1 ? " selected" : ""}>Now (current)</option>` +
+      arr.map((s, i) => `<option value="${i}"${sel === i ? " selected" : ""}>${escapeHTML(s.label)}</option>`).join("");
+    cmpCtl.innerHTML = `<label class="opt-cmp-label">Compare
+      <select id="opt-cmp-a" class="cs-ref-sel">${opts(-1)}</select> vs
+      <select id="opt-cmp-b" class="cs-ref-sel">${opts(0)}</select></label>`;
+    const run = () => renderCompare(parseInt(cmpCtl.querySelector("#opt-cmp-a").value, 10), parseInt(cmpCtl.querySelector("#opt-cmp-b").value, 10));
+    cmpCtl.querySelector("#opt-cmp-a").onchange = run;
+    cmpCtl.querySelector("#opt-cmp-b").onchange = run;
+    run();
+  }
+
+  function refreshScenarios() { renderSc(); renderCmpCtl(); }
+  refreshScenarios();
+
+  body.querySelector("#opt-save-scenario").onclick = () => {
+    const label = prompt("Name this scenario:", "Snapshot " + new Date().toLocaleDateString());
+    if (!label || !label.trim()) return;
+    const arr = loadSc();
+    arr.unshift({ label: label.trim(), ts: Date.now(), gpa: gpaSel, volume: res.volume, selected: selRatings.length, n: res.N, people: nowPeople });
+    saveSc(arr); refreshScenarios();
+  };
 }
 
 async function openRefReport() {
