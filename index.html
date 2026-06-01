@@ -11,7 +11,7 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.39</span>
+    <span class="tb-sub" id="tb-version">v0.2.40</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -26,6 +26,13 @@
         <button class="tb-menu-item" id="tb-save-unit" role="menuitem">
           <span class="tb-mi-label">Save current unit…</span>
           <span class="tb-mi-hint">Download this unit as Markdown</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-settings" role="menuitem">
+          <span class="tb-mi-label">Settings…</span>
+        </button>
+        <button class="tb-menu-item tb-menu-item-plain" id="tb-about" role="menuitem">
+          <span class="tb-mi-label">About Scholar Dashboard</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item tb-menu-item-plain" id="tb-quit" role="menuitem">
@@ -219,6 +226,34 @@
       <button class="tb-btn primary" id="data-save">Save changes</button>
     </div>
     <p class="data-status" id="data-status"></p>
+  </div>
+</div>
+
+<!-- About dialog -->
+<div id="about-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card about-card">
+    <button class="close" aria-label="Close" data-about-close>×</button>
+    <div class="about-head">
+      <span class="about-logo" aria-hidden="true">◐</span>
+      <div>
+        <h3 id="about-name">Scholar Dashboard</h3>
+        <p class="about-ver" id="about-version">—</p>
+      </div>
+    </div>
+    <div id="about-body"></div>
+  </div>
+</div>
+
+<!-- Settings dialog -->
+<div id="settings-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card settings-card">
+    <button class="close" aria-label="Close" data-settings-close>×</button>
+    <h3>Settings</h3>
+    <div id="settings-body"></div>
+    <div class="data-actions">
+      <span class="data-actions-spacer"></span>
+      <button class="tb-btn" data-settings-close>Close</button>
+    </div>
   </div>
 </div>
 

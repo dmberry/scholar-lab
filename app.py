@@ -85,7 +85,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.39"
+__version__ = "0.2.40"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -853,6 +853,45 @@ def api_ref_targets():
 @app.route("/api/version")
 def api_version():
     return jsonify({"version": __version__})
+
+
+@app.route("/api/about")
+def api_about():
+    """Metadata for the About dialog + the Settings 'Data & reset' panel:
+    version, where user data lives, and how much is cached."""
+    cached = len(list(CACHE_DIR.glob("*.json"))) if CACHE_DIR.exists() else 0
+    # _cooldown.json sits in .cache too — don't count it as a profile.
+    cached = max(0, cached - (1 if (_COOLDOWN_FILE.exists()) else 0))
+    units = len(list(DATA_DIR.glob("*.md"))) if DATA_DIR.exists() else 0
+    return jsonify({
+        "name": "Scholar Dashboard",
+        "version": __version__,
+        "author": "David M. Berry",
+        "homepage": "https://github.com/dmberry/scholar-lab",
+        "license": "Proof-of-concept; not for production bibliometrics.",
+        "frozen": _FROZEN,
+        "data_dir": str(DATA_DIR),
+        "cache_dir": str(CACHE_DIR),
+        "user_root": str(USER_ROOT),
+        "unit_files": units,
+        "cached_profiles": cached,
+    })
+
+
+@app.route("/api/clear-cache", methods=["POST"])
+def api_clear_cache():
+    """Delete all cached Scholar payloads (keeps the cooldown marker).
+    Staff/unit data is untouched — only the re-fetchable Scholar cache."""
+    removed = 0
+    if CACHE_DIR.exists():
+        for p in CACHE_DIR.glob("*.json"):
+            if p.name == _COOLDOWN_FILE.name:
+                continue
+            try:
+                p.unlink(); removed += 1
+            except OSError:
+                pass
+    return jsonify({"ok": True, "removed": removed})
 
 
 @app.route("/api/heartbeat")

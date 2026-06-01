@@ -1761,6 +1761,146 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") closeToolbarMenus();
 });
 
+// ─── About + Settings dialogs ─────────────────────────────────────────────
+async function openAbout() {
+  const m = document.getElementById("about-modal");
+  m.classList.remove("hidden");
+  let a = {};
+  try { a = await (await fetch("/api/about")).json(); } catch {}
+  document.getElementById("about-version").textContent =
+    `Version ${a.version || "?"}${a.frozen ? " · packaged app" : " · source"}`;
+  document.getElementById("about-body").innerHTML = `
+    <p class="about-tag">A staff metrics dashboard surfacing Google Scholar
+       citations, h-index and REF 2029 readiness at unit, school and
+       faculty level.</p>
+    <dl class="about-dl">
+      <dt>Author</dt><dd>${escapeHTML(a.author || "David M. Berry")}</dd>
+      <dt>Project</dt><dd><a href="${escapeAttr(a.homepage || "#")}" target="_blank" rel="noopener">${escapeHTML((a.homepage || "").replace(/^https?:\/\//, "")) || "—"}</a></dd>
+      <dt>Data folder</dt><dd><code>${escapeHTML(a.data_dir || "—")}</code></dd>
+      <dt>Contents</dt><dd>${a.unit_files ?? "?"} unit file(s) · ${a.cached_profiles ?? "?"} cached Scholar profile(s)</dd>
+    </dl>
+    <p class="about-note">${escapeHTML(a.license || "Proof-of-concept.")}
+       Scholar metrics are noisy and under-represent practice-based output —
+       treat them as indicative, not definitive.</p>`;
+}
+
+async function openSettings() {
+  const m = document.getElementById("settings-modal");
+  m.classList.remove("hidden");
+  const body = document.getElementById("settings-body");
+  body.innerHTML = `<p class="spinner">Loading…</p>`;
+  let about = {}, targets = { default: { multiplier: 2.5, min_per_person: 1, max_per_person: 5 } };
+  try { about = await (await fetch("/api/about")).json(); } catch {}
+  try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
+  const t = targets.default || { multiplier: 2.5, min_per_person: 1, max_per_person: 5 };
+  const scale = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
+  const sort  = localStorage.getItem("sd-sort") || "name";
+  const sortOpts = [["name","Name"],["citations","Citations"],["hindex","h-index"],
+                    ["h5","h5-index"],["role","Stack by role"],["overview","Overview"]]
+    .map(([v,l]) => `<option value="${v}" ${v===sort?"selected":""}>${l}</option>`).join("");
+  body.innerHTML = `
+    <section class="set-sec">
+      <h4>Display defaults</h4>
+      <div class="set-row">
+        <label>Card chart scale</label>
+        <div class="set-scale">
+          <button class="filter-btn ${scale==="cohort"?"active":""}" data-set-scale="cohort">Cohort</button>
+          <button class="filter-btn ${scale==="per-card"?"active":""}" data-set-scale="per-card">Per-card</button>
+        </div>
+      </div>
+      <div class="set-row">
+        <label for="set-sort">Default sort</label>
+        <select id="set-sort" class="unit-select">${sortOpts}</select>
+      </div>
+    </section>
+
+    <section class="set-sec">
+      <h4>REF 2029 targets <span class="set-sub">(default for all UoAs)</span></h4>
+      <p class="set-help">Used by REF readiness analytics. A submission needs roughly
+         (active FTE × multiplier) outputs, with each person contributing between
+         the min and max.</p>
+      <div class="set-grid3">
+        <label>Multiplier <input type="number" id="set-mult" step="0.1" min="0" value="${t.multiplier}"></label>
+        <label>Min / person <input type="number" id="set-min" step="1" min="0" value="${t.min_per_person}"></label>
+        <label>Max / person <input type="number" id="set-max" step="1" min="1" value="${t.max_per_person}"></label>
+      </div>
+      <button class="tb-btn" id="set-save-targets">Save targets</button>
+      <span class="set-saved" id="set-targets-saved"></span>
+    </section>
+
+    <section class="set-sec">
+      <h4>Data &amp; reset</h4>
+      <dl class="about-dl">
+        <dt>Data folder</dt><dd><code>${escapeHTML(about.data_dir || "—")}</code></dd>
+        <dt>Cache folder</dt><dd><code>${escapeHTML(about.cache_dir || "—")}</code></dd>
+        <dt>Contents</dt><dd>${about.unit_files ?? "?"} unit file(s) · ${about.cached_profiles ?? "?"} cached profile(s)</dd>
+      </dl>
+      <div class="set-btns">
+        <button class="tb-btn" id="set-clear-cache">Clear Scholar cache</button>
+        <button class="tb-btn" id="set-reset-prefs">Reset preferences</button>
+      </div>
+      <p class="set-help">Clearing the cache removes downloaded Scholar metrics (re-fetched on next view); your staff/unit data is untouched. Reset preferences clears zoom, sort, filters and scale on this device.</p>
+    </section>
+
+    <section class="set-sec set-dim">
+      <h4>Scholar fetch tuning</h4>
+      <p class="set-help">Cooldown after a rate-limit (currently 10 min), idle auto-shutdown (20 min) and cache lifetime (7 days) are fixed in this build. Editable tuning is planned.</p>
+    </section>`;
+
+  // Display defaults — apply immediately + persist.
+  body.querySelectorAll("[data-set-scale]").forEach(b => b.addEventListener("click", () => {
+    applySparkMode(b.dataset.setScale);
+    body.querySelectorAll("[data-set-scale]").forEach(x => x.classList.toggle("active", x === b));
+  }));
+  body.querySelector("#set-sort")?.addEventListener("change", (e) => applySort(e.target.value));
+
+  // REF targets — save to backend.
+  body.querySelector("#set-save-targets")?.addEventListener("click", async () => {
+    const payload = {
+      uoa: "default",
+      multiplier: parseFloat(body.querySelector("#set-mult").value) || 2.5,
+      min_per_person: parseInt(body.querySelector("#set-min").value, 10) || 1,
+      max_per_person: parseInt(body.querySelector("#set-max").value, 10) || 5,
+    };
+    const saved = body.querySelector("#set-targets-saved");
+    try {
+      const r = await fetch("/api/ref-targets", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error("save failed");
+      saved.textContent = "Saved ✓"; setTimeout(() => saved.textContent = "", 2500);
+    } catch (e) { saved.textContent = "Save failed"; }
+  });
+
+  // Data & reset.
+  body.querySelector("#set-clear-cache")?.addEventListener("click", async () => {
+    if (!confirm("Delete all cached Scholar metrics? Staff data is kept; metrics re-fetch on next view.")) return;
+    try {
+      const r = await fetch("/api/clear-cache", { method: "POST" });
+      const d = await r.json();
+      alert(`Cleared ${d.removed} cached profile(s). Reloading…`);
+      location.reload();
+    } catch (e) { alert("Couldn't clear cache: " + e.message); }
+  });
+  body.querySelector("#set-reset-prefs")?.addEventListener("click", () => {
+    if (!confirm("Reset zoom, sort, filters and scale to defaults on this device?")) return;
+    ["sd-zoom","sd-sort","sd-spark-mode","sd-ref-all","sd-exclude-emeritus",
+     "sd-exclude-visiting","sd-view-mode"].forEach(k => localStorage.removeItem(k));
+    location.reload();
+  });
+}
+
+document.addEventListener("click", (e) => {
+  if (e.target.closest("#tb-about"))    openAbout();
+  if (e.target.closest("#tb-settings")) openSettings();
+  if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
+  if (e.target.closest("[data-settings-close]")) document.getElementById("settings-modal").classList.add("hidden");
+  // Click on the dimmed backdrop closes.
+  if (e.target.id === "about-modal")    e.target.classList.add("hidden");
+  if (e.target.id === "settings-modal") e.target.classList.add("hidden");
+});
+
 // ─── Server liveness ────────────────────────────────────────────────────
 // The backend kills itself after 20 minutes of no real requests, so we
 // poll /api/heartbeat every 60s. When it fails, the Quit button swaps to

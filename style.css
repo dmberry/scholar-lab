@@ -156,6 +156,41 @@ body {
 .tb-menu-item:hover .tb-mi-label { color: var(--accent); }
 .tb-mi-hint { font-size: .68rem; color: var(--muted); line-height: 1.3; }
 .tb-menu-sep { height: 1px; background: var(--border); margin: .25rem .3rem; }
+/* Scope label at the top of the Export menu. */
+.tb-menu-scope {
+  font-size: .66rem; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--accent);
+  padding: .3rem .6rem .35rem; margin-bottom: .1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* About + Settings dialogs */
+.about-card, .settings-card { max-width: 34rem; }
+.about-head { display: flex; align-items: center; gap: .8rem; margin-bottom: .6rem; }
+.about-logo { font-size: 2.2rem; color: var(--accent); line-height: 1; }
+.about-head h3 { margin: 0; }
+.about-ver { margin: .1rem 0 0; color: var(--muted); font-size: .8rem; }
+.about-tag { color: var(--ink); font-size: .9rem; line-height: 1.5; }
+.about-note { color: var(--muted); font-size: .78rem; line-height: 1.5; margin-top: .8rem; }
+.about-dl { display: grid; grid-template-columns: auto 1fr; gap: .3rem .9rem; margin: .8rem 0; font-size: .82rem; }
+.about-dl dt { color: var(--muted); font-weight: 600; }
+.about-dl dd { margin: 0; overflow-wrap: anywhere; }
+.about-dl code { font-size: .85em; background: var(--accent-soft); padding: .05em .35em; border-radius: 3px; }
+
+.set-sec { padding: .9rem 0; border-top: 1px solid var(--border); }
+.set-sec:first-child { border-top: 0; }
+.set-sec h4 { margin: 0 0 .5rem; font-size: .9rem; }
+.set-sub { font-weight: 400; color: var(--muted); font-size: .78rem; }
+.set-help { color: var(--muted); font-size: .76rem; line-height: 1.45; margin: .4rem 0; }
+.set-row { display: flex; align-items: center; gap: .8rem; margin: .4rem 0; }
+.set-row label { font-size: .85rem; min-width: 9rem; }
+.set-scale { display: inline-flex; gap: .3rem; }
+.set-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .6rem; margin: .5rem 0; }
+.set-grid3 label { display: flex; flex-direction: column; gap: .2rem; font-size: .78rem; color: var(--muted); }
+.set-grid3 input { font: inherit; padding: .3rem .4rem; border: 1px solid var(--border); border-radius: 5px; }
+.set-btns { display: flex; gap: .5rem; margin: .5rem 0; }
+.set-saved { font-size: .78rem; color: #1a7f3c; margin-left: .5rem; }
+.set-dim { opacity: .7; }
 
 .tb-zoom { gap: 0; border-radius: 6px; overflow: hidden; }
 .tb-zoom .tb-btn {
