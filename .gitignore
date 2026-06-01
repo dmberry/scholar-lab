@@ -30,6 +30,7 @@ scholar-export-*.json
 # ── Python ─────────────────────────────────────────────────
 .venv/
 .venv-build/
+.venv-build-x86/
 __pycache__/
 *.pyc
 
