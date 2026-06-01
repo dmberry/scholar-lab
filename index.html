@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.57</span>
+    <span class="tb-sub" id="tb-version">v0.2.58</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -281,11 +281,14 @@
   <div class="modal-card data-card">
     <button class="close" aria-label="Close" data-data-close>×</button>
     <h3>Data — staff &amp; units</h3>
-    <p class="data-help">Edit the staff data. Changes are saved to the
-    <code>data/</code> Markdown files (one per unit) when you click Save, with a
-    timestamped backup of the previous version. Scholar data
-    (citations, h-index, sparkline) is cached separately and only re-fetched when you click
-    <em>Refresh all</em> in the toolbar or <em>force refresh</em> on a person's modal.</p>
+    <p class="data-help">Edit the staff data. <strong>Changes save automatically</strong>
+    to the <code>data/</code> Markdown files (one per unit) a moment after you stop typing,
+    with a timestamped backup each time — so a new person you add is kept even if you
+    don't click Save. (<em>Save &amp; reload</em> also refreshes the dashboard grid.)
+    Entering a Google&nbsp;Scholar URL sets that person's status to <em>set</em> so their
+    metrics are fetched on the next view. Scholar data (citations, h-index, sparkline) is
+    cached separately and re-fetched via <em>Refresh</em> in the Data menu or
+    <em>Refresh Data from Google Scholar</em> on a person's card.</p>
     <div id="data-editor"></div>
     <div class="data-actions">
       <button class="tb-btn" id="data-load-unit" title="Load a unit Markdown file from disk (adds or replaces that unit)">⬆ Load unit file</button>
@@ -293,7 +296,7 @@
       <input type="file" id="data-load-input" accept=".md,.json,text/markdown,text/plain,application/json" hidden>
       <span class="data-actions-spacer"></span>
       <button class="tb-btn" data-data-close>Cancel</button>
-      <button class="tb-btn primary" id="data-save">Save changes</button>
+      <button class="tb-btn primary" id="data-save" title="Save now and reload the dashboard (changes also save automatically)">Save &amp; reload</button>
     </div>
     <p class="data-status" id="data-status"></p>
   </div>

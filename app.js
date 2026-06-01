@@ -1475,7 +1475,7 @@ function buildStaffRow(p) {
       <button class="data-row-del"  title="Delete this staff row">🗑</button>
     </td>
   `;
-  tr.querySelector(".data-row-del").onclick = () => tr.remove();
+  tr.querySelector(".data-row-del").onclick = () => { tr.remove(); scheduleDataEditorAutosave(); };
   tr.querySelector(".data-row-edit").onclick = (e) => {
     e.preventDefault();
     // No-op when marked missing — the red X is a status indicator, not a
@@ -1703,14 +1703,17 @@ function parseScholarId(raw) {
   return null;
 }
 
-async function saveDataEditor() {
-  const status = document.getElementById("data-status");
-  status.textContent = "Saving…";
-  status.className = "data-status";
+// Read the live data-editor DOM into the faculties payload. `blankNames` is
+// the count of staff rows that have no name yet (used to gate auto-save —
+// posting a blank-name row would 400). Shared by manual Save and auto-save.
+function collectDataEditorPayload() {
+  let blankNames = 0;
   const collectStaff = (card) => [...card.querySelectorAll("tbody tr")].map(tr => {
     const uoaRaw = tr.querySelector(".r-uoa")?.value || "";
+    const name = tr.querySelector(".r-name").value.trim();
+    if (!name) blankNames++;
     return {
-      name:        tr.querySelector(".r-name").value.trim(),
+      name,
       title:       tr.querySelector(".r-title").value.trim(),
       staff_id:   tr.querySelector(".r-staff-id").value.trim(),
       scholar_id:  parseScholarId(tr.querySelector(".r-scholar").value),
@@ -1743,7 +1746,14 @@ async function saveDataEditor() {
     schools: [...fb.querySelectorAll(":scope > .data-faculty-body > .data-school")].map(collectSchool),
     units:   [...fb.querySelectorAll(":scope > .data-faculty-body > .data-unit")].map(collectUnit),
   }));
-  const payload = { faculties };
+  return { payload: { faculties }, blankNames };
+}
+
+async function saveDataEditor() {
+  const status = document.getElementById("data-status");
+  status.textContent = "Saving…";
+  status.className = "data-status";
+  const { payload } = collectDataEditorPayload();
   try {
     const r = await fetch("/api/staff", {
       method: "POST",
@@ -1760,6 +1770,59 @@ async function saveDataEditor() {
     status.classList.add("err");
   }
 }
+
+// Quiet auto-save: persists data-editor edits without reloading, so a new
+// user who adds a person and forgets to click Save doesn't lose it. Debounced;
+// skipped while any staff row is still nameless (that would fail validation).
+let _autoSaveTimer = null;
+function scheduleDataEditorAutosave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(autoSaveDataEditor, 1200);
+}
+async function autoSaveDataEditor() {
+  const status = document.getElementById("data-status");
+  const { payload, blankNames } = collectDataEditorPayload();
+  if (blankNames > 0) {   // a half-entered new row — wait until it has a name
+    if (status) { status.textContent = "Unsaved — finish naming the new person…"; status.className = "data-status"; }
+    return;
+  }
+  try {
+    const r = await fetch("/api/staff", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+    });
+    const j = await r.json();
+    if (!r.ok || j.error) throw new Error(j.error || `HTTP ${r.status}`);
+    if (status) {
+      status.textContent = `All changes saved automatically ✓${j.trashed ? ` · ${j.trashed} moved to Trash` : ""}`;
+      status.className = "data-status ok";
+    }
+    loadScholarCacheIndex().then(() => decorateAllStaffFreshness(document.getElementById("data-editor")));
+  } catch (e) {
+    if (status) { status.textContent = `Auto-save failed: ${e.message} — click Save to retry`; status.className = "data-status err"; }
+  }
+}
+
+// Data-editor auto-save + Scholar-URL → status wiring. Delegated on the
+// persistent #data-editor container so it survives each re-render.
+(function wireDataEditorAutosave() {
+  const ed = document.getElementById("data-editor");
+  if (!ed) return;
+  ed.addEventListener("input", (e) => {
+    const t = e.target;
+    // Entering a Scholar URL flips the row's status to "set" automatically
+    // (so it actually gets fetched); clearing it reverts a "set" to unchecked.
+    if (t.classList && t.classList.contains("r-scholar")) {
+      const statusSel = t.closest("tr")?.querySelector(".r-status");
+      if (statusSel) {
+        if (parseScholarId(t.value)) statusSel.value = "set";
+        else if (statusSel.value === "set") statusSel.value = "unchecked";
+        statusSel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    scheduleDataEditorAutosave();
+  });
+  ed.addEventListener("change", () => scheduleDataEditorAutosave());
+})();
 
 document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-data")) openDataEditor();
@@ -4807,8 +4870,8 @@ function renderPerson(p, d) {
          target="_blank" rel="noopener">open on Scholar ↗</a> ·
       <a href="https://scholar.google.com/scholar?q=${encodeURIComponent(p.name)}"
          target="_blank" rel="noopener">search Scholar for ${escapeHTML(p.name)} ↗</a>
-      <button class="modal-refresh" type="button" title="Force-refresh from Google Scholar"
-              onclick="forceRefresh('${p.scholar_id}', this)">↻ Refresh</button>
+      <button class="modal-refresh" type="button" title="Re-fetch this person's metrics from Google Scholar"
+              onclick="forceRefresh('${p.scholar_id}', this)">↻ Refresh Data from Google Scholar</button>
     </p>
     <p class="scrape-stamp">${d._fetched_iso
       ? `Scraped from Google Scholar on ${escapeHTML(new Date(d._fetched_iso).toLocaleString())}`

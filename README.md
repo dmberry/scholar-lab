@@ -1,9 +1,37 @@
 # Scholar Dashboard
 
-A staff metrics dashboard that surfaces Google Scholar citations, h-index,
-and REF 2029 Unit-of-Assessment readiness at unit, school, and faculty level.
+Scholar Dashboard is a small, self-contained desktop tool for getting a clear,
+comparative picture of a department's research profile and its readiness for
+the next Research Excellence Framework (REF 2029). It pulls each member of
+staff's public Google Scholar record — total and recent citations, h-index,
+i10-index, and a twenty-year citation history — and lays them out as a grid of
+cards that can be sliced **By Faculty** (Faculty → School → Unit) or **By Unit
+of Assessment**, so the same people can be viewed either through the
+institution's own org chart or through the REF's submission units.
 
-**Version:** 0.2.57 · proof-of-concept.
+On top of that descriptive layer it provides the working scaffolding for
+preparing an actual REF submission. You can flag individual publications for
+inclusion and rate each one on the REF star scale (1\*–4\*, including the
+in-between bands), and the dashboard turns those decisions into a quality
+profile and a mean output GPA per scholar and per UoA, sets them against a
+configurable output target, and surfaces the result as a colour-coded
+red/amber/green readiness scorecard. Impact case studies are authored against
+the REF3 template — with references picked from the rated outputs, contributors
+drawn from their authors, an inclusion-slot system ("case study N of the
+required total"), and a draft/candidate state — and the whole picture is pulled
+together into printable UoA and selection reports (also exportable as plain
+rich text for pasting into other documents).
+
+It runs entirely on your own machine. There is no account, no server, and
+nothing is uploaded: staff records live as human-readable Markdown files, the
+Scholar data is cached locally, and a whole faculty or UoA can be saved as a
+single portable bundle and shared with a colleague. It is a pragmatic,
+proof-of-concept aid for research managers and REF coordinators, not a
+research-grade bibliometrics engine — Google Scholar is noisy and
+under-represents practice-based and non-indexed work, so the numbers are best
+read as indicative rather than definitive.
+
+**Version:** 0.2.58 · proof-of-concept.
 
 ## What it does
 
@@ -141,21 +169,30 @@ Each person has a `status`:
 
 ## Run it
 
-### Easiest path — download the packaged app (macOS)
+### Easiest path — download the packaged app
 
-Grab the latest `Scholar-Dashboard-<version>-macos.zip` from the
+Grab the latest build for your OS from the
 [GitHub Releases](https://github.com/dmberry/scholar-lab/releases) page.
-Unzip, drag **Scholar Dashboard.app** to your Applications folder, and
-double-click. No Python install required.
+No Python install required on the target machine.
 
-On first launch it seeds an example faculty into
-`~/Library/Application Support/Scholar Dashboard/data/` and opens the
-browser at <http://localhost:5057>. Use the in-app **Data** editor or
-**＋ Unit** to add your own people; everything you add lives in that
-Application Support folder and persists across app upgrades.
+| OS | Download | Install |
+|----|----------|---------|
+| **macOS** | `Scholar-Dashboard-<version>-macos.zip` | Unzip → drag **Scholar Dashboard.app** to Applications → double-click. |
+| **Windows** | `Scholar-Dashboard-<version>-setup.exe` (installer) or `…-windows.zip` (portable) | Run the installer, or unzip and run `scholar-dashboard.exe`. |
+| **Linux** | `Scholar-Dashboard-<version>-linux.tar.gz` | `tar -xzf …`, then run `scholar-dashboard/scholar-dashboard` (or install the bundled `.desktop`). |
 
-The first launch may show macOS's *"unidentified developer"* warning —
-right-click → **Open** clears it permanently.
+On first launch the app seeds an example faculty into a per-user data folder
+and opens the dashboard at <http://localhost:5057>. Everything you add lives in
+that folder (relocatable from **Settings → Data & reset**) and persists across
+upgrades. The per-user data folder is:
+
+- macOS — `~/Library/Application Support/Scholar Dashboard/`
+- Windows — `%APPDATA%\Scholar Dashboard\`
+- Linux — `$XDG_DATA_HOME/scholar-dashboard/` (default `~/.local/share/…`)
+
+First-launch OS warnings are expected for an unsigned app: macOS shows
+*"unidentified developer"* (right-click → **Open** clears it), and Windows
+SmartScreen shows *"Windows protected your PC"* (**More info → Run anyway**).
 
 ### Source-tree path (if you cloned the repo)
 
@@ -186,18 +223,34 @@ python app.py
 # open http://localhost:5057
 ```
 
-### Building the release package
+### Building the release packages
 
-To produce a fresh **Scholar Dashboard.app** + zip for distribution:
+PyInstaller bundles Python + Flask + BeautifulSoup + requests + the frontend
+assets into a self-contained build. There's one build script per OS — and
+because **PyInstaller can't cross-compile, each platform must be built on that
+platform** (a Windows `.exe` only builds on Windows, etc.). All three use a
+separate `.venv-build/` so they don't pollute your dev venv.
 
 ```bash
-./build.sh                     # writes dist/Scholar Dashboard.app + zip
-./build.sh --no-zip            # skip the zip step (faster iteration)
+./build.sh           # macOS  → dist/Scholar Dashboard.app + …-macos.zip
+./build-linux.sh     # Linux  → dist/…-linux.tar.gz (app folder + .desktop)
+.\build.ps1          # Windows→ dist/…-windows.zip (+ …-setup.exe if Inno Setup is installed)
 ```
 
-PyInstaller bundles Python + Flask + BeautifulSoup + requests + the
-frontend assets into a self-contained `.app`. The build uses a
-separate `.venv-build/` so it doesn't pollute your dev venv.
+The Windows installer comes from `installer/scholar-dashboard.iss`
+([Inno Setup](https://jrsoftware.org/isinfo.php)); `build.ps1` compiles it
+automatically when `iscc.exe` is on `PATH`, otherwise it just produces the
+portable zip.
+
+**All three at once — GitHub Actions.** Pushing a version tag runs
+`.github/workflows/release.yml`, which builds on macOS, Windows and Linux
+runners and attaches every package (zip, installer, tarball) to the GitHub
+Release. This is the easiest way to get the Windows and Linux artifacts if you
+only have one OS to hand:
+
+```bash
+git tag v0.2.57 && git push origin v0.2.57   # → CI builds + publishes all three
+```
 
 ## PDF print
 

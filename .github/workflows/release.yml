@@ -1,0 +1,71 @@
+name: Build & release
+
+# Build native packages on each OS and attach them to a GitHub Release.
+# PyInstaller can't cross-compile, so each platform is built on its own
+# runner. Triggered by pushing a version tag (e.g. v0.2.57), or manually.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build .app + zip
+        run: ./build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: dist/Scholar-Dashboard-*-macos.zip
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Install Inno Setup (for the .exe installer)
+        run: choco install innosetup --no-progress -y
+      - name: Build zip + installer
+        shell: pwsh
+        run: .\build.ps1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: |
+            dist/Scholar-Dashboard-*-windows.zip
+            dist/Scholar-Dashboard-*-setup.exe
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - name: Build tarball
+        run: ./build-linux.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: dist/Scholar-Dashboard-*-linux.tar.gz
+
+  release:
+    needs: [macos, windows, linux]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: artifacts }
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/**/*
+          generate_release_notes: true
