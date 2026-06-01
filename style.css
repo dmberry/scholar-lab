@@ -268,6 +268,7 @@ body {
   content: ">"; display: inline-block; width: 1em;
   font-size: 1.1em; font-weight: 400; line-height: 1;
   color: var(--muted); transition: transform .12s ease;
+  position: relative; top: .1em;
 }
 .set-details[open] > summary::before { transform: rotate(90deg); }
 .set-warn {
@@ -322,6 +323,7 @@ body {
 .profile-panel > summary::before {
   content: ">"; font-size: 1.1em; font-weight: 400; line-height: 1;
   color: var(--muted); transition: transform .12s ease; display: inline-block;
+  position: relative; top: .1em;
 }
 .profile-panel[open] > summary::before { transform: rotate(90deg); }
 .profile-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
@@ -1803,7 +1805,7 @@ h2 {
   font-weight: 600; list-style: none; display: flex; align-items: center; gap: .4rem;
 }
 .opt-panel > summary::-webkit-details-marker { display: none; }
-.opt-panel > summary::before { content: ">"; font-size: 1.1em; font-weight: 400; line-height: 1; display: inline-block; color: var(--muted); transition: transform .12s ease; }
+.opt-panel > summary::before { content: ">"; font-size: 1.1em; font-weight: 400; line-height: 1; display: inline-block; color: var(--muted); transition: transform .12s ease; position: relative; top: .1em; }
 .opt-panel[open] > summary::before { transform: rotate(90deg); }
 .opt-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
 .opt-panel > *:not(summary) { margin-left: .8rem; margin-right: .8rem; }
@@ -2236,6 +2238,7 @@ h2 {
   content: ">"; display: inline-block; width: 1em;
   color: #5a6377; font-size: 1.1em; font-weight: 400; line-height: 1;
   transition: transform .15s ease;
+  position: relative; top: .1em;
 }
 .data-school[open] > .data-school-summary::before { transform: rotate(90deg); }
 .data-school-summary::after {
@@ -2349,6 +2352,7 @@ h2 {
   color: var(--muted);
   font-size: 1.1em; font-weight: 400; line-height: 1;
   transition: transform .15s ease;
+  position: relative; top: .1em;
 }
 .data-unit[open] summary::before { transform: rotate(90deg); }
 .data-unit[open] summary::after { content: ""; }
