@@ -18,6 +18,7 @@ ref_flags.json
 ref_targets.json
 settings.json
 case_studies.json
+uoa_meta.json
 
 # Exports
 scholar-dashboard-*.json

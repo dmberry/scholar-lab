@@ -74,6 +74,7 @@ DATA_DIR = USER_ROOT / "data"   # one Markdown file per unit lives here
 REF_FLAGS_FILE    = USER_ROOT / "ref_flags.json"     # {scholar_id: {pub_key: True}}
 REF_TARGETS_FILE  = USER_ROOT / "ref_targets.json"   # {uoa_code: {multiplier, min_per_person, max_per_person}}
 CASE_STUDIES_FILE = USER_ROOT / "case_studies.json"  # {id: {uoa, title, status, …, versions[]}}
+UOA_META_FILE     = USER_ROOT / "uoa_meta.json"      # {uoa_code: {narrative}}
 
 # First-run seed: if the user has no data/ yet, copy the bundled
 # data.example/ so they see a working dashboard immediately rather than
@@ -86,7 +87,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.45"
+__version__ = "0.2.46"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -958,6 +959,31 @@ def api_case_study_write():
     data[cid] = rec
     _save_case_studies(data)
     return jsonify({"ok": True, "case_study": rec})
+
+
+@app.route("/api/uoa-meta", methods=["GET", "POST"])
+def api_uoa_meta():
+    """Per-UoA narrative / environment text for the UoA report.
+      GET ?uoa=NN → {narrative}
+      POST {uoa, narrative} → save."""
+    try:
+        with UOA_META_FILE.open() as f:
+            meta = json.load(f) or {}
+    except (OSError, json.JSONDecodeError):
+        meta = {}
+    if request.method == "GET":
+        uoa = str(request.args.get("uoa") or "")
+        return jsonify(meta.get(uoa, {"narrative": ""}))
+    body = request.get_json(force=True, silent=True) or {}
+    uoa = str(body.get("uoa") or "")
+    if not uoa:
+        return jsonify({"error": "uoa required"}), 400
+    meta[uoa] = {"narrative": (body.get("narrative") or "")}
+    try:
+        UOA_META_FILE.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
+    except OSError:
+        pass
+    return jsonify({"ok": True, "uoa": uoa, **meta[uoa]})
 
 
 @app.route("/api/version")

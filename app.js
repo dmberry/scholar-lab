@@ -2173,7 +2173,121 @@ async function openCaseStudyEditor(cs, uoaCode) {
 document.addEventListener("click", (e) => {
   if (e.target.closest("[data-cs-close]")) document.getElementById("cs-modal").classList.add("hidden");
   if (e.target.id === "cs-modal") e.target.classList.add("hidden");
+  if (e.target.closest("#tb-uoa-report")) buildUoaReport();
+  if (e.target.closest("[data-uoa-report-close]")) document.getElementById("uoa-report-modal").classList.add("hidden");
+  if (e.target.id === "uoa-report-modal") e.target.classList.add("hidden");
 });
+
+// ─── UoA report ───────────────────────────────────────────────────────────
+// One printable document for a UoA: cover + editable narrative + selected
+// (REF-flagged) outputs per scholar + full impact case studies (REF3 order).
+async function buildUoaReport() {
+  const code = document.getElementById("uoa-select")?.value;
+  if (VIEW_MODE !== "uoa" || !code) {
+    alert("Switch to the By UoA view and pick a UoA first — the report is per-UoA.");
+    return;
+  }
+  const modal = document.getElementById("uoa-report-modal");
+  const body  = document.getElementById("uoa-report-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = `<p class="spinner">Assembling UoA report…</p>`;
+  await loadRefFlags();
+
+  const uoaName = UOA_BY_CODE[code]?.name || "";
+  const scholars = [...new Map((STAFF || []).filter(p => p.scholar_id).map(p => [p.scholar_id, p])).values()];
+  const flaggedIds = scholars.filter(p => refFlagCount(p.scholar_id) > 0).map(p => p.scholar_id);
+  let batch = {};
+  if (flaggedIds.length) {
+    try { batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(flaggedIds.join(",")))).json(); } catch {}
+  }
+  let cases = [], meta = { narrative: "" };
+  try { cases = (await (await fetch("/api/case-studies?uoa=" + encodeURIComponent(code))).json()).case_studies || []; } catch {}
+  try { meta = await (await fetch("/api/uoa-meta?uoa=" + encodeURIComponent(code))).json(); } catch {}
+
+  const pubTitle = (sid, key) => {
+    const pub = ((batch[sid]?.recent_publications) || []).find(p => p.pub_key === key);
+    return pub ? `${pub.title} (${pub.year || "n.d."})` : deSlugTitle(key);
+  };
+  const nameByStaffId = new Map(scholars.map(p => [(p.staff_id || p.name), p.name]));
+
+  // Outputs section — only scholars with flags, flagged pubs only.
+  let totalOutputs = 0;
+  const outputsHtml = scholars.filter(p => refFlagCount(p.scholar_id) > 0).map(p => {
+    const keys = Object.keys(refFlagsFor(p.scholar_id));
+    totalOutputs += keys.length;
+    const rows = keys.map(k => `<li>${escapeHTML(pubTitle(p.scholar_id, k))}</li>`).join("");
+    return `<div class="ur-scholar"><div class="ur-sc-name">${escapeHTML(p.name)} <span class="ur-sc-meta">${escapeHTML(p.title || "")}</span></div><ol>${rows}</ol></div>`;
+  }).join("") || `<p class="ur-empty">No outputs flagged for REF in this UoA yet.</p>`;
+
+  // Case-studies section — full REF3 render.
+  const byStatus = { not_started: 0, draft: 0, proof: 0, finished: 0 };
+  cases.forEach(c => { byStatus[c.status] = (byStatus[c.status] || 0) + 1; });
+  const casesHtml = cases.map(c => {
+    const st = CS_STATES.find(s => s.key === c.status) || CS_STATES[0];
+    const refs = (c.references || []).map(r => { const [sid, key] = r.split(/:(.+)/); return `<li>${escapeHTML(pubTitle(sid, key))}</li>`; }).join("");
+    const contribs = (c.contributors || []).map(id => escapeHTML(nameByStaffId.get(id) || id)).join(", ");
+    const sources = (c.corroborating_sources || []).map(s => `<li>${escapeHTML(s)}</li>`).join("");
+    const sec = (label, txt) => txt ? `<div class="ur-cs-sec"><h5>${label}</h5><p>${escapeHTML(txt).replace(/\n/g, "<br>")}</p></div>` : "";
+    return `<article class="ur-cs">
+      <h4>${escapeHTML(c.title || "Untitled case study")} <span class="cs-status ${st.cls}">${st.label}</span></h4>
+      ${c.period ? `<p class="ur-cs-period">Underpinning research: ${escapeHTML(c.period)}</p>` : ""}
+      ${sec("Summary of the impact", c.summary)}
+      ${sec("Underpinning research", c.underpinning_research)}
+      ${refs ? `<div class="ur-cs-sec"><h5>References to the research</h5><ol>${refs}</ol></div>` : ""}
+      ${sec("Details of the impact", c.details)}
+      ${sources ? `<div class="ur-cs-sec"><h5>Sources to corroborate</h5><ul>${sources}</ul></div>` : ""}
+      ${contribs ? `<p class="ur-cs-contrib">Contributors: ${contribs}</p>` : ""}
+    </article>`;
+  }).join("") || `<p class="ur-empty">No impact case studies recorded for this UoA yet.</p>`;
+
+  const today = new Date().toLocaleDateString();
+  body.innerHTML = `
+    <div class="ur-top">
+      <div>
+        <h2 class="ur-title">UoA ${escapeHTML(code)}${uoaName ? " · " + escapeHTML(uoaName) : ""}</h2>
+        <p class="ur-sub">REF submission report · ${escapeHTML(window.__UNIVERSITY__ || "University")} · generated ${escapeHTML(today)}</p>
+      </div>
+      <button class="tb-btn primary" id="ur-print">Print / PDF</button>
+    </div>
+    <div class="ur-stats">
+      <span><strong>${scholars.length}</strong> staff</span>
+      <span><strong>${totalOutputs}</strong> outputs flagged</span>
+      <span><strong>${cases.length}</strong> case studies</span>
+      <span class="ur-stat-sub">${byStatus.finished} finished · ${byStatus.proof} proof · ${byStatus.draft} draft · ${byStatus.not_started} not started</span>
+    </div>
+
+    <section class="ur-section">
+      <h3>Narrative / environment</h3>
+      <textarea id="ur-narrative" class="ur-narrative" rows="5" placeholder="Describe the UoA's research environment, strategy and vitality…">${escapeHTML(meta.narrative || "")}</textarea>
+      <div class="ur-narrative-actions"><button class="tb-btn" id="ur-save-narrative">Save narrative</button><span class="set-saved" id="ur-narr-saved"></span></div>
+    </section>
+
+    <section class="ur-section">
+      <h3>Selected outputs <span class="ur-count">${totalOutputs}</span></h3>
+      ${outputsHtml}
+    </section>
+
+    <section class="ur-section">
+      <h3>Impact case studies <span class="ur-count">${cases.length}</span></h3>
+      ${casesHtml}
+    </section>`;
+
+  body.querySelector("#ur-save-narrative")?.addEventListener("click", async () => {
+    const saved = body.querySelector("#ur-narr-saved");
+    try {
+      const r = await fetch("/api/uoa-meta", { method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ uoa: code, narrative: body.querySelector("#ur-narrative").value }) });
+      if (!r.ok) throw new Error();
+      saved.textContent = "Saved ✓"; setTimeout(() => saved.textContent = "", 2500);
+    } catch { saved.textContent = "Save failed"; }
+  });
+  body.querySelector("#ur-print")?.addEventListener("click", () => {
+    document.body.classList.add("printing-uoa-report");
+    const done = () => { document.body.classList.remove("printing-uoa-report"); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 60);
+  });
+}
 
 // ─── Server liveness ────────────────────────────────────────────────────
 // The backend kills itself after 20 minutes of no real requests, so we

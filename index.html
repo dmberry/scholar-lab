@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.45</span>
+    <span class="tb-sub" id="tb-version">v0.2.46</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -93,6 +93,10 @@
         <button class="tb-menu-item" id="tb-ref-report" role="menuitem">
           <span class="tb-mi-label">REF selection report…</span>
           <span class="tb-mi-hint">Flagged outputs only, grouped by scholar</span>
+        </button>
+        <button class="tb-menu-item" id="tb-uoa-report" role="menuitem">
+          <span class="tb-mi-label">UoA report…</span>
+          <span class="tb-mi-hint">Cover, narrative, selected outputs &amp; impact case studies</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-print" role="menuitem">
@@ -253,6 +257,14 @@
   <div class="modal-card cs-card">
     <button class="close" aria-label="Close" data-cs-close>×</button>
     <div id="cs-body"></div>
+  </div>
+</div>
+
+<!-- UoA report — full printable: cover, narrative, outputs, case studies -->
+<div id="uoa-report-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card uoa-report-card">
+    <button class="close" aria-label="Close" data-uoa-report-close>×</button>
+    <div id="uoa-report-body"></div>
   </div>
 </div>
 

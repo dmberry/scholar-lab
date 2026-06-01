@@ -265,6 +265,33 @@ body {
 .cs-danger { color: #a31818; border-color: #e0c4c4; }
 .cs-danger:hover { background: #fef0f0; border-color: #a31818; }
 
+/* UoA report */
+.uoa-report-card { max-width: 48rem; }
+.ur-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.ur-title { margin: 0; font-size: 1.3rem; }
+.ur-sub { margin: .2rem 0 0; color: var(--muted); font-size: .82rem; }
+.ur-stats { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; margin: .8rem 0 1.2rem; padding: .6rem .8rem; background: var(--accent-soft); border-radius: 8px; font-size: .9rem; }
+.ur-stats strong { color: var(--accent); font-size: 1.05rem; }
+.ur-stat-sub { color: var(--muted); font-size: .76rem; }
+.ur-section { margin: 1.3rem 0; }
+.ur-section > h3 { font-size: .95rem; text-transform: none; letter-spacing: 0; color: var(--ink); border-bottom: 2px solid var(--accent-soft); padding-bottom: .25rem; margin: 0 0 .6rem; }
+.ur-count { font-size: .72rem; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: .1em .5em; margin-left: .3rem; }
+.ur-narrative { width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.5; }
+.ur-narrative-actions { margin-top: .4rem; display: flex; align-items: center; gap: .5rem; }
+.ur-scholar { margin: .5rem 0; }
+.ur-sc-name { font-weight: 600; font-size: .9rem; }
+.ur-sc-meta { font-weight: 400; color: var(--muted); font-size: .8rem; }
+.ur-scholar ol { margin: .2rem 0 .2rem; padding-left: 1.3rem; font-size: .85rem; }
+.ur-empty { color: var(--muted); font-size: .85rem; }
+.ur-cs { border: 1px solid var(--border); border-radius: 8px; padding: .8rem 1rem; margin: .7rem 0; }
+.ur-cs h4 { margin: 0 0 .3rem; font-size: 1rem; }
+.ur-cs-period { font-size: .78rem; color: var(--muted); margin: 0 0 .5rem; }
+.ur-cs-sec { margin: .5rem 0; }
+.ur-cs-sec h5 { margin: 0 0 .2rem; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.ur-cs-sec p { margin: 0; font-size: .88rem; line-height: 1.5; }
+.ur-cs-sec ol, .ur-cs-sec ul { margin: .1rem 0; padding-left: 1.3rem; font-size: .85rem; }
+.ur-cs-contrib { font-size: .8rem; color: var(--muted); margin: .5rem 0 0; }
+
 /* REF selection report */
 .ref-report-card { max-width: 44rem; }
 .rr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; }
@@ -1043,6 +1070,28 @@ h2 {
   body.printing-ref-report .close,
   body.printing-ref-report #rr-print { display: none !important; }
   body.printing-ref-report .rr-scholar { break-inside: avoid; page-break-inside: avoid; }
+
+  /* ── UoA-report print mode ── */
+  body.printing-uoa-report > *:not(#uoa-report-modal) { display: none !important; }
+  body.printing-uoa-report #uoa-report-modal {
+    position: static !important; background: none !important; display: block !important;
+  }
+  body.printing-uoa-report .uoa-report-card {
+    box-shadow: none !important; border: 0 !important;
+    max-width: 100% !important; width: 100% !important;
+    padding: 0 !important; margin: 0 !important; background: #fff !important;
+  }
+  body.printing-uoa-report .close,
+  body.printing-uoa-report #ur-print,
+  body.printing-uoa-report .ur-narrative-actions { display: none !important; }
+  /* Show the narrative as plain text on paper, not an editable box. */
+  body.printing-uoa-report .ur-narrative {
+    border: 0 !important; padding: 0 !important; resize: none !important;
+    height: auto !important; overflow: visible !important;
+  }
+  body.printing-uoa-report .ur-cs,
+  body.printing-uoa-report .ur-scholar { break-inside: avoid; page-break-inside: avoid; }
+  body.printing-uoa-report .ur-section { break-inside: auto; }
 
   /* Hide chrome that's not useful on paper. Includes controls that moved
      out of the toolbar in 0.2.37 (the per-scope ↻ Refresh button sits in
