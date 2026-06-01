@@ -11,7 +11,7 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.38</span>
+    <span class="tb-sub" id="tb-version">v0.2.39</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -65,23 +65,28 @@
       </div>
     </div>
 
-    <!-- Export: print / PDF / JSON. -->
+    <!-- Export: scope-aware print / PDF / shareable data / JSON. -->
     <div class="tb-menu" data-menu="export">
       <button class="tb-menu-btn" id="tb-export-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Export</button>
       <div class="tb-menu-pop" role="menu" aria-label="Export" hidden>
+        <div class="tb-menu-scope" id="tb-export-scope">Current view</div>
         <button class="tb-menu-item" id="tb-print" role="menuitem">
           <span class="tb-mi-label">Print…</span>
-          <span class="tb-mi-hint">Open the print dialog</span>
+          <span class="tb-mi-hint">Paginated — cards are never split across pages</span>
         </button>
         <button class="tb-menu-item" id="tb-pdf" role="menuitem">
           <span class="tb-mi-label">Save as PDF…</span>
           <span class="tb-mi-hint">Print dialog → choose “Save as PDF”</span>
         </button>
         <div class="tb-menu-sep" role="separator"></div>
-        <a href="/api/export.json" class="tb-menu-item" id="tb-json" role="menuitem" download>
-          <span class="tb-mi-label">Download JSON</span>
-          <span class="tb-mi-hint">Full unit tree + every cached Scholar payload</span>
-        </a>
+        <button class="tb-menu-item" id="tb-export-data" role="menuitem">
+          <span class="tb-mi-label" id="tb-export-data-label">Export data…</span>
+          <span class="tb-mi-hint">Shareable Markdown — re-imports via File → Load unit file</span>
+        </button>
+        <button class="tb-menu-item" id="tb-export-json" role="menuitem">
+          <span class="tb-mi-label">Download JSON snapshot</span>
+          <span class="tb-mi-hint">Units + cached Scholar metrics for this view</span>
+        </button>
       </div>
     </div>
   </div>

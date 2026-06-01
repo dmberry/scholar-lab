@@ -907,8 +907,14 @@ h2 {
   body.printing-analytics .quad,
   body.printing-analytics .heatmap { break-inside: avoid; page-break-inside: avoid; }
 
-  /* Hide chrome that's not useful on paper */
-  .toolbar, .modal, .sort-bar, .hint { display: none !important; }
+  /* Hide chrome that's not useful on paper. Includes controls that moved
+     out of the toolbar in 0.2.37 (the per-scope ↻ Refresh button sits in
+     the unit picker, and the By Faculty / By UoA segmented tabs) — both
+     would otherwise print as stray UI. */
+  .toolbar, .modal, .sort-bar, .hint,
+  .scope-refresh, .view-tabs { display: none !important; }
+  /* Make sure bar colours actually render on paper. */
+  * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
 
   /* Page header — tight */
   header { padding: 0 0 4pt; border-bottom: .5pt solid #888; margin-bottom: 6pt; }

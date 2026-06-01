@@ -85,7 +85,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.38"
+__version__ = "0.2.39"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -989,35 +989,109 @@ def _enrich_staff_list(staff):
     return out
 
 
+def _enrich_units_in_place(container: dict, scope_slugs: set | None) -> int:
+    """Walk a faculty/school container, keep only units whose slug is in
+    scope (or all if scope_slugs is None), and inline cached Scholar data
+    into each kept unit's staff rows. Returns the number of units kept.
+    Mutates `container` (faculties[].schools[].units[] and any
+    faculties[].units[])."""
+    kept = 0
+
+    def _prune_units(units):
+        nonlocal kept
+        out = []
+        for u in units:
+            if scope_slugs is not None and _slugify(u.get("slug", "")) not in scope_slugs:
+                continue
+            u = {**u, "staff": _enrich_staff_list(u.get("staff", []))}
+            out.append(u)
+            kept += 1
+        return out
+
+    for fac in container.get("faculties", []):
+        if isinstance(fac.get("units"), list):
+            fac["units"] = _prune_units(fac["units"])
+        for sch in fac.get("schools", []):
+            sch["units"] = _prune_units(sch.get("units", []))
+        # Drop now-empty schools so a scoped export isn't full of stubs.
+        fac["schools"] = [s for s in fac.get("schools", [])
+                          if s.get("units") or not isinstance(s.get("units"), list)]
+    # Drop now-empty faculties.
+    container["faculties"] = [
+        f for f in container.get("faculties", [])
+        if f.get("schools") or f.get("units")
+    ]
+    return kept
+
+
 @app.route("/api/export.json")
 def api_export():
-    """Full faculty dump: every unit, every staff row, with cached Scholar data inlined."""
+    """JSON snapshot of the current view: the faculty→school→unit tree
+    pruned to the requested units, with cached Scholar data inlined into
+    each staff row so it re-imports without a re-scrape.
+      ?slugs=a,b,c  limit to these unit slugs (omit = whole dataset)
+      ?name=        filename base."""
     from flask import Response
     staff_data = _load_staff()
+    slugs_arg = request.args.get("slugs", "").strip()
+    scope_slugs = {_slugify(s) for s in slugs_arg.split(",") if s.strip()} if slugs_arg else None
+    name_arg = request.args.get("name", "").strip()
 
-    if isinstance(staff_data.get("units"), list):
-        units_out = [{**{k: v for k, v in u.items() if k != "staff"},
-                      "staff": _enrich_staff_list(u.get("staff", []))}
-                     for u in staff_data["units"]]
-        payload = {
-            **{k: v for k, v in staff_data.items() if k != "units"},
-            "exported_at": datetime.now(timezone.utc).isoformat(),
-            "units": units_out,
-        }
-        fname_base = "scholar-dashboard"
-    else:
-        payload = {
-            **{k: v for k, v in staff_data.items() if k != "staff"},
-            "exported_at": datetime.now(timezone.utc).isoformat(),
-            "staff": _enrich_staff_list(staff_data.get("staff", [])),
-        }
-        fname_base = (staff_data.get("unit") or "unit").lower().replace(" ", "-").replace(",", "")
+    payload = {k: v for k, v in staff_data.items() if k != "staff"}
+    if isinstance(payload.get("faculties"), list):
+        _enrich_units_in_place(payload, scope_slugs)
+    elif isinstance(staff_data.get("units"), list):
+        src = staff_data["units"]
+        if scope_slugs is not None:
+            src = [u for u in src if _slugify(u.get("slug", "")) in scope_slugs]
+        payload["units"] = [{**u, "staff": _enrich_staff_list(u.get("staff", []))} for u in src]
+    payload["exported_at"] = datetime.now(timezone.utc).isoformat()
 
+    fname_base = re.sub(r"[^A-Za-z0-9._-]+", "-", name_arg).strip("-") or "scholar-dashboard"
     body = json.dumps(payload, indent=2, ensure_ascii=False)
     return Response(
         body,
         mimetype="application/json",
         headers={"Content-Disposition": f'attachment; filename="{fname_base}-{datetime.now().strftime("%Y%m%d")}.json"'},
+    )
+
+
+@app.route("/api/export-units.zip")
+def api_export_units_zip():
+    """Shareable export: a .zip of the per-unit Markdown files for the
+    given scope. These are the exact files 'Load unit file' ingests, so
+    the bundle round-trips into another copy of the app.
+
+      ?slugs=a,b,c   → zip data/a.md, data/b.md, data/c.md
+      (no slugs)     → zip every unit file in data/
+
+    A single-slug request still returns a .zip for consistency; the
+    frontend offers a direct .md download for the single-unit case."""
+    import io, zipfile
+    slugs_arg = request.args.get("slugs", "").strip()
+    if slugs_arg:
+        slugs = [_slugify(s) for s in slugs_arg.split(",") if s.strip()]
+    else:
+        slugs = [p.stem for p in DATA_DIR.glob("*.md")]
+    name = request.args.get("name", "scholar-dashboard").strip() or "scholar-dashboard"
+    name = re.sub(r"[^A-Za-z0-9._-]+", "-", name).strip("-") or "scholar-dashboard"
+
+    buf = io.BytesIO()
+    written = 0
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        for slug in slugs:
+            path = DATA_DIR / f"{slug}.md"
+            if path.exists():
+                zf.writestr(path.name, path.read_text(encoding="utf-8"))
+                written += 1
+    if not written:
+        return jsonify({"error": "no unit files matched the requested scope"}), 404
+    buf.seek(0)
+    fname = f"{name}-{datetime.now().strftime('%Y%m%d')}.zip"
+    return Response(
+        buf.getvalue(),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{fname}"'},
     )
 
 

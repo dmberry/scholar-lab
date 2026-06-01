@@ -1690,6 +1690,18 @@ document.addEventListener("click", (e) => {
     closeToolbarMenus();
     setTimeout(() => window.print(), 60);
   }
+  // Shareable Markdown export of the current scope (zip, or single .md).
+  if (e.target.closest("#tb-export-data")) { closeToolbarMenus(); exportScopeData(); }
+  // JSON snapshot, scoped to the current view's units.
+  if (e.target.closest("#tb-export-json")) {
+    closeToolbarMenus();
+    const scope = currentScope();
+    const url = `/api/export.json?slugs=${encodeURIComponent(scope.slugs.join(","))}`
+              + `&name=${encodeURIComponent(scope.name)}`;
+    const a = document.createElement("a");
+    a.href = url; a.download = "";
+    document.body.appendChild(a); a.click(); a.remove();
+  }
   if (e.target.closest("#tb-quit")) {
     if (SERVER_DOWN) showRestartInstructions();
     else quitServer();
@@ -1714,10 +1726,26 @@ function openToolbarMenu(menu) {
   menu.querySelector(".tb-menu-btn")?.setAttribute("aria-expanded", "true");
   menu.querySelector(".tb-menu-pop")?.removeAttribute("hidden");
 }
+// Update the Export menu's labels to reflect the current view scope, so
+// it reads "Export Unit" / "Export School" / "Export All units" etc.
+function refreshExportMenu() {
+  const scope = currentScope();
+  const trigger = document.getElementById("tb-export-menu");
+  const scopeEl = document.getElementById("tb-export-scope");
+  const dataLbl = document.getElementById("tb-export-data-label");
+  if (trigger) trigger.textContent = `Export ${scope.noun}`;
+  if (scopeEl) scopeEl.textContent = `${scope.label} · ${scope.slugs.length} unit${scope.slugs.length === 1 ? "" : "s"}`;
+  if (dataLbl) {
+    dataLbl.textContent = scope.slugs.length === 1
+      ? "Export unit (.md)…"
+      : `Export ${scope.noun} (.zip)…`;
+  }
+}
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".tb-menu-btn");
   if (btn) {
     e.preventDefault();
+    if (btn.id === "tb-export-menu") refreshExportMenu();
     openToolbarMenu(btn.closest(".tb-menu"));
     return;
   }
@@ -1822,6 +1850,67 @@ function saveCurrentUnit() {
     return;
   }
   downloadUnitFile(CURRENT_UNIT.slug);
+}
+
+// Describe what the current view covers, for scope-aware Export. Returns
+// { kind, label, noun, slugs, name } where kind ∈ unit|school|faculty|uoa|all.
+function currentScope() {
+  const activeUnits = (pred) =>
+    UNITS.filter(u => !u.disabled && u.slug !== "all-staff" && pred(u));
+
+  if (VIEW_MODE === "uoa") {
+    const code = document.getElementById("uoa-select")?.value;
+    if (code) {
+      const slugs = activeUnits(u =>
+        (u.staff || []).some(p => String(effectiveUoa(p, u)) === String(code))
+      ).map(u => u.slug);
+      const nm = UOA_BY_CODE[code]?.name ? `UoA ${code} · ${UOA_BY_CODE[code].name}` : `UoA ${code}`;
+      return { kind: "uoa", label: nm, noun: "UoA", slugs, name: `uoa-${code}` };
+    }
+  } else {
+    const facSlug  = document.getElementById("faculty-select")?.value;
+    const schSlug  = document.getElementById("school-select")?.value;
+    const unitSlug = document.getElementById("unit-select")?.value;
+    const aggregate = ["", "__all__", "__fac-all__", "all-staff"];
+    // A single real unit is selected.
+    if (unitSlug && !aggregate.includes(unitSlug)) {
+      const u = UNITS.find(x => x.slug === unitSlug);
+      if (u) return { kind: "unit", label: u.name, noun: "Unit", slugs: [u.slug], name: u.slug };
+    }
+    // A school within a faculty.
+    if (schSlug && schSlug !== "__all__" && facSlug && facSlug !== "__all__") {
+      const fac = FACULTIES.find(f => f.slug === facSlug);
+      const sch = fac?.schools?.find(s => s.slug === schSlug);
+      const slugs = activeUnits(u => u._facultySlug === facSlug && u._schoolSlug === schSlug).map(u => u.slug);
+      return { kind: "school", label: sch?.name || schSlug, noun: "School", slugs, name: schSlug };
+    }
+    // A whole faculty.
+    if (facSlug && facSlug !== "__all__") {
+      const fac = FACULTIES.find(f => f.slug === facSlug);
+      const slugs = activeUnits(u => u._facultySlug === facSlug).map(u => u.slug);
+      return { kind: "faculty", label: fac?.name || facSlug, noun: "Faculty", slugs, name: facSlug };
+    }
+  }
+  // Everything.
+  const slugs = activeUnits(() => true).map(u => u.slug);
+  return { kind: "all", label: "All units", noun: "All units", slugs, name: "all-units" };
+}
+
+// Download the current scope as a shareable bundle that round-trips via
+// "Load unit file": a single .md for one unit, or a .zip of unit files
+// for a school / faculty / all. These files re-import into another copy.
+function exportScopeData() {
+  const scope = currentScope();
+  if (!scope.slugs.length) { alert("Nothing to export in the current view."); return; }
+  if (scope.slugs.length === 1) {
+    downloadUnitFile(scope.slugs[0]);   // single unit → its .md directly
+    return;
+  }
+  const url = `/api/export-units.zip?slugs=${encodeURIComponent(scope.slugs.join(","))}`
+            + `&name=${encodeURIComponent(scope.name)}`;
+  const a = document.createElement("a");
+  a.href = url; a.download = "";
+  document.body.appendChild(a); a.click(); a.remove();
 }
 
 // Toolbar "New unit" — prompt for the unit's main info, build a Markdown unit
