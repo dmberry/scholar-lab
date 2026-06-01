@@ -168,6 +168,9 @@ rate("ppltn_odgers", "Dogsbody and Vassal (durational performance, 14 months)", 
 rate("ppltn_odgers", "The Picket Line as Pedagogic Space", 2023, 2.5)
 rate("ppltn_odgers", "Against the Student-as-Consumer: A Polemic", 2021, 2)
 
+add_person("media-cultural-studies", "Maureen",
+           "Departmental Secretary", "PUP0003", None, status="missing", uoa=0)
+
 
 # ── Social Psychology (UoA 4) ────────────────────────────────────────────────
 add_person("social-psychology", "Professor G. W. Tipping",

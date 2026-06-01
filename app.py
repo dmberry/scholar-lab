@@ -109,7 +109,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "3.0.3"
+__version__ = "3.0.4"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().
