@@ -1801,8 +1801,10 @@ async function openSettings() {
   const body = document.getElementById("settings-body");
   body.innerHTML = `<p class="spinner">Loading…</p>`;
   let about = {}, targets = { default: { multiplier: 2.5, min_per_person: 1, max_per_person: 5 } };
+  let fetchCfg = { cooldown_minutes: 10, idle_minutes: 20, cache_ttl_days: 7 };
   try { about = await (await fetch("/api/about")).json(); } catch {}
   try { targets = await (await fetch("/api/ref-targets")).json(); } catch {}
+  try { fetchCfg = await (await fetch("/api/settings")).json(); } catch {}
   const t = targets.default || { multiplier: 2.5, min_per_person: 1, max_per_person: 5 };
   const scale = localStorage.getItem("sd-spark-mode") === "per-card" ? "per-card" : "cohort";
   const sort  = localStorage.getItem("sd-sort") || "name";
@@ -1853,9 +1855,19 @@ async function openSettings() {
       <p class="set-help">Clearing the cache removes downloaded Scholar metrics (re-fetched on next view); your staff/unit data is untouched. Reset preferences clears zoom, sort, filters and scale on this device.</p>
     </section>
 
-    <section class="set-sec set-dim">
-      <h4>Scholar fetch tuning</h4>
-      <p class="set-help">Cooldown after a rate-limit (currently 10 min), idle auto-shutdown (20 min) and cache lifetime (7 days) are fixed in this build. Editable tuning is planned.</p>
+    <section class="set-sec">
+      <details class="set-details">
+        <summary>Scholar fetch tuning</summary>
+        <p class="set-warn">⚠ Advanced. Shortening the cooldown or cache lifetime makes the app hit Google Scholar harder — Scholar rate-limits aggressively and can temporarily block your IP. The defaults are deliberately conservative. Only change these if you understand the risk.</p>
+        <div class="set-grid3">
+          <label>Cooldown (min)<input type="number" id="set-cooldown" step="1" min="0" max="180" value="${fetchCfg.cooldown_minutes}"></label>
+          <label>Idle shutdown (min)<input type="number" id="set-idle" step="1" min="0" max="1440" value="${fetchCfg.idle_minutes}"></label>
+          <label>Cache lifetime (days)<input type="number" id="set-ttl" step="0.5" min="0.04" max="365" value="${fetchCfg.cache_ttl_days}"></label>
+        </div>
+        <p class="set-help">Cooldown = pause after Scholar rate-limits us (0 disables). Idle shutdown = auto-quit the local server after inactivity (0 = never). Cache lifetime = how long a profile is reused before re-fetching. Idle changes apply within ~30s; the rest apply immediately.</p>
+        <button class="tb-btn" id="set-save-fetch">Save fetch settings</button>
+        <span class="set-saved" id="set-fetch-saved"></span>
+      </details>
     </section>`;
 
   // Display defaults — apply immediately + persist.
@@ -1899,6 +1911,24 @@ async function openSettings() {
     ["sd-zoom","sd-sort","sd-spark-mode","sd-ref-all","sd-exclude-emeritus",
      "sd-exclude-visiting","sd-view-mode"].forEach(k => localStorage.removeItem(k));
     location.reload();
+  });
+
+  // Scholar fetch tuning — persisted server-side, applied live.
+  body.querySelector("#set-save-fetch")?.addEventListener("click", async () => {
+    const saved = body.querySelector("#set-fetch-saved");
+    const payload = {
+      cooldown_minutes: parseFloat(body.querySelector("#set-cooldown").value),
+      idle_minutes:     parseFloat(body.querySelector("#set-idle").value),
+      cache_ttl_days:   parseFloat(body.querySelector("#set-ttl").value),
+    };
+    try {
+      const r = await fetch("/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) throw new Error("save failed");
+      saved.textContent = "Saved ✓"; setTimeout(() => saved.textContent = "", 2500);
+    } catch (e) { saved.textContent = "Save failed"; }
   });
 }
 

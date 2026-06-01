@@ -16,6 +16,7 @@ staff.bak.*.json
 # Dashboard/ when running from the packaged .app.
 ref_flags.json
 ref_targets.json
+settings.json
 
 # Exports
 scholar-dashboard-*.json

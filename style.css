@@ -47,7 +47,7 @@ body {
    they just have a single label child, which left-aligns via text-align. */
 .tb-menu-item.tb-restart .tb-mi-label { color: var(--accent); font-weight: 600; }
 .tb-brand {
-  display: flex; align-items: baseline; gap: .5rem;
+  display: flex; align-items: center; gap: .5rem;
   min-width: 0; flex: 0 1 auto; overflow: hidden;
 }
 .tb-logo { color: var(--accent); line-height: 0; flex-shrink: 0; display: inline-flex; align-items: center; }
@@ -193,6 +193,22 @@ body {
 .set-btns { display: flex; gap: .5rem; margin: .5rem 0; }
 .set-saved { font-size: .78rem; color: #1a7f3c; margin-left: .5rem; }
 .set-dim { opacity: .7; }
+/* Collapsible advanced section (Scholar fetch tuning). */
+.set-details > summary {
+  cursor: pointer; font-size: .9rem; font-weight: 600; color: var(--ink);
+  list-style: none; user-select: none;
+}
+.set-details > summary::-webkit-details-marker { display: none; }
+.set-details > summary::before {
+  content: "▸"; display: inline-block; width: 1em;
+  color: var(--muted); transition: transform .12s ease;
+}
+.set-details[open] > summary::before { transform: rotate(90deg); }
+.set-warn {
+  background: #fff5e6; border: 1px solid #e8d5a8; color: #6b4500;
+  border-radius: 6px; padding: .5rem .65rem; font-size: .76rem;
+  line-height: 1.45; margin: .6rem 0;
+}
 
 .tb-zoom { gap: 0; border-radius: 6px; overflow: hidden; }
 .tb-zoom .tb-btn {

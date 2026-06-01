@@ -85,7 +85,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "0.2.41"
+__version__ = "0.2.42"
 CACHE_TTL_SECONDS = 60 * 60 * 24 * 7  # 7 days
 
 # Once Scholar returns a 429 / captcha, all further outbound Scholar fetches
@@ -123,9 +123,33 @@ app = Flask(__name__, static_folder=None)
 # no real requests, so an abandoned tab doesn't leave a Python process
 # squatting on port 5057 forever. Heartbeat pings from the frontend do not
 # count as activity — they only ask "are you alive?" not "do something".
-IDLE_TIMEOUT_SECONDS = 60 * 20  # 20 minutes
+IDLE_TIMEOUT_SECONDS = 60 * 20  # 20 minutes (0 = never auto-shutdown)
 _last_request_at = time.time()
 _IDLE_EXCLUDED_PATHS = {"/api/heartbeat"}
+
+# Scholar fetch tuning — the three rate/lifetime knobs above
+# (SCHOLAR_COOLDOWN_SECONDS, IDLE_TIMEOUT_SECONDS, CACHE_TTL_SECONDS) can be
+# overridden at runtime from Settings → Scholar fetch tuning. Overrides
+# persist to settings.json and are re-applied at startup. All three are
+# read at use-time (not captured), so changes take effect live.
+_SETTINGS_FILE = USER_ROOT / "settings.json"
+
+
+def _load_settings_overrides():
+    global SCHOLAR_COOLDOWN_SECONDS, IDLE_TIMEOUT_SECONDS, CACHE_TTL_SECONDS
+    try:
+        s = json.loads(_SETTINGS_FILE.read_text())
+    except (OSError, ValueError, json.JSONDecodeError):
+        return
+    if "cooldown_minutes" in s:
+        SCHOLAR_COOLDOWN_SECONDS = max(0, int(float(s["cooldown_minutes"]) * 60))
+    if "idle_minutes" in s:
+        IDLE_TIMEOUT_SECONDS = max(0, int(float(s["idle_minutes"]) * 60))
+    if "cache_ttl_days" in s:
+        CACHE_TTL_SECONDS = max(3600, int(float(s["cache_ttl_days"]) * 86400))
+
+
+_load_settings_overrides()
 
 
 @app.before_request
@@ -142,7 +166,8 @@ def _idle_watchdog():
     import signal
     while True:
         time.sleep(30)
-        if time.time() - _last_request_at >= IDLE_TIMEOUT_SECONDS:
+        # IDLE_TIMEOUT_SECONDS == 0 disables auto-shutdown entirely.
+        if IDLE_TIMEOUT_SECONDS > 0 and time.time() - _last_request_at >= IDLE_TIMEOUT_SECONDS:
             try:
                 os.kill(os.getpid(), signal.SIGTERM)
             except OSError:
@@ -876,6 +901,38 @@ def api_about():
         "unit_files": units,
         "cached_profiles": cached,
     })
+
+
+@app.route("/api/settings", methods=["GET", "POST"])
+def api_settings():
+    """Get / set the Scholar fetch-tuning knobs (cooldown, idle-shutdown,
+    cache TTL). Persisted to settings.json; applied live to the module
+    globals (all three are read at use-time)."""
+    global SCHOLAR_COOLDOWN_SECONDS, IDLE_TIMEOUT_SECONDS, CACHE_TTL_SECONDS
+    if request.method == "GET":
+        return jsonify({
+            "cooldown_minutes": round(SCHOLAR_COOLDOWN_SECONDS / 60, 2),
+            "idle_minutes":     round(IDLE_TIMEOUT_SECONDS / 60, 2),
+            "cache_ttl_days":   round(CACHE_TTL_SECONDS / 86400, 2),
+        })
+    body = request.get_json(force=True, silent=True) or {}
+    def _clamp(v, lo, hi, default):
+        try:
+            return max(lo, min(hi, float(v)))
+        except (TypeError, ValueError):
+            return default
+    cm = _clamp(body.get("cooldown_minutes"), 0, 180,  SCHOLAR_COOLDOWN_SECONDS / 60)
+    im = _clamp(body.get("idle_minutes"),     0, 1440, IDLE_TIMEOUT_SECONDS / 60)
+    td = _clamp(body.get("cache_ttl_days"),   0.04, 365, CACHE_TTL_SECONDS / 86400)
+    SCHOLAR_COOLDOWN_SECONDS = int(cm * 60)
+    IDLE_TIMEOUT_SECONDS     = int(im * 60)
+    CACHE_TTL_SECONDS        = int(td * 86400)
+    try:
+        _SETTINGS_FILE.write_text(json.dumps(
+            {"cooldown_minutes": cm, "idle_minutes": im, "cache_ttl_days": td}, indent=2))
+    except OSError:
+        pass
+    return jsonify({"ok": True, "cooldown_minutes": cm, "idle_minutes": im, "cache_ttl_days": td})
 
 
 @app.route("/api/clear-cache", methods=["POST"])
