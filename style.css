@@ -2518,8 +2518,13 @@ html[data-dark][data-theme="yellow"] { --accent: #d9b84a; }
 .clippy-hacker .clippy-bubble { background: #000; border-color: #00aa00; color: #00ff66; font-family: ui-monospace, Menlo, monospace; }
 .clippy-hacker .clippy-hint { color: #00aa44; }
 .clippy-hacker .clippy-close { background: #000; border-color: #00aa00; color: #00ff66; }
-/* Athena: owl-of-wisdom — deep aegis blue-grey with Attic gold. */
-.clippy-athena .clippy-bubble { background: #0e1726; border-color: #c9a227; color: #ece3c8; font-style: italic; }
-.clippy-athena .clippy-hint { color: #c9a227; }
-.clippy-athena .clippy-close { background: #0e1726; border-color: #c9a227; color: #c9a227; }
-.clippy-athena .clippy-char { color: #c9a227; }
+/* Emoji character glyph (Athena owl, Poppleton crest). */
+.clippy-emoji { font-size: 42px; line-height: 1; display: inline-block; filter: drop-shadow(0 2px 4px rgba(0,0,0,.25)); }
+/* Athena: a goddess — pale marble bubble with Attic gold. */
+.clippy-athena .clippy-bubble { background: #faf6ec; border-color: #c9a227; color: #3a2f15; font-style: italic; box-shadow: 0 8px 28px rgba(160,130,20,.22); }
+.clippy-athena .clippy-hint { color: #9a7d1f; }
+.clippy-athena .clippy-close { background: #faf6ec; border-color: #c9a227; color: #9a7d1f; }
+/* Poppleton: redbrick-on-cream institutional stuffiness. */
+.clippy-poppleton .clippy-bubble { background: #f6f1e9; border-color: #6b2734; color: #2e2228; }
+.clippy-poppleton .clippy-hint { color: #6b2734; }
+.clippy-poppleton .clippy-close { background: #f6f1e9; border-color: #6b2734; color: #6b2734; }

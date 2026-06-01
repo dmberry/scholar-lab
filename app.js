@@ -5496,9 +5496,10 @@ function escapeHTML(s) {
 loadStaff();
 
 // ─── Clippy (easter egg) ───────────────────────────────────────────────────
-// A wink at the bureaucracy of research metrics. Type "clippy", "hacker", or
-// "athena" anywhere outside a text field to summon a paperclip / Athena (owl of
-// wisdom) with rotating, scholar-lab-themed messages. Ported from LLMbench.
+// A wink at the bureaucracy of research metrics. Type "clippy", "hacker",
+// "athena" (owl of wisdom) or "poppleton" (Laurie Taylor's fictional faculty)
+// anywhere outside a text field to summon rotating, scholar-lab-themed
+// messages. Ported from LLMbench.
 (function () {
   const CLIPPY = [
     "It looks like you're trying to measure scholarly worth with a citation count. Would you like me to pretend that's the same thing?",
@@ -5552,8 +5553,25 @@ loadStaff();
     "Metis was my mother — cunning intelligence, swallowed by power. Watch that your metrics do not swallow the very intelligence they claim to measure.\n\n🦉 Athena",
   ];
 
+  // The University of Poppleton (Laurie Taylor, Times Higher Education) — its
+  // faculty offer their counsel on research assessment.
+  const POPPLETON = [
+    "Jamie Targett, Director of Corporate Affairs, here. I've rebranded your 'citation count' as a 'Research Visibility Journey'. The number is identical. The synergy is transformational.\n\n— Jamie Targett, Corporate Affairs",
+    "A memo from the Vice-Chancellor: Poppleton has set itself the ambitious target of becoming a Top 20 university by 2030. We are currently 94th. A detailed implementation plan will follow shortly.\n\n— The Vice-Chancellor",
+    "Maureen says she's printed out your REF spreadsheet, but the printer's done that thing again, and Ted says not to fret as nobody reads them until the night before anyway.\n\n— Maureen, Media & Cultural Studies office",
+    "Professor Gordon Lapping writes: in my day we wrote books and hoped two people read them. Now there is a 'dashboard'. I cannot operate it. My monograph on the semicolon remains, gloriously, uncited.\n\n— Prof. Gordon Lapping",
+    "Ted Odgers, Head of Media & Cultural Studies: the lads have flagged their best four outputs. Three are podcasts and one is a tweet that did 'numbers'. I've assured the panel it's all 'practice-based'.\n\n— Ted Odgers",
+    "Jamie Targett again. We're not 'cutting the department'. We're 'realising a strategic estate consolidation that empowers colleagues to explore exciting opportunities elsewhere'.\n\n— Jamie Targett, Corporate Affairs",
+    "The VC's office reminds all staff that 'excellence' is now one of our six core values, alongside 'excellence', 'impact', 'excellence', 'students at the heart', and 'excellence'.\n\n— The Vice-Chancellor's Office",
+    "Maureen says the man from the league tables rang. We've gone up two places because somebody else went down. Ted's calling it 'a step change in our upward trajectory'. There's cake in the kitchen.\n\n— Maureen, Dept office",
+    "Memo: following the Strategic Review, the Department of Media & Cultural Studies will be renamed the School of Communication, Influence and Brand Futures. The staff, and the carpet, remain unchanged.\n\n— The Vice-Chancellor",
+    "Gordon Lapping: I asked a young person what a 'GPA' was. They explained. I went home and read a poem instead. I recommend it. The poem does not have a target.\n\n— Prof. Gordon Lapping",
+    "Jamie Targett: the impact case study is ready. It's a moving tale of how our research 'touched lives', 'shifted the conversation' and 'unlocked measurable stakeholder value'. The actual research is on page 9, in small print.\n\n— Jamie Targett, Corporate Affairs",
+    "The VC writes: colleagues will be delighted that Poppleton has secured a prestigious place in the new 'Universities That Have a Logo' rankings. We are 1st. We commissioned them.\n\n— The Vice-Chancellor",
+  ];
+
   let visible = false, mode = "clippy", used = new Set(), timer = null, host = null;
-  const msgs = () => (mode === "hacker" ? HACKER : mode === "athena" ? ATHENA : CLIPPY);
+  const msgs = () => (mode === "hacker" ? HACKER : mode === "athena" ? ATHENA : mode === "poppleton" ? POPPLETON : CLIPPY);
   function pick() {
     let avail = msgs().map((_, i) => i).filter(i => !used.has(i));
     if (!avail.length) { used = new Set(); avail = msgs().map((_, i) => i); }
@@ -5563,17 +5581,13 @@ loadStaff();
   }
   function charSVG() {
     if (mode === "athena") {
-      // Athena's owl (glaux) — wise eyes, ear tufts, perched.
-      return `<svg width="46" height="56" viewBox="0 0 48 58" aria-hidden="true">
-        <path d="M9 14 L15 22 M39 14 L33 22" stroke="#c9a227" stroke-width="2.5" stroke-linecap="round"/>
-        <path d="M10 24 Q10 8, 24 8 Q38 8, 38 24 L38 40 Q38 52, 24 52 Q10 52, 10 40 Z" fill="#3c4760" stroke="#c9a227" stroke-width="1.5"/>
-        <circle cx="18" cy="24" r="7" fill="#0e1726" stroke="#c9a227" stroke-width="1.5"/>
-        <circle cx="30" cy="24" r="7" fill="#0e1726" stroke="#c9a227" stroke-width="1.5"/>
-        <circle cx="18" cy="24" r="3" fill="#c9a227"/>
-        <circle cx="30" cy="24" r="3" fill="#c9a227"/>
-        <path d="M24 28 L21 33 L27 33 Z" fill="#c9a227"/>
-        <path d="M16 38 Q24 44, 32 38" fill="none" stroke="#c9a227" stroke-width="1.2"/>
-        <path d="M24 33 L24 46" stroke="#2a3146" stroke-width="1"/></svg>`;
+      // Athena's owl, as the 🦉 emoji.
+      return `<span class="clippy-emoji" role="img" aria-label="owl">🦉</span>`;
+    }
+    if (mode === "poppleton") {
+      // The University of Poppleton — a redbrick crest standing in for the
+      // whole sorry institution.
+      return `<span class="clippy-emoji" role="img" aria-label="university">🏛️</span>`;
     }
     const hk = mode === "hacker";
     return `<svg width="44" height="58" viewBox="0 0 48 64" aria-hidden="true">
@@ -5619,7 +5633,7 @@ loadStaff();
     if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || (e.target && e.target.isContentEditable)) return;
     if (e.key.length !== 1) return;
     buf = (buf + e.key.toLowerCase()).slice(-10);
-    for (const m of ["clippy", "hacker", "athena"]) {
+    for (const m of ["clippy", "hacker", "athena", "poppleton"]) {
       if (buf.endsWith(m)) {
         buf = "";
         if (m === "clippy" && mode === "clippy" && visible) { hide(); }

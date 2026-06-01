@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 3.0.1 · proof-of-concept.
+**Version:** 3.0.2 · proof-of-concept.
 
 ## What it does
 
@@ -181,7 +181,8 @@ No Python install required on the target machine.
 
 | OS | Download | Install |
 |----|----------|---------|
-| **macOS** | `Scholar-Dashboard-<version>-macos.zip` | Unzip → drag **Scholar Dashboard.app** to Applications → double-click. |
+| **macOS (Apple Silicon)** | `Scholar-Dashboard-<version>-macos-arm64.zip` | Unzip → drag **Scholar Dashboard.app** to Applications → double-click. |
+| **macOS (Intel)** | `Scholar-Dashboard-<version>-macos-intel.zip` | Same, for Intel Macs (pre-2021). |
 | **Windows** | `Scholar-Dashboard-<version>-setup.exe` (installer) or `…-windows.zip` (portable) | Run the installer, or unzip and run `scholar-dashboard.exe`. |
 | **Linux** | `Scholar-Dashboard-<version>-linux.tar.gz` | `tar -xzf …`, then run `scholar-dashboard/scholar-dashboard` (or install the bundled `.desktop`). |
 
