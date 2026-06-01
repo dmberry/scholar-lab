@@ -283,7 +283,7 @@ Release. This is the easiest way to get the Windows and Linux artifacts if you
 only have one OS to hand:
 
 ```bash
-git tag v0.2.57 && git push origin v0.2.57   # → CI builds + publishes all three
+git tag v3.4.2 && git push origin v3.4.2   # → CI builds + publishes all three
 ```
 
 ## PDF print
@@ -293,54 +293,45 @@ print dialog; pick "Save as PDF". `@page { margin: 0 }` is used to suppress
 the browser-injected URL/date header in the PDF — if your browser still
 shows them, untick "Headers and footers" in the print dialog.
 
+## Version history
+
+Newest first. Releases are tagged `vX.Y.Z`; each pushed tag triggers a
+cross-platform build.
+
+- **3.4.1** — Modal polish: a sticky person-modal header (name + job title)
+  that condenses as you scroll; the institutional profile moved into a
+  collapsible panel; restyled, vertically-centred chevron markers.
+- **3.4.0** — Decision support completed: a per-person **GPA-without** column
+  (each scholar's marginal contribution), saved **scenario snapshots**, a
+  richer two-scenario **compare**, and inline ⓘ info boxes on every metric.
+- **3.3.0** — **Selection optimiser** (REF → Optimise selection…): computes the
+  GPA-maximising valid output selection for the current cohort, honouring each
+  person's floor and cap and an overall volume target.
+- **3.2.0** — **Impact researchers** (widen the Scholar fetch back to 2008 for
+  underpinning work); **manual publications** and **per-output locks** (frozen
+  against re-scrape); add/edit form with **BibTeX paste**; LLM data prompt no
+  longer assigns UoAs.
+- **3.1.x** — Loadable **demo data** with comic sample profiles; a "Generate
+  data with an LLM" Help modal plus an agent data guide; case-study
+  inclusion-slot fixes and a delete-all; CI builds arm64 / Windows / Linux
+  (macOS Intel built and attached locally).
+- **3.0.x** — Independent light/dark **theming**; the Clippy / Athena /
+  Poppleton easter eggs; macOS Intel build; report and dark-mode fixes.
+
+Earlier `0.2.x` work established the foundations: the Markdown data layer,
+By-Faculty / By-UoA views, per-output REF star ratings and GPA, the
+Red/Amber/Green readiness dashboard, the case-study editor with faceted
+pickers, portable bundles, and printable reports.
+
 ## Caveats
 
-- **Google Scholar rate-limits hard.** A 7-day cache plus a 10-min server
-  cooldown after each 429 keep normal use safe. Refresh small batches (one
-  unit at a time) rather than the whole institution in one go.
+- **Google Scholar rate-limits hard.** A 7-day cache plus a 10-minute server
+  cooldown after each 429 keep normal use safe. Refresh small batches (one unit
+  at a time) rather than the whole institution in one go.
 - **Practice-based output won't appear.** Scholar indexes formal publications;
   for practice-led disciplines the metrics under-represent the work.
-- **Not a research-quality bibliometric tool.** Scholar is noisy (duplicates,
-  citation inflation, mis-attribution). Treat the numbers as indicative.
-
-## Recent additions (0.2.51 – 0.2.53)
-
-- Per-output **REF star ratings** (Not REF / 1\* … 4\*, with 2–3\* and 3–4\*
-  bands stored as 2.5 / 3.5); REF chip charts flagged years only with N/A gaps.
-- Configurable **REF exercise year + window** (Settings), floored at 2029 with a
-  change warning.
-- **Mean GPA** per scholar / per UoA and a **quality profile** bar in both
-  reports; a colour-coded **Red/Amber/Green readiness dashboard** atop the UoA
-  report (outputs vs target, GPA, % rated, case-study progress).
-- **Faceted pickers** in the case-study editor: references by scholar → output,
-  contributors auto-suggested from the referenced authors then editable.
-- **Complete-UoA bundles** (`…_UoA.json`) for save/load; **version-stamped
-  exports** with import-time compatibility warnings.
-- **Report** button beside the UoA selector; **Help** menu with an in-app guide.
-- **Relocatable data folder** with backup-first copy and a Show-Folder reveal.
-
-## Earlier additions (0.2.0)
-
-- Markdown data layer (per-unit `data/*.md`, resilient parser, canonical
-  re-serialiser, /api/unit-file Load/Save endpoints).
-- REF 2029 UoA tagging at unit + person level; By-UoA tab; UoA chip on cards
-  and in the modal; unified UoA picker with No-UoA option.
-- Stack-by-role view: role bar chart + Distribution stats + Role Spread
-  mini bar + Data Coverage + mini Bell-Curve Comparison.
-- Overview mode: per-unit role-distribution cards on a single page.
-- Copy-card-as-image (PNG to clipboard, falls back to download).
-- Toolbar: New / Load / Save unit, Hide emeritus / visiting toggles.
-- Per-card and per-modal retry buttons; clickable Scholar URL on failure.
-- Sort selection persists across faculty / school / unit / view changes.
-- Server-side Scholar rate-limit cooldown (`429` cooldown lasts 10 min).
-- Print: `break-inside: avoid` on cards; `@page { margin: 0 }` to hide the
-  browser's URL/date header in saved PDFs.
-
-## Caveats
-
-- **Google Scholar is noisy.** Citation counts include duplicates, mis-attributions
-  and citation inflation, and they under-represent practice-based and non-indexed
-  work. Treat every number as indicative, not definitive.
+- **Google Scholar is noisy.** Citation counts include duplicates,
+  mis-attributions and citation inflation. Treat every number as indicative.
 - **Not a research-quality bibliometric tool.** It's a planning aid; the human
   judgement (which outputs, which case studies, which rating) is the point.
 
