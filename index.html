@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Scholar Dashboard</title>
 <link rel="stylesheet" href="style.css">
+<script>
+  // Apply the saved theme before first paint to avoid a flash of light mode.
+  try { if (localStorage.getItem("sd-theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}
+</script>
 </head>
 <body>
 <nav class="toolbar">
@@ -19,7 +23,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.58</span>
+    <span class="tb-sub" id="tb-version">v0.2.59</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">

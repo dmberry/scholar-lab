@@ -2052,9 +2052,14 @@ async function openSettings() {
   const sortOpts = [["name","Name"],["citations","Citations"],["hindex","h-index"],
                     ["h5","h5-index"],["role","Stack by role"],["overview","Overview"]]
     .map(([v,l]) => `<option value="${v}" ${v===sort?"selected":""}>${l}</option>`).join("");
+  const darkOn = (localStorage.getItem("sd-theme") === "dark");
   body.innerHTML = `
     <section class="set-sec">
-      <h4>Display defaults</h4>
+      <h4>Appearance</h4>
+      <div class="set-toggle-row">
+        <label class="set-switch" for="set-dark">Dark mode</label>
+        <input type="checkbox" id="set-dark" ${darkOn ? "checked" : ""}>
+      </div>
       <div class="set-row">
         <label>Card chart scale</label>
         <div class="set-scale">
@@ -2156,6 +2161,17 @@ async function openSettings() {
         <span class="set-saved" id="set-fetch-saved"></span>
       </details>
     </section>`;
+
+  // Appearance — dark mode (applies immediately + persists).
+  body.querySelector("#set-dark")?.addEventListener("change", (e) => {
+    if (e.target.checked) {
+      document.documentElement.dataset.theme = "dark";
+      localStorage.setItem("sd-theme", "dark");
+    } else {
+      delete document.documentElement.dataset.theme;
+      localStorage.removeItem("sd-theme");
+    }
+  });
 
   // Display defaults — apply immediately + persist.
   body.querySelectorAll("[data-set-scale]").forEach(b => b.addEventListener("click", () => {

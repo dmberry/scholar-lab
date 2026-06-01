@@ -166,7 +166,8 @@ body {
 }
 
 /* About + Settings dialogs */
-.about-card, .settings-card { max-width: 34rem; }
+.about-card { max-width: 34rem; }
+.settings-card { max-width: 40rem; }
 .help-card { max-width: 44rem; max-height: 86vh; overflow-y: auto; }
 .help-h { margin: 0 0 .3rem; font-size: 1.3rem; }
 .help-lead { color: var(--ink); font-size: .92rem; line-height: 1.55; margin: 0 0 1rem; }
@@ -202,9 +203,13 @@ body {
 .about-dl dd { margin: 0; overflow-wrap: anywhere; }
 .about-dl code { font-size: .85em; background: var(--accent-soft); padding: .05em .35em; border-radius: 3px; }
 
-.set-sec { padding: .9rem 0; border-top: 1px solid var(--border); }
-.set-sec:first-child { border-top: 0; }
-.set-sec h4 { margin: 0 0 .5rem; font-size: .9rem; }
+/* Each settings group is its own card so the panel reads as logical sections
+   rather than one long scroll. */
+.set-sec { padding: .85rem 1rem; border: 1px solid var(--border); border-radius: 10px;
+  margin-bottom: .8rem; background: var(--card); }
+.set-sec h4 { margin: 0 0 .5rem; font-size: .92rem; }
+.set-toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin: .3rem 0; }
+.set-switch { font-size: .9rem; }
 .set-sub { font-weight: 400; color: var(--muted); font-size: .78rem; }
 .set-help { color: var(--muted); font-size: .76rem; line-height: 1.45; margin: .4rem 0; }
 .set-row { display: flex; align-items: center; gap: .8rem; margin: .4rem 0; }
@@ -267,8 +272,9 @@ body {
 .profile-save { margin-top: .4rem; }
 .profile-saved { font-size: .72rem; font-weight: 500; color: #1a7f3c; text-transform: none; letter-spacing: 0; margin-left: .4rem; }
 .cs-status {
-  align-self: flex-start; font-size: .62rem; font-weight: 700; letter-spacing: .03em;
-  text-transform: uppercase; padding: .2em .55em; border-radius: 999px;
+  display: inline-flex; align-items: center; line-height: 1;
+  font-size: .62rem; font-weight: 700; letter-spacing: .03em;
+  text-transform: uppercase; padding: .25em .55em; border-radius: 999px;
 }
 .cs-st-none  { background: #eee;     color: #6b6b6b; }
 .cs-st-draft { background: #fff0d6;  color: #8a5a00; }
@@ -276,8 +282,11 @@ body {
 .cs-st-done  { background: #d8f0df;  color: #1a7f3c; }
 /* Inclusion-slot badge on case-study cards. */
 .cs-badges { display: inline-flex; gap: .35rem; align-items: center; }
-.cs-slot-badge { font-size: .62rem; font-weight: 700; letter-spacing: .03em; padding: .2em .55em;
+.cs-slot-badge { display: inline-flex; align-items: center; line-height: 1;
+  font-size: .62rem; font-weight: 700; letter-spacing: .03em; padding: .25em .55em;
   border-radius: 999px; background: var(--accent); color: #fff; }
+/* Manager rows: keep both badges vertically centred with the title. */
+.csm-row > * { align-self: center; }
 .cs-slot-badge.cs-slot-draft { background: #efeae0; color: var(--muted); }
 /* Inclusion slot in the UoA report case-study heading. */
 .ur-cs-slot { display: inline-block; font-size: .68rem; font-weight: 700; letter-spacing: .02em;
@@ -301,6 +310,9 @@ body {
 @media (max-width: 640px) { .csm-row { grid-template-columns: auto 1fr; row-gap: .25rem; } }
 /* Report top-bar action cluster (Text version + Print). */
 .rr-top-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+/* Keep header action buttons clear of the absolutely-positioned × close. */
+.tr-top, .rr-top, .ur-top { padding-right: 2.2rem; }
+.tr-top .tr-actions { margin-right: .2rem; }
 /* Text / rich-text report modal. */
 .tr-card { max-width: 46rem; max-height: 86vh; overflow-y: auto; }
 .tr-top { display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; }
@@ -362,8 +374,8 @@ body {
 .ur-section { margin: 1.3rem 0; }
 .ur-section > h3 { font-size: .95rem; text-transform: none; letter-spacing: 0; color: var(--ink); border-bottom: 2px solid var(--accent-soft); padding-bottom: .25rem; margin: 0 0 .6rem; }
 .ur-count { font-size: .72rem; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: .1em .5em; margin-left: .3rem; }
-.ur-narrative { width: 100%; font: inherit; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.5; }
-.ur-narrative-print { display: none; }   /* shown only when printing */
+.ur-narrative { width: 100%; font: inherit; font-size: .82rem; padding: .5rem; border: 1px solid var(--border); border-radius: 6px; resize: vertical; line-height: 1.45; }
+.ur-narrative-print { display: none; font-size: .82rem; }   /* shown only when printing */
 .ur-narrative-actions { margin-top: .4rem; display: flex; align-items: center; gap: .5rem; }
 .ur-scholar { margin: .5rem 0; }
 .ur-sc-name { font-weight: 600; font-size: .9rem; }
@@ -2371,3 +2383,53 @@ h2 {
 }
 .data-status.ok { color: #1e6b2c; font-weight: 600; }
 .data-status.err { color: #a31818; }
+
+/* ── Dark mode ─────────────────────────────────────────────────────────────
+   Toggled via [data-theme="dark"] on <html> (persisted in localStorage and
+   applied before paint by an inline script in index.html). Overrides the core
+   palette vars plus the common hardcoded light surfaces. */
+[data-theme="dark"] {
+  --bg: #14161a;
+  --ink: #e6e7ea;
+  --muted: #9aa1ab;
+  --accent: #6aa3ff;
+  --accent-soft: #1e2a3e;
+  --border: #2b2f37;
+  --warn: #e0913f;
+  --card: #1d2025;
+  color-scheme: dark;
+}
+[data-theme="dark"] .toolbar { background: #1d2025ee; }
+[data-theme="dark"] .modal { background: rgba(0,0,0,.6); }
+[data-theme="dark"] .modal-card,
+[data-theme="dark"] .person-card,
+[data-theme="dark"] .unit-picker,
+[data-theme="dark"] .tb-menu-pop,
+[data-theme="dark"] .cs-cardx,
+[data-theme="dark"] .tr-rich,
+[data-theme="dark"] .set-sec,
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .tb-btn,
+[data-theme="dark"] .filter-btn,
+[data-theme="dark"] .sort-btn,
+[data-theme="dark"] .scale-btn,
+[data-theme="dark"] .unit-select,
+[data-theme="dark"] .csm-uoa,
+[data-theme="dark"] .cs-ref-sel,
+[data-theme="dark"] .pub-ref-rating {
+  background: var(--card); color: var(--ink); border-color: var(--border);
+}
+[data-theme="dark"] .tb-btn.primary,
+[data-theme="dark"] .sort-btn.active,
+[data-theme="dark"] .scale-btn.active,
+[data-theme="dark"] .filter-btn.active { background: var(--accent); color: #0f1115; border-color: var(--accent); }
+[data-theme="dark"] pre,
+[data-theme="dark"] code { background: #23262c; color: #d6d8dc; }
+[data-theme="dark"] .modal-card pre { background: #23262c; }
+[data-theme="dark"] .data-table th { background: #23262c; }
+/* Keep card sparkline navy readable on dark. */
+[data-theme="dark"] .cs-empty,
+[data-theme="dark"] .data-help,
+[data-theme="dark"] .set-help { color: var(--muted); }
