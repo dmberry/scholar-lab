@@ -2056,24 +2056,14 @@ function openHelp() {
        non-indexed work — treat them as indicative, not definitive.</p>
 
     <div class="help-poppleton">
-      <p class="help-pop-head">A few words from the University of Poppleton</p>
-      <ul class="help-pop-list">
-        <li><strong>On targets.</strong> The Vice-Chancellor reminds colleagues that any figure
-            inconvenient to the institution is a methodological artefact, and any figure flattering to
-            it a triumph of strategy. Plan accordingly.</li>
-        <li><strong>On case studies.</strong> Jamie Targett (Corporate Affairs) advises that a strong
-            impact narrative should "touch lives", "shift the conversation" and "unlock measurable
-            stakeholder value". The actual research may go on page nine, in small print.</li>
-        <li><strong>On star ratings.</strong> Ted Chippings (TEF Submissions) notes that words mean
-            precisely what we choose them to mean. A 2* output is therefore "outstanding" once the
-            relevant buzz-word has been applied.</li>
-        <li><strong>On the GPA.</strong> Jennifer Doubleday (Personal Development) cautions that the
-            moment you are satisfied with your quality profile is the moment you stop growing. Breathe.
-            Imagine yourself as a tree.</li>
-        <li><strong>On rankings.</strong> Brand Management confirms we are comfortably in the global
-            top 1 per cent, once benchmarked against every institution that has never been ranked.</li>
-      </ul>
-      <p class="help-pop-foot">— <span class="help-pop-mast">THE POPPL<span class="pop-red">ETONIAN</span></span>, the official weekly newsletter. <em>Finem respice!</em></p>
+      <p class="help-pop-head">A few words from the Vice-Chancellor</p>
+      <p class="help-pop-body">I am only too pleased to contribute a few final words to this important
+         new website for (Mrs&nbsp;Dilworth. Please check title).</p>
+      <p class="help-pop-body">Here at Poppleton University (or The University of Poppleton as it was
+         better known before our recent re-branding exercise) we pride ourselves on leading the field
+         in the marketisation of higher education. We are pleased to support this new app
+         (Mrs&nbsp;Dilworth. Please check what that is) and hope you find it useful.</p>
+      <p class="help-pop-foot">— The Vice-Chancellor, as reported in <span class="help-pop-mast">THE POPPL<span class="pop-red">ETONIAN</span></span>. <em>Finem respice!</em></p>
     </div>`;
 }
 

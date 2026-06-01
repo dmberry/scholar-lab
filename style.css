@@ -183,6 +183,7 @@ body {
   text-transform: uppercase; color: #6b2734; }
 .help-pop-list { margin: 0; padding-left: 1.1rem; }
 .help-pop-list li { font-size: .84rem; line-height: 1.5; margin: .35rem 0; }
+.help-pop-body { font-size: .84rem; line-height: 1.55; margin: .35rem 0; font-style: italic; }
 .help-pop-foot { margin: .7rem 0 0; font-size: .8rem; color: #6b2734; }
 .help-pop-mast { font-family: "Arial Narrow", "Helvetica Neue", Impact, sans-serif; font-weight: 900;
   font-stretch: condensed; letter-spacing: -.3px; color: #111; }
