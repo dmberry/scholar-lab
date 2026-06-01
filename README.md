@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 0.2.60 · proof-of-concept.
+**Version:** 3.0.0 · proof-of-concept.
 
 ## What it does
 
@@ -90,9 +90,10 @@ read as indicative rather than definitive.
   export carries a version stamp and imports warn on a newer format.
 - **Configurable data folder**: relocate it from *Settings → Data & reset*
   (backup-first copy), with a **Show Folder** button to reveal it.
-- **Themes & dark mode**: a theme picker in *Settings → Appearance*
-  (Default / White / Blue / Brown / Yellow / Dark), persisted across sessions,
-  with a quick **Dark mode** toggle on the View menu.
+- **Themes & dark mode** (two independent controls): a colour-theme picker in
+  *Settings → Appearance* (Default / White / Blue / Brown / Yellow) **and** a
+  separate **Dark mode** toggle (in Settings and on the View menu) that works
+  with any theme. Both persist across sessions.
 - **Help menu**: an in-app guide to the whole workflow.
 - **Analytics modal**: cross-unit visibility, citation totals, REF readiness,
   momentum, cross-listings, citation history.
@@ -305,3 +306,16 @@ shows them, untick "Headers and footers" in the print dialog.
 - Print: `break-inside: avoid` on cards; `@page { margin: 0 }` to hide the
   browser's URL/date header in saved PDFs.
 - De-branded to an institution-neutral codebase; `sussex_id` → `staff_id`.
+
+## Caveats
+
+- **Google Scholar is noisy.** Citation counts include duplicates, mis-attributions
+  and citation inflation, and they under-represent practice-based and non-indexed
+  work. Treat every number as indicative, not definitive.
+- **Not a research-quality bibliometric tool.** It's a planning aid; the human
+  judgement (which outputs, which case studies, which rating) is the point.
+
+---
+
+<sub>It looks like you're trying to assess research. There may be a helpful paperclip
+who has opinions about that — try typing its name.</sub>

@@ -2385,10 +2385,12 @@ h2 {
 .data-status.err { color: #a31818; }
 
 /* ── Dark mode ─────────────────────────────────────────────────────────────
-   Toggled via [data-theme="dark"] on <html> (persisted in localStorage and
-   applied before paint by an inline script in index.html). Overrides the core
-   palette vars plus the common hardcoded light surfaces. */
-[data-theme="dark"] {
+   INDEPENDENT of the theme picker: dark is its own [data-dark] flag on <html>,
+   so any palette (Default/White/Blue/Brown/Yellow) can be light OR dark. The
+   surface vars use html[data-dark] (specificity 0,1,1) so they win over the
+   palette's [data-theme=…] (0,1,0); per-palette dark accents (below) keep each
+   theme's hue. Persisted + applied pre-paint by the inline script in index.html. */
+html[data-dark] {
   --bg: #14161a;
   --ink: #e6e7ea;
   --muted: #9aa1ab;
@@ -2399,74 +2401,78 @@ h2 {
   --card: #1d2025;
   color-scheme: dark;
 }
-[data-theme="dark"] .toolbar { background: #1d2025ee; }
-[data-theme="dark"] .modal { background: rgba(0,0,0,.6); }
-[data-theme="dark"] .modal-card,
-[data-theme="dark"] .person-card,
-[data-theme="dark"] .unit-picker,
-[data-theme="dark"] .tb-menu-pop,
-[data-theme="dark"] .cs-cardx,
-[data-theme="dark"] .tr-rich,
-[data-theme="dark"] .set-sec,
-[data-theme="dark"] input,
-[data-theme="dark"] select,
-[data-theme="dark"] textarea,
-[data-theme="dark"] .tb-btn,
-[data-theme="dark"] .filter-btn,
-[data-theme="dark"] .sort-btn,
-[data-theme="dark"] .scale-btn,
-[data-theme="dark"] .unit-select,
-[data-theme="dark"] .csm-uoa,
-[data-theme="dark"] .cs-ref-sel,
-[data-theme="dark"] .pub-ref-rating {
+/* Per-palette dark accents — keep the chosen theme's hue in dark mode. */
+html[data-dark][data-theme="blue"]   { --accent: #6aa3ff; }
+html[data-dark][data-theme="brown"]  { --accent: #c99a6a; }
+html[data-dark][data-theme="yellow"] { --accent: #d9b84a; }
+[data-dark] .toolbar { background: #1d2025ee; }
+[data-dark] .modal { background: rgba(0,0,0,.6); }
+[data-dark] .modal-card,
+[data-dark] .person-card,
+[data-dark] .unit-picker,
+[data-dark] .tb-menu-pop,
+[data-dark] .cs-cardx,
+[data-dark] .tr-rich,
+[data-dark] .set-sec,
+[data-dark] input,
+[data-dark] select,
+[data-dark] textarea,
+[data-dark] .tb-btn,
+[data-dark] .filter-btn,
+[data-dark] .sort-btn,
+[data-dark] .scale-btn,
+[data-dark] .unit-select,
+[data-dark] .csm-uoa,
+[data-dark] .cs-ref-sel,
+[data-dark] .pub-ref-rating {
   background: var(--card); color: var(--ink); border-color: var(--border);
 }
-[data-theme="dark"] .tb-btn.primary,
-[data-theme="dark"] .sort-btn.active,
-[data-theme="dark"] .scale-btn.active,
-[data-theme="dark"] .filter-btn.active { background: var(--accent); color: #0f1115; border-color: var(--accent); }
-[data-theme="dark"] pre,
-[data-theme="dark"] code { background: #23262c; color: #d6d8dc; }
-[data-theme="dark"] .modal-card pre { background: #23262c; }
-[data-theme="dark"] .data-table th { background: #23262c; }
+[data-dark] .tb-btn.primary,
+[data-dark] .sort-btn.active,
+[data-dark] .scale-btn.active,
+[data-dark] .filter-btn.active { background: var(--accent); color: #0f1115; border-color: var(--accent); }
+[data-dark] pre,
+[data-dark] code { background: #23262c; color: #d6d8dc; }
+[data-dark] .modal-card pre { background: #23262c; }
+[data-dark] .data-table th { background: #23262c; }
 /* Keep card sparkline navy readable on dark. */
-[data-theme="dark"] .cs-empty,
-[data-theme="dark"] .data-help,
-[data-theme="dark"] .set-help { color: var(--muted); }
+[data-dark] .cs-empty,
+[data-dark] .data-help,
+[data-dark] .set-help { color: var(--muted); }
 
 /* Dark-mode fixes for report + analytics surfaces (the light tints were
    jarring on a dark background). */
-[data-theme="dark"] .qp-bar { background: #2a2e35; }
-[data-theme="dark"] .abar { background: #2a2e35; }
-[data-theme="dark"] .ref-card { background: var(--card); border-color: var(--border); }
-[data-theme="dark"] .ref-card.ref-tier-good { background: #13241a; border-color: #1f5c38; }
-[data-theme="dark"] .ref-card.ref-tier-ok   { background: #241f12; border-color: #6b561f; }
-[data-theme="dark"] .ref-card.ref-tier-low  { background: #2a1717; border-color: #6b2f2f; }
-[data-theme="dark"] .rag-tile            { background: #1b1f25; }
-[data-theme="dark"] .rag-tile.rag-ok     { background: #13241a; }
-[data-theme="dark"] .rag-tile.rag-warn   { background: #241f12; }
-[data-theme="dark"] .rag-tile.rag-under  { background: #2a1717; }
-[data-theme="dark"] .rag-ok    { color: #5fcf86; }
-[data-theme="dark"] .rag-warn  { color: #e0b15a; }
-[data-theme="dark"] .rag-under { color: #f08a8a; }
-[data-theme="dark"] .rag-tile.rag-ok .rag-val,    [data-theme="dark"] .rag-tile.rag-ok .rag-note    { color: #5fcf86; }
-[data-theme="dark"] .rag-tile.rag-warn .rag-val,  [data-theme="dark"] .rag-tile.rag-warn .rag-note  { color: #e0b15a; }
-[data-theme="dark"] .rag-tile.rag-under .rag-val, [data-theme="dark"] .rag-tile.rag-under .rag-note { color: #f08a8a; }
-[data-theme="dark"] .rr-gpa.rag-ok strong    { color: #5fcf86; }
-[data-theme="dark"] .rr-gpa.rag-warn strong  { color: #e0b15a; }
-[data-theme="dark"] .rr-gpa.rag-under strong { color: #f08a8a; }
-[data-theme="dark"] .ur-sc-gpa.rag-ok    { background: #13241a; }
-[data-theme="dark"] .ur-sc-gpa.rag-warn  { background: #241f12; }
-[data-theme="dark"] .ur-sc-gpa.rag-under { background: #2a1717; }
+[data-dark] .qp-bar { background: #2a2e35; }
+[data-dark] .abar { background: #2a2e35; }
+[data-dark] .ref-card { background: var(--card); border-color: var(--border); }
+[data-dark] .ref-card.ref-tier-good { background: #13241a; border-color: #1f5c38; }
+[data-dark] .ref-card.ref-tier-ok   { background: #241f12; border-color: #6b561f; }
+[data-dark] .ref-card.ref-tier-low  { background: #2a1717; border-color: #6b2f2f; }
+[data-dark] .rag-tile            { background: #1b1f25; }
+[data-dark] .rag-tile.rag-ok     { background: #13241a; }
+[data-dark] .rag-tile.rag-warn   { background: #241f12; }
+[data-dark] .rag-tile.rag-under  { background: #2a1717; }
+[data-dark] .rag-ok    { color: #5fcf86; }
+[data-dark] .rag-warn  { color: #e0b15a; }
+[data-dark] .rag-under { color: #f08a8a; }
+[data-dark] .rag-tile.rag-ok .rag-val,    [data-dark] .rag-tile.rag-ok .rag-note    { color: #5fcf86; }
+[data-dark] .rag-tile.rag-warn .rag-val,  [data-dark] .rag-tile.rag-warn .rag-note  { color: #e0b15a; }
+[data-dark] .rag-tile.rag-under .rag-val, [data-dark] .rag-tile.rag-under .rag-note { color: #f08a8a; }
+[data-dark] .rr-gpa.rag-ok strong    { color: #5fcf86; }
+[data-dark] .rr-gpa.rag-warn strong  { color: #e0b15a; }
+[data-dark] .rr-gpa.rag-under strong { color: #f08a8a; }
+[data-dark] .ur-sc-gpa.rag-ok    { background: #13241a; }
+[data-dark] .ur-sc-gpa.rag-warn  { background: #241f12; }
+[data-dark] .ur-sc-gpa.rag-under { background: #2a1717; }
 /* Authoring-status chips. */
-[data-theme="dark"] .cs-st-none  { background: #2a2e35; color: #cfd3da; }
-[data-theme="dark"] .cs-st-draft { background: #2e2716; color: #e0b15a; }
-[data-theme="dark"] .cs-st-proof { background: #16243a; color: #7fb0ff; }
-[data-theme="dark"] .cs-st-done  { background: #13241a; color: #5fcf86; }
-[data-theme="dark"] .rr-readiness.ok    { background: #13241a; color: #5fcf86; }
-[data-theme="dark"] .rr-readiness.under { background: #241f12; color: #e0b15a; }
+[data-dark] .cs-st-none  { background: #2a2e35; color: #cfd3da; }
+[data-dark] .cs-st-draft { background: #2e2716; color: #e0b15a; }
+[data-dark] .cs-st-proof { background: #16243a; color: #7fb0ff; }
+[data-dark] .cs-st-done  { background: #13241a; color: #5fcf86; }
+[data-dark] .rr-readiness.ok    { background: #13241a; color: #5fcf86; }
+[data-dark] .rr-readiness.under { background: #241f12; color: #e0b15a; }
 /* Excluded-staff note / misc light pills. */
-[data-theme="dark"] .data-table th { background: #23262c; }
+[data-dark] .data-table th { background: #23262c; }
 
 /* ── Theme palettes (light variants) ──────────────────────────────────────
    Each just recolours the core vars; the default ("parchment") needs no rule.

@@ -636,29 +636,39 @@ document.addEventListener("click", (e) => {
 // Cross-unit comparative dashboards. Reads from /api/scholar/<id> for every
 // set staff member (mostly cached hits — fast). Computes per-unit aggregates.
 
-// ─── Theme ────────────────────────────────────────────────────────────────
-// Palette presets applied via [data-theme] on <html>, persisted in
-// localStorage (also applied pre-paint by an inline script in index.html).
+// ─── Theme + dark mode (two independent controls) ──────────────────────────
+// A colour palette (sd-theme, applied as [data-theme]) AND a separate dark
+// flag (sd-dark, applied as [data-dark]). Any palette can be light or dark.
+// Both persisted; also applied pre-paint by an inline script in index.html.
 const THEMES = [
   ["default", "Default (parchment)"],
   ["white",   "White"],
   ["blue",    "Blue"],
   ["brown",   "Brown"],
   ["yellow",  "Yellow"],
-  ["dark",    "Dark"],
 ];
 function currentTheme() { return localStorage.getItem("sd-theme") || "default"; }
-function applyTheme(name) {
-  if (!name || name === "default") delete document.documentElement.dataset.theme;
-  else document.documentElement.dataset.theme = name;
+function isDark() { return localStorage.getItem("sd-dark") === "1"; }
+function applyAppearance() {
+  const pal = currentTheme();
+  if (!pal || pal === "default") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = pal;
+  if (isDark()) document.documentElement.dataset.dark = "1";
+  else delete document.documentElement.dataset.dark;
+  // Keep both controls in sync if present.
+  const sel = document.getElementById("set-theme"); if (sel) sel.value = pal;
+  const cb = document.getElementById("set-dark"); if (cb) cb.checked = isDark();
+  const dk = document.getElementById("tb-dark-toggle"); if (dk) dk.setAttribute("aria-checked", isDark() ? "true" : "false");
 }
-function setTheme(name) {
-  applyTheme(name);
-  if (!name || name === "default") localStorage.removeItem("sd-theme");
-  else localStorage.setItem("sd-theme", name);
-  // Keep the Settings select + View toggle in sync if present.
-  const sel = document.getElementById("set-theme"); if (sel) sel.value = currentTheme();
-  const dk = document.getElementById("tb-dark-toggle"); if (dk) dk.setAttribute("aria-checked", currentTheme() === "dark" ? "true" : "false");
+function setTheme(pal) {
+  if (!pal || pal === "default") localStorage.removeItem("sd-theme");
+  else localStorage.setItem("sd-theme", pal);
+  applyAppearance();
+}
+function setDark(on) {
+  if (on) localStorage.setItem("sd-dark", "1");
+  else localStorage.removeItem("sd-dark");
+  applyAppearance();
 }
 
 // Analytics scope state — defaults to grouping by UoA (REF is the primary
@@ -2086,6 +2096,11 @@ async function openSettings() {
         <select id="set-theme" class="unit-select">${
           THEMES.map(([v, l]) => `<option value="${v}" ${v === curTheme ? "selected" : ""}>${l}</option>`).join("")}</select>
       </div>
+      <div class="set-toggle-row">
+        <label class="set-switch" for="set-dark">Dark mode</label>
+        <input type="checkbox" id="set-dark" ${isDark() ? "checked" : ""}>
+      </div>
+      <p class="set-help">The theme sets the colour palette; dark mode can be turned on with any theme.</p>
       <div class="set-row">
         <label>Card chart scale</label>
         <div class="set-scale">
@@ -2188,8 +2203,9 @@ async function openSettings() {
       </details>
     </section>`;
 
-  // Appearance — theme (applies immediately + persists).
+  // Appearance — theme palette + independent dark mode (apply + persist).
   body.querySelector("#set-theme")?.addEventListener("change", (e) => setTheme(e.target.value));
+  body.querySelector("#set-dark")?.addEventListener("change", (e) => setDark(e.target.checked));
 
   // Display defaults — apply immediately + persist.
   body.querySelectorAll("[data-set-scale]").forEach(b => b.addEventListener("click", () => {
@@ -2381,7 +2397,7 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-ref-report")) openRefReport();
   if (e.target.closest("#tb-ref-targets")) openSettings();
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
-  if (e.target.closest("#tb-dark-toggle")) setTheme(currentTheme() === "dark" ? "default" : "dark");
+  if (e.target.closest("#tb-dark-toggle")) setDark(!isDark());
   if (e.target.closest("#tb-help"))      openHelp();
   if (e.target.closest("#tb-help-about") || e.target.closest("#tb-about")) openAbout();
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
@@ -5611,5 +5627,5 @@ loadStaff();
   });
 })();
 
-// Sync the View-menu Dark-mode toggle's tick on load.
-document.getElementById("tb-dark-toggle")?.setAttribute("aria-checked", currentTheme() === "dark" ? "true" : "false");
+// Sync the theme/dark controls (View toggle tick, etc.) on load.
+applyAppearance();
