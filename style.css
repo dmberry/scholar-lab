@@ -295,7 +295,7 @@ body {
 .cs-cardx:hover { border-color: var(--accent); box-shadow: 0 2px 10px rgba(0,0,0,.06); }
 /* Draft / not-started case studies: visually secondary so polished ones lead. */
 .cs-cardx-draft {
-  background: transparent; border-style: dashed; border-color: var(--border);
+  background: transparent; border-style: dotted; border-width: 2px; border-color: var(--border);
   opacity: .62;
 }
 .cs-cardx-draft .cs-title { font-weight: 500; }
