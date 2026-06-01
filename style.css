@@ -1634,6 +1634,17 @@ h2 {
 }
 .modal h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
 .modal .affil { color: var(--muted); font-size: .9rem; margin-bottom: 1rem; }
+/* Person modal: keep the name pinned at the top (shrunk) while the body
+   scrolls, so it's always clear whose card you're looking at. */
+#modal .modal-card { padding-top: 0; }   /* header provides top spacing instead */
+#modal-body > h3 {
+  position: sticky; top: 0; z-index: 5;
+  margin: 0 -1.8rem .6rem; padding: .85rem 2.8rem .55rem 1.8rem;
+  background: #fff; font-size: .98rem; line-height: 1.25;
+  border-bottom: 1px solid var(--border);
+}
+[data-dark] #modal-body > h3 { background: var(--card); }
+#modal .modal-card > .close { z-index: 6; top: .5rem; }   /* stay above the sticky name */
 .modal-uoa-chip {
   display: inline-block;
   font-size: .72rem; font-weight: 600;
