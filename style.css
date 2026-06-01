@@ -1121,24 +1121,26 @@ h2 {
 .unit-picker.hidden { display: none; }
 
 /* View-mode tabs above the picker — By Faculty / By UoA */
+/* Segmented pill control — the active mode is filled so flipping between
+   By Faculty / By UoA feels like a deliberate, significant change. */
 .view-tabs {
-  display: flex; gap: 0;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: .75rem;
+  display: inline-flex; gap: .25rem;
+  background: #ece8df; border: 1px solid var(--border);
+  border-radius: 999px; padding: .2rem;
+  margin-bottom: .85rem;
 }
 .view-tab {
-  font: inherit; font-size: .85rem;
+  font: inherit; font-size: .82rem; font-weight: 600;
   background: transparent; color: var(--muted);
-  border: 0; border-bottom: 2px solid transparent;
-  padding: .5rem 1rem;
+  border: 0; border-radius: 999px;
+  padding: .4rem 1.1rem;
   cursor: pointer;
-  margin-bottom: -1px;
+  transition: background .14s ease, color .14s ease, box-shadow .14s ease;
 }
 .view-tab:hover { color: var(--ink); }
 .view-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
+  background: var(--accent); color: #fff;
+  box-shadow: 0 1px 4px rgba(29,79,145,.35);
 }
 
 /* Unit-level UoA dropdown in the Data editor summary */

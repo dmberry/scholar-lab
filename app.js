@@ -565,15 +565,24 @@ function updateExcludedPill() {
   pill.textContent = `${uniq} hidden ⓘ`;
   pill.title = `${uniq} staff hidden by current exclusions — click for details`;
 }
+// Hide-emeritus / Hide-visiting are toggle chips (matching the REF 2029
+// filter chip and the Sort/Scale button groups) rather than checkboxes,
+// so the whole sort bar reads as one consistent set of pill toggles.
 [
   { id: "exclude-emeritus", key: "sd-exclude-emeritus", read: excludeEmeritus },
   { id: "exclude-visiting", key: "sd-exclude-visiting", read: excludeVisiting },
 ].forEach(({ id, key, read }) => {
-  const cb = document.getElementById(id);
-  if (!cb) return;
-  cb.checked = read();
-  cb.addEventListener("change", () => {
-    localStorage.setItem(key, cb.checked ? "1" : "0");
+  const btn = document.getElementById(id);
+  if (!btn) return;
+  const sync = (on) => {
+    btn.classList.toggle("active", on);
+    btn.setAttribute("aria-pressed", on ? "true" : "false");
+  };
+  sync(read());
+  btn.addEventListener("click", () => {
+    const on = !(localStorage.getItem(key) === "1");
+    localStorage.setItem(key, on ? "1" : "0");
+    sync(on);
     renderPeople();
     updateExcludedPill();
   });

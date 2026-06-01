@@ -11,7 +11,7 @@
   <div class="tb-brand">
     <span class="tb-logo" aria-hidden="true">◐</span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.37</span>
+    <span class="tb-sub" id="tb-version">v0.2.38</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -139,12 +139,8 @@
       <span class="sort-divider" aria-hidden="true"></span>
       <span class="sort-label">Filter</span>
       <button class="filter-btn" id="tb-ref-all" title="REF 2029 window (2021–2028): fade citation years outside the assessment window so the REF years stand out.">REF 2029</button>
-      <label class="sort-toggle" title="Hide anyone whose title contains 'Emeritus'">
-        <input type="checkbox" id="exclude-emeritus"> Hide emeritus
-      </label>
-      <label class="sort-toggle" title="Hide anyone whose title contains 'Visiting' (Visiting Professor / Visiting Fellow / etc.)">
-        <input type="checkbox" id="exclude-visiting"> Hide visiting
-      </label>
+      <button class="filter-btn" id="exclude-emeritus" type="button" aria-pressed="false" title="Hide anyone whose title contains 'Emeritus'">Hide emeritus</button>
+      <button class="filter-btn" id="exclude-visiting" type="button" aria-pressed="false" title="Hide anyone whose title contains 'Visiting' (Visiting Professor / Visiting Fellow / etc.)">Hide visiting</button>
       <button class="excluded-pill hidden" id="excluded-pill" type="button" title="See the staff currently hidden by these toggles"></button>
       <span class="sort-divider" aria-hidden="true"></span>
       <span class="sort-label">Scale by</span>
