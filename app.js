@@ -2940,7 +2940,10 @@ async function renderCaseStudies() {
     const slot = cs.slot
       ? `<span class="cs-slot-badge" title="Slotted for inclusion">№${cs.slot}</span>`
       : `<span class="cs-slot-badge cs-slot-draft" title="A candidate not yet slotted for inclusion">Candidate</span>`;
-    return `<button class="cs-cardx" data-cs-edit="${escapeAttr(cs.id)}">
+    // Draft / not-started case studies are de-emphasised so the polished
+    // (proof / finished) ones stand out.
+    const isDraft = cs.status === "draft" || cs.status === "not_started";
+    return `<button class="cs-cardx${isDraft ? " cs-cardx-draft" : ""}" data-cs-edit="${escapeAttr(cs.id)}">
       <span class="cs-badges"><span class="cs-status ${st.cls}">${st.label}</span>${slot}</span>
       <span class="cs-title">${escapeHTML(cs.title || "Untitled case study")}</span>
       <span class="cs-meta">${(cs.references||[]).length} output(s) · ${(cs.contributors||[]).length} contributor(s)${updated ? " · updated " + escapeHTML(updated) : ""}</span>
