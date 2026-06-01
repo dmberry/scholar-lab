@@ -266,7 +266,7 @@ body {
 .set-details > summary::-webkit-details-marker { display: none; }
 .set-details > summary::before {
   content: ">"; display: inline-block; width: 1em;
-  font-size: 1.3em; font-weight: 700; line-height: 1;
+  font-size: 1.1em; font-weight: 700; line-height: 1;
   color: var(--muted); transition: transform .12s ease;
 }
 .set-details[open] > summary::before { transform: rotate(90deg); }
@@ -320,8 +320,8 @@ body {
 }
 .profile-panel > summary::-webkit-details-marker { display: none; }
 .profile-panel > summary::before {
-  content: ">"; font-size: 1.3em; font-weight: 700; line-height: 1;
-  color: var(--accent); transition: transform .12s ease; display: inline-block;
+  content: ">"; font-size: 1.1em; font-weight: 700; line-height: 1;
+  color: var(--muted); transition: transform .12s ease; display: inline-block;
 }
 .profile-panel[open] > summary::before { transform: rotate(90deg); }
 .profile-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
@@ -1803,7 +1803,7 @@ h2 {
   font-weight: 600; list-style: none; display: flex; align-items: center; gap: .4rem;
 }
 .opt-panel > summary::-webkit-details-marker { display: none; }
-.opt-panel > summary::before { content: ">"; font-size: 1.3em; font-weight: 700; line-height: 1; display: inline-block; color: var(--accent); transition: transform .12s ease; }
+.opt-panel > summary::before { content: ">"; font-size: 1.1em; font-weight: 700; line-height: 1; display: inline-block; color: var(--muted); transition: transform .12s ease; }
 .opt-panel[open] > summary::before { transform: rotate(90deg); }
 .opt-panel > summary:hover { background: var(--accent-soft); border-radius: 8px; }
 .opt-panel > *:not(summary) { margin-left: .8rem; margin-right: .8rem; }
@@ -2234,7 +2234,7 @@ h2 {
 .data-school-summary::-webkit-details-marker, .data-school-summary::marker { display: none; }
 .data-school-summary::before {
   content: ">"; display: inline-block; width: 1em;
-  color: #5a6377; font-size: 1.3em; font-weight: 700; line-height: 1;
+  color: #5a6377; font-size: 1.1em; font-weight: 700; line-height: 1;
   transition: transform .15s ease;
 }
 .data-school[open] > .data-school-summary::before { transform: rotate(90deg); }
@@ -2346,8 +2346,8 @@ h2 {
   content: ">";
   display: inline-block;
   width: 1em; flex-shrink: 0;
-  color: var(--accent);
-  font-size: 1.3em; font-weight: 700; line-height: 1;
+  color: var(--muted);
+  font-size: 1.1em; font-weight: 700; line-height: 1;
   transition: transform .15s ease;
 }
 .data-unit[open] summary::before { transform: rotate(90deg); }
