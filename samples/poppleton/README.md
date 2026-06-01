@@ -12,12 +12,19 @@ count, publication, rating and case study below is invented. (In the original
 column, every name is followed by the person's age in brackets, e.g. *Keith
 Ponting (30)* — the data model has no age field, so that gag lives only here.)
 
+## Two bundles
+
+| File | Load it to demonstrate |
+|------|------------------------|
+| `University-of-Poppleton_Faculty.json` | The whole institution: faculty → school → unit tree, By-Faculty and By-UoA views, the full staff grid. 4 units, 19 people. |
+| `University-of-Poppleton_UoA-34_UoA.json` | The single-UoA REF workflow: one unit (Media and Cultural Studies, UoA 34) with a full slate of **four impact case studies** across the draft/proof/finished states, slotted №1–4. |
+
 ## How to load it
 
-1. Open Scholar Dashboard and switch to **By UoA** view (the File menu is
-   mode-aware; faculty bundles load from either view).
-2. **File → Load…** and pick `University-of-Poppleton_Faculty.json`.
-3. The whole faculty appears, with publications, ratings and the case study
+1. Open Scholar Dashboard. Faculty bundles load from either view; the UoA
+   bundle is best appreciated in **By UoA** view.
+2. **File → Load…** and pick one of the two JSON files above.
+3. The data appears with publications, ratings, narratives and case studies
    already in place. Nothing is fetched from Google Scholar — the profiles are
    seeded from the bundle's own cache.
 
@@ -52,6 +59,27 @@ It deliberately covers a spread so the dashboard has something to show:
 - **Four UoA narratives** and **one impact case study** (REF3) in UoA 34,
   slotted as case study №1, in *draft*, with references picked from rated
   outputs and contributors drawn from their authors.
+
+## Provenance of the names (be honest with your audience)
+
+This is a tribute, not a transcript. The cast falls into two groups:
+
+- **Drawn from the column** (recurring Poppletonian figures): Jamie Targett
+  (Director of Corporate Affairs), Keith Ponting (the perpetually-30 reporter),
+  Ted Odgers, Professor Lapping, Dr Piercemüller, Maureen the secretary, Louise
+  Bimpson (HR), Georgina Edsel (Brand Management), Ted Chippings (TEF), and the
+  Philosophy pair Dr C. E. M. Cummings and Dr Gerald Robards — plus the
+  Department of Media and Cultural Studies itself.
+- **Invented in the same spirit** to fill out a plausible faculty: Professors
+  Stoat, Lasenby, Garn and Sir Vivian Bakewell (the column's Vice-Chancellor is
+  never named — "Bakewell" is ours), and Drs Quaife, Pith, Lard and Petty.
+
+Everything quantitative or biographical is fabricated: **all ages in brackets**
+(only "Keith Ponting (30)" is canonical), all surnames not listed above, all
+publications, citation counts, REF ratings, and **all four impact case
+studies**, which are original satire written in the column's register rather
+than reproductions of anything Laurie Taylor published. Treat the whole thing
+as affectionate pastiche.
 
 ## A note on freshness
 

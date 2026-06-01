@@ -5589,7 +5589,7 @@ loadStaff();
     if (mode === "poppleton") {
       // The Poppletonian masthead, recreated as a red-and-black wordmark in the
       // condensed style of the official weekly newsletter. Finem respice!
-      return `<span class="pop-mast" role="img" aria-label="The Poppletonian">THE&nbsp;POPP<span class="pop-red">LE</span>TONIAN<span class="pop-red">:</span></span>`;
+      return `<span class="pop-mast" role="img" aria-label="The Poppletonian">THE&nbsp;POPPL<span class="pop-red">ETONIAN:</span></span>`;
     }
     const hk = mode === "hacker";
     return `<svg width="44" height="58" viewBox="0 0 48 64" aria-hidden="true">
