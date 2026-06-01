@@ -1935,12 +1935,105 @@ async function openSettings() {
 document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-about"))    openAbout();
   if (e.target.closest("#tb-settings")) openSettings();
+  if (e.target.closest("#tb-ref-report")) openRefReport();
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
   if (e.target.closest("[data-settings-close]")) document.getElementById("settings-modal").classList.add("hidden");
+  if (e.target.closest("[data-ref-report-close]")) document.getElementById("ref-report-modal").classList.add("hidden");
   // Click on the dimmed backdrop closes.
   if (e.target.id === "about-modal")    e.target.classList.add("hidden");
   if (e.target.id === "settings-modal") e.target.classList.add("hidden");
+  if (e.target.id === "ref-report-modal") e.target.classList.add("hidden");
 });
+
+// ─── REF selection report ─────────────────────────────────────────────────
+// Lists, for the current scope (Unit / School / Faculty / UoA / All), each
+// scholar with ≥1 REF-flagged output and *only* their flagged outputs.
+// Becomes §3 of the UoA report later; useful standalone now.
+function deSlugTitle(pubKey) {
+  // "2025-some-title-slug" → "2025 · Some title slug" (lossy fallback used
+  // only when a flagged pub isn't in the cached recent-publications list).
+  const m = /^(\d{4}|n\.d\.)-(.*)$/.exec(pubKey || "");
+  if (!m) return pubKey || "Untitled";
+  const title = m[2].replace(/-/g, " ");
+  return `${m[1]} · ${title.charAt(0).toUpperCase()}${title.slice(1)}`;
+}
+
+async function openRefReport() {
+  const modal = document.getElementById("ref-report-modal");
+  const body  = document.getElementById("ref-report-body");
+  modal.classList.remove("hidden");
+  body.innerHTML = `<p class="spinner">Building report…</p>`;
+  await loadRefFlags();
+  const scope = currentScope();
+
+  // Unique scholars in the current view that have at least one flag.
+  const seen = new Map();
+  for (const p of (STAFF || [])) {
+    if (p.scholar_id && refFlagCount(p.scholar_id) > 0 && !seen.has(p.scholar_id)) {
+      seen.set(p.scholar_id, p);
+    }
+  }
+  const scholars = [...seen.values()].sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
+  if (!scholars.length) {
+    body.innerHTML = `
+      <h3>REF selection — ${escapeHTML(scope.label)}</h3>
+      <p class="affil">No publications have been flagged for REF in this view yet.
+      Open a person's card and tick the <strong>REF</strong> box on their
+      2021–2028 outputs.</p>`;
+    return;
+  }
+
+  // Fetch cached payloads in one batch to get publication details.
+  let batch = {};
+  try {
+    const ids = scholars.map(p => p.scholar_id);
+    batch = await (await fetch("/api/scholar-batch?ids=" + encodeURIComponent(ids.join(",")))).json();
+  } catch { /* fall back to slug-derived titles */ }
+
+  let totalOutputs = 0;
+  const sections = scholars.map(p => {
+    const flags = refFlagsFor(p.scholar_id);
+    const flaggedKeys = Object.keys(flags);
+    const pubs = (batch[p.scholar_id]?.recent_publications) || [];
+    const byKey = new Map(pubs.map(pub => [pub.pub_key, pub]));
+    const rows = flaggedKeys.map(key => {
+      const pub = byKey.get(key);
+      if (pub) {
+        return `<li><span class="rr-pt">${escapeHTML(pub.title || "Untitled")}</span>
+          <span class="rr-pm">${escapeHTML(String(pub.year || "n.d."))}${pub.venue ? " · " + escapeHTML(pub.venue) : ""} · cited by ${fmt(pub.num_citations)}</span></li>`;
+      }
+      return `<li><span class="rr-pt">${escapeHTML(deSlugTitle(key))}</span>
+        <span class="rr-pm">flagged — not in the cached recent list (refresh this profile to confirm)</span></li>`;
+    }).join("");
+    totalOutputs += flaggedKeys.length;
+    const uoa = p._effective_uoa ?? effectiveUoa(p, CURRENT_UNIT);
+    return `<div class="rr-scholar">
+      <div class="rr-head">
+        <span class="rr-name">${escapeHTML(p.name)}</span>
+        <span class="rr-meta">${escapeHTML(p.title || "")}${uoa ? " · UoA " + uoa : ""} · ${flaggedKeys.length} output${flaggedKeys.length === 1 ? "" : "s"}</span>
+      </div>
+      <ol class="rr-pubs">${rows}</ol>
+    </div>`;
+  }).join("");
+
+  body.innerHTML = `
+    <div class="rr-top">
+      <div>
+        <h3>REF selection — ${escapeHTML(scope.label)}</h3>
+        <p class="rr-sub">${scholars.length} scholar${scholars.length === 1 ? "" : "s"} · ${totalOutputs} flagged output${totalOutputs === 1 ? "" : "s"}</p>
+      </div>
+      <button class="tb-btn primary" id="rr-print">Print / PDF</button>
+    </div>
+    ${sections}`;
+
+  body.querySelector("#rr-print")?.addEventListener("click", () => {
+    document.body.classList.add("printing-ref-report");
+    const done = () => { document.body.classList.remove("printing-ref-report"); window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    setTimeout(() => window.print(), 60);
+  });
+}
 
 // ─── Server liveness ────────────────────────────────────────────────────
 // The backend kills itself after 20 minutes of no real requests, so we

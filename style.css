@@ -210,6 +210,21 @@ body {
   line-height: 1.45; margin: .6rem 0;
 }
 
+/* REF selection report */
+.ref-report-card { max-width: 44rem; }
+.rr-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .4rem; }
+.rr-top h3 { margin: 0; }
+.rr-sub { margin: .15rem 0 0; color: var(--muted); font-size: .82rem; }
+.rr-scholar { padding: .7rem 0; border-top: 1px solid var(--border); }
+.rr-scholar:first-of-type { border-top: 0; }
+.rr-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem; }
+.rr-name { font-weight: 600; }
+.rr-meta { font-size: .78rem; color: var(--muted); }
+.rr-pubs { margin: .35rem 0 0; padding-left: 1.3rem; }
+.rr-pubs li { margin: .25rem 0; }
+.rr-pt { display: block; font-size: .9rem; }
+.rr-pm { display: block; font-size: .76rem; color: var(--muted); }
+
 .tb-zoom { gap: 0; border-radius: 6px; overflow: hidden; }
 .tb-zoom .tb-btn {
   border-radius: 0; padding: .3rem .55rem; min-width: 30px; justify-content: center;
@@ -959,6 +974,20 @@ h2 {
   body.printing-analytics .analytics-section { break-inside: avoid; page-break-inside: avoid; }
   body.printing-analytics .quad,
   body.printing-analytics .heatmap { break-inside: avoid; page-break-inside: avoid; }
+
+  /* ── REF-selection-report print mode ── mirrors the analytics path. */
+  body.printing-ref-report > *:not(#ref-report-modal) { display: none !important; }
+  body.printing-ref-report #ref-report-modal {
+    position: static !important; background: none !important; display: block !important;
+  }
+  body.printing-ref-report .ref-report-card {
+    box-shadow: none !important; border: 0 !important;
+    max-width: 100% !important; width: 100% !important;
+    padding: 0 !important; margin: 0 !important; background: #fff !important;
+  }
+  body.printing-ref-report .close,
+  body.printing-ref-report #rr-print { display: none !important; }
+  body.printing-ref-report .rr-scholar { break-inside: avoid; page-break-inside: avoid; }
 
   /* Hide chrome that's not useful on paper. Includes controls that moved
      out of the toolbar in 0.2.37 (the per-scope ↻ Refresh button sits in

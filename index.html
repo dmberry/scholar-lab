@@ -19,7 +19,7 @@
       </svg>
     </span>
     <span class="tb-name">Scholar Dashboard</span>
-    <span class="tb-sub" id="tb-version">v0.2.42</span>
+    <span class="tb-sub" id="tb-version">v0.2.43</span>
   </div>
   <!-- Menu bar — native-app style: File · View · Data · Export. -->
   <div class="tb-menubar" role="menubar">
@@ -90,6 +90,11 @@
       <button class="tb-menu-btn" id="tb-export-menu" role="menuitem" aria-haspopup="true" aria-expanded="false">Export</button>
       <div class="tb-menu-pop" role="menu" aria-label="Export" hidden>
         <div class="tb-menu-scope" id="tb-export-scope">Current view</div>
+        <button class="tb-menu-item" id="tb-ref-report" role="menuitem">
+          <span class="tb-mi-label">REF selection report…</span>
+          <span class="tb-mi-hint">Flagged outputs only, grouped by scholar</span>
+        </button>
+        <div class="tb-menu-sep" role="separator"></div>
         <button class="tb-menu-item" id="tb-print" role="menuitem">
           <span class="tb-mi-label">Print…</span>
           <span class="tb-mi-hint">Paginated — cards are never split across pages</span>
@@ -237,6 +242,14 @@
       <button class="tb-btn primary" id="data-save">Save changes</button>
     </div>
     <p class="data-status" id="data-status"></p>
+  </div>
+</div>
+
+<!-- REF selection report — flagged outputs per scholar for the current scope -->
+<div id="ref-report-modal" class="modal hidden" aria-hidden="true">
+  <div class="modal-card ref-report-card">
+    <button class="close" aria-label="Close" data-ref-report-close>×</button>
+    <div id="ref-report-body"></div>
   </div>
 </div>
 
