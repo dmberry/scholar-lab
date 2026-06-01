@@ -176,6 +176,15 @@ body {
 .help-card code { background: #efeae0; padding: .05em .35em; border-radius: 4px; font-size: .85em; }
 .help-foot { margin-top: 1.2rem; padding-top: .7rem; border-top: 1px solid var(--border);
   color: var(--muted); font-size: .8rem; font-style: italic; }
+/* "Generate data with an LLM" prompt modal. */
+.aip-steps { margin: .2rem 0 1rem; padding-left: 1.2rem; font-size: .86rem; line-height: 1.55; color: var(--ink); }
+.aip-steps li { margin: .25rem 0; }
+.aip-bar { display: flex; align-items: center; gap: .8rem; margin-bottom: .5rem; }
+.aip-copied { color: #1a7f37; font-size: .82rem; font-weight: 600; }
+.aip-note { margin-left: auto; font-size: .76rem; color: var(--muted); }
+.aip-text { width: 100%; height: 18rem; resize: vertical; font: 12px/1.5 ui-monospace, Menlo, monospace;
+  padding: .6rem .7rem; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--card); color: var(--ink); white-space: pre; }
 /* "Try the demo data" callout in the help box. */
 .help-demo { margin: 1rem 0 1.2rem; padding: .9rem 1rem; border: 1px solid var(--accent);
   border-radius: 8px; background: color-mix(in srgb, var(--accent) 7%, transparent); }

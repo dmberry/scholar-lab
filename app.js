@@ -1966,6 +1966,62 @@ document.addEventListener("keydown", (e) => {
 });
 
 // ─── About + Settings dialogs ─────────────────────────────────────────────
+// The copy-and-paste prompt that gets an LLM to build a unit roster in the
+// format the app loads. Kept in sync with docs/AGENT-DATA-GUIDE.md.
+const AI_DATA_PROMPT = `You are building roster data for "Scholar Dashboard", which loads each
+university unit (department) as a Markdown file. I will give you a list of
+staff (or a department web page); produce one Markdown file per unit in the
+EXACT format below.
+
+FORMAT — header lines, then one bullet per person:
+
+University: <institution>
+Faculty: <faculty name>          # same spelling groups units together
+Faculty-URL: <optional homepage>
+School: <optional mid-level grouping; omit if none>
+Unit: <department name>          # REQUIRED
+Slug: <lower-case-hyphenated-id> # unique per unit
+UoA: <default REF Unit of Assessment, a number 1-34; omit if unsure>
+Active: yes
+
+- Name | Title | Staff ID | Google Scholar URL | status | uoa:NN
+
+STAFF LINE RULES:
+- Fields are pipe-separated, in that fixed order. Trailing fields are optional.
+- Name: full name (required).
+- Title: real academic rank (Professor of X, Senior Lecturer, Reader, Lecturer,
+  Research Fellow, etc.).
+- Staff ID: any internal id, or blank.
+- Google Scholar URL: the person's REAL profile URL
+  (https://scholar.google.com/citations?user=...) or blank if none/uncertain.
+- status: "set" if a Scholar URL is present; "missing" if they genuinely have no
+  profile; "unchecked" if not looked up.
+- uoa:NN: optional per-person override (1-34). uoa:0 = explicitly no UoA
+  (e.g. administrators). Omit to inherit the unit's UoA.
+- Lines starting with # are comments.
+
+HARD RULES:
+1. NEVER invent Google Scholar IDs, citation counts, h-index, or publications.
+   This app scrapes metrics itself. Your job is only the roster + correct
+   Scholar profile URLs.
+2. If you cannot confidently identify a person's real Scholar profile, leave the
+   Scholar field blank and set status "missing" or "unchecked". A wrong profile
+   is worse than none.
+3. UoA codes are 1-34 (REF 2029). Pick the unit default from its discipline;
+   override individuals only where justified.
+4. Output one fenced code block per unit, with the suggested filename
+   "<slug>.md" on the line above each block. No commentary inside the block.
+
+Here is the staff list / source:
+<PASTE YOUR LIST OR A DEPARTMENT URL HERE>`;
+
+function openAiPrompt() {
+  const m = document.getElementById("aiprompt-modal");
+  m.classList.remove("hidden");
+  const ta = document.getElementById("aip-text");
+  if (ta) ta.value = AI_DATA_PROMPT;
+}
+
 async function openAbout() {
   const m = document.getElementById("about-modal");
   m.classList.remove("hidden");
@@ -2491,9 +2547,19 @@ document.addEventListener("click", (e) => {
   if (e.target.closest("#tb-ref-window")) applyGlobalRefMode(localStorage.getItem("sd-ref-all") !== "1");
   if (e.target.closest("#tb-dark-toggle")) setDark(!isDark());
   if (e.target.closest("#tb-help"))      openHelp();
+  if (e.target.closest("#tb-ai-prompt")) openAiPrompt();
   const sampleBtn = e.target.closest("[data-load-sample]");
   if (sampleBtn) loadSampleBundle(sampleBtn.getAttribute("data-load-sample"), sampleBtn);
+  if (e.target.closest("#aip-copy")) {
+    const ta = document.getElementById("aip-text");
+    const done = document.getElementById("aip-copied");
+    const flash = () => { if (done) { done.hidden = false; setTimeout(() => { done.hidden = true; }, 2000); } };
+    (navigator.clipboard?.writeText(ta.value).then(flash).catch(() => { ta.select(); document.execCommand("copy"); flash(); }))
+      || (ta.select(), document.execCommand("copy"), flash());
+  }
   if (e.target.closest("#tb-help-about") || e.target.closest("#tb-about")) openAbout();
+  if (e.target.closest("[data-aiprompt-close]")) document.getElementById("aiprompt-modal").classList.add("hidden");
+  if (e.target.id === "aiprompt-modal")  e.target.classList.add("hidden");
   if (e.target.closest("[data-about-close]"))    document.getElementById("about-modal").classList.add("hidden");
   if (e.target.closest("[data-help-close]"))     document.getElementById("help-modal").classList.add("hidden");
   if (e.target.closest("[data-settings-close]")) document.getElementById("settings-modal").classList.add("hidden");

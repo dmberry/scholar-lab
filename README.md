@@ -31,7 +31,7 @@ research-grade bibliometrics engine — Google Scholar is noisy and
 under-represents practice-based and non-indexed work, so the numbers are best
 read as indicative rather than definitive.
 
-**Version:** 3.1.2 · proof-of-concept.
+**Version:** 3.1.3 · proof-of-concept.
 
 ## What it does
 
@@ -209,6 +209,15 @@ studies. The demo uses out-of-range UoA codes (99 and 98) so it can never
 collide with a real REF UoA in your working data. The bundles ship inside the
 app; see [`samples/poppleton/`](samples/poppleton/) for details and a
 regenerator script.
+
+### Build rosters with an LLM
+
+Rather than typing a department by hand, let an LLM build the unit file for you.
+**Help → Generate data with an LLM…** shows a copy-and-paste prompt: paste it
+into ChatGPT/Claude with your staff list (or a department URL), save the result
+as `<slug>.md`, load it via **File → Load unit file…**, then **Data → Refresh
+Scholar data**. The LLM only builds the roster and finds Scholar profile URLs;
+the app scrapes the metrics. Full rules: [`docs/AGENT-DATA-GUIDE.md`](docs/AGENT-DATA-GUIDE.md).
 
 ### Source-tree path (if you cloned the repo)
 
