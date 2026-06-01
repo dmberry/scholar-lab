@@ -2528,3 +2528,11 @@ html[data-dark][data-theme="yellow"] { --accent: #d9b84a; }
 .clippy-poppleton .clippy-bubble { background: #f6f1e9; border-color: #6b2734; color: #2e2228; }
 .clippy-poppleton .clippy-hint { color: #6b2734; }
 .clippy-poppleton .clippy-close { background: #f6f1e9; border-color: #6b2734; color: #6b2734; }
+/* The Poppletonian masthead — bold condensed wordmark, black with red accents. */
+.clippy-poppleton .clippy-char { align-self: flex-end; }
+.pop-mast { display: inline-block; padding: 4px 7px; background: #f6f1e9; border: 2px solid #111;
+  font-family: "Arial Narrow", "Helvetica Neue", Impact, sans-serif; font-weight: 900;
+  font-stretch: condensed; letter-spacing: -.5px; font-size: 19px; line-height: 1; color: #111;
+  text-transform: uppercase; transform: scaleY(1.25); transform-origin: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,.3); }
+.pop-mast .pop-red { color: #d81e2c; }

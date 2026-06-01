@@ -1,0 +1,561 @@
+{
+  "_meta": {
+    "app": "Scholar Dashboard",
+    "app_version": "3.0.1",
+    "format_version": 1,
+    "exported_at": "2026-06-01T09:00:00+00:00",
+    "kind": "bundle",
+    "format": "scholar-dashboard-bundle"
+  },
+  "scope": {
+    "kind": "uoa",
+    "code": "34",
+    "name": "Communication, Cultural and Media Studies, Library and Information Management"
+  },
+  "uoa": {
+    "code": "34",
+    "name": "Communication, Cultural and Media Studies, Library and Information Management"
+  },
+  "units": [
+    {
+      "slug": "media-cultural-studies",
+      "markdown": "Generator: Scholar Dashboard v3.0.1 (format 1)\nUniversity: University of Poppleton\nFaculty: Faculty of Arts and Social Sciences\nFaculty-URL: https://www.poppleton.ac.uk/arts-social-sciences\nSchool: School of Media, Culture and Society\nUnit: Department of Media and Cultural Studies\nSlug: media-cultural-studies\nUoA: 34\nActive: yes\n\n# ── Staff ──────────────────────────────────────────────────────────\n# One person per line. Fields are pipe-separated, in this fixed order:\n#\n#   - Name | Title | Staff ID | Google Scholar URL | status | uoa:NN\n#\n#   status  = set | missing | unchecked\n#   Scholar = full profile URL (https://scholar.google.com/citations?user=…)\n#             or blank if the person has no profile\n#   uoa:NN  = optional; overrides this unit's UoA for that person.\n#             uoa:0 means 'explicitly no UoA'. Omit to inherit the unit.\n#   Trailing fields are optional. Lines starting with '#' are ignored.\n\n- Professor G. F. Lapping | Head of Department · Professor of Cultural Studies | PUP0001 | https://scholar.google.com/citations?user=ppltn_lapping&hl=en | set\n- Dr Karl Piercemüller | Reader in Critical Theory | PUP0002 | https://scholar.google.com/citations?user=ppltn_piercemuller&hl=en | set\n- Ted Odgers | Senior Lecturer in Radical Media | PUP0003 | https://scholar.google.com/citations?user=ppltn_odgers&hl=en | set\n- Dr Janet Petty | Lecturer in Digital Culture (Early Career) | PUP0004 | https://scholar.google.com/citations?user=ppltn_petty&hl=en | set\n- Maureen Tilsley | Departmental Secretary | PUP0005 |  | missing\n- Professor Norman Stoat | Emeritus Professor of Film Studies | PUP0006 | https://scholar.google.com/citations?user=ppltn_stoat&hl=en | set\n"
+    }
+  ],
+  "scholar_cache": {
+    "ppltn_lapping": {
+      "scholar_id": "ppltn_lapping",
+      "name": "Professor G. F. Lapping",
+      "affiliation": "Professor of Cultural Studies, University of Poppleton",
+      "interests": [
+        "Cultural Studies",
+        "Semiotics",
+        "Television",
+        "Critical Theory"
+      ],
+      "url_picture": "",
+      "citedby": 1432,
+      "citedby5y": 611,
+      "hindex": 19,
+      "hindex5y": 12,
+      "i10index": 26,
+      "i10index5y": 14,
+      "cites_per_year": {
+        "2009": 18,
+        "2010": 31,
+        "2011": 44,
+        "2012": 52,
+        "2013": 61,
+        "2014": 73,
+        "2015": 88,
+        "2016": 104,
+        "2017": 121,
+        "2018": 118,
+        "2019": 109,
+        "2020": 96,
+        "2021": 101,
+        "2022": 115,
+        "2023": 122,
+        "2024": 118,
+        "2025": 96,
+        "2026": 41
+      },
+      "recent_publications": [
+        {
+          "title": "The Hermeneutics of the Box Set: Binge-Watching as Late-Modern Ritual",
+          "year": 2024,
+          "venue": "Journal of Cultural Studies 31 (2), 145-168",
+          "num_citations": 14,
+          "authors": "G F Lapping",
+          "pub_key": "2024-the-hermeneutics-of-the-box-set-binge-watching-as-late-modern-ritual"
+        },
+        {
+          "title": "Stuart Hall and the Senior Common Room: Encoding and Decoding the Staff Meeting",
+          "year": 2022,
+          "venue": "Theory, Culture & Society 39 (4), 77-99",
+          "num_citations": 31,
+          "authors": "G F Lapping, K Piercemuller",
+          "pub_key": "2022-stuart-hall-and-the-senior-common-room-encoding-and-decoding-the-staff-meeting"
+        },
+        {
+          "title": "Towards a Critical Theory of the Lanyard",
+          "year": 2021,
+          "venue": "New Formations 104, 22-41",
+          "num_citations": 22,
+          "authors": "G F Lapping",
+          "pub_key": "2021-towards-a-critical-theory-of-the-lanyard"
+        },
+        {
+          "title": "The Semiotics of the Vice-Chancellor's Away-Day",
+          "year": 2019,
+          "venue": "Media, Culture & Society 41 (6), 812-830",
+          "num_citations": 40,
+          "authors": "G F Lapping, T Odgers",
+          "pub_key": "2019-the-semiotics-of-the-vice-chancellor-s-away-day"
+        },
+        {
+          "title": "Reading the Mission Statement: A Cultural Studies Approach",
+          "year": 2017,
+          "venue": "European Journal of Cultural Studies 20 (3), 301-322",
+          "num_citations": 55,
+          "authors": "G F Lapping",
+          "pub_key": "2017-reading-the-mission-statement-a-cultural-studies-approach"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_piercemuller": {
+      "scholar_id": "ppltn_piercemuller",
+      "name": "Dr Karl Piercemüller",
+      "affiliation": "Reader in Critical Theory, University of Poppleton",
+      "interests": [
+        "Critical Theory",
+        "Adorno",
+        "Aesthetics",
+        "Frankfurt School"
+      ],
+      "url_picture": "",
+      "citedby": 624,
+      "citedby5y": 233,
+      "hindex": 13,
+      "hindex5y": 9,
+      "i10index": 15,
+      "i10index5y": 8,
+      "cites_per_year": {
+        "2010": 9,
+        "2011": 14,
+        "2012": 19,
+        "2013": 24,
+        "2014": 28,
+        "2015": 34,
+        "2016": 41,
+        "2017": 38,
+        "2018": 36,
+        "2019": 33,
+        "2020": 41,
+        "2021": 46,
+        "2022": 49,
+        "2023": 44,
+        "2024": 39,
+        "2025": 31,
+        "2026": 13
+      },
+      "recent_publications": [
+        {
+          "title": "Negative Dialectics in the Modular Degree",
+          "year": 2023,
+          "venue": "Radical Philosophy 215, 33-49",
+          "num_citations": 9,
+          "authors": "K Piercemuller",
+          "pub_key": "2023-negative-dialectics-in-the-modular-degree"
+        },
+        {
+          "title": "Adorno at the REF: Administered Research and the Culture Industry",
+          "year": 2022,
+          "venue": "Telos 199, 88-110",
+          "num_citations": 17,
+          "authors": "K Piercemuller",
+          "pub_key": "2022-adorno-at-the-ref-administered-research-and-the-culture-industry"
+        },
+        {
+          "title": "The Jargon of Authenticity in the University Prospectus",
+          "year": 2020,
+          "venue": "New German Critique 47 (2), 145-167",
+          "num_citations": 12,
+          "authors": "K Piercemuller",
+          "pub_key": "2020-the-jargon-of-authenticity-in-the-university-prospectus"
+        },
+        {
+          "title": "Mahler, Modernity and the Modular Timetable",
+          "year": 2018,
+          "venue": "Cultural Critique 100, 55-78",
+          "num_citations": 6,
+          "authors": "K Piercemuller",
+          "pub_key": "2018-mahler-modernity-and-the-modular-timetable"
+        },
+        {
+          "title": "Minima Pedagogica: Reflections from Damaged Teaching",
+          "year": 2016,
+          "venue": "Constellations 23 (4), 511-530",
+          "num_citations": 28,
+          "authors": "K Piercemuller",
+          "pub_key": "2016-minima-pedagogica-reflections-from-damaged-teaching"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_odgers": {
+      "scholar_id": "ppltn_odgers",
+      "name": "Ted Odgers",
+      "affiliation": "Senior Lecturer in Radical Media, University of Poppleton",
+      "interests": [
+        "Marxism",
+        "Political Economy of Media",
+        "Labour",
+        "Trade Unionism"
+      ],
+      "url_picture": "",
+      "citedby": 214,
+      "citedby5y": 84,
+      "hindex": 8,
+      "hindex5y": 5,
+      "i10index": 7,
+      "i10index5y": 4,
+      "cites_per_year": {
+        "2012": 6,
+        "2013": 11,
+        "2014": 14,
+        "2015": 19,
+        "2016": 18,
+        "2017": 16,
+        "2018": 15,
+        "2019": 17,
+        "2020": 14,
+        "2021": 16,
+        "2022": 18,
+        "2023": 19,
+        "2024": 15,
+        "2025": 11,
+        "2026": 5
+      },
+      "recent_publications": [
+        {
+          "title": "The Picket Line as Pedagogic Space",
+          "year": 2024,
+          "venue": "Capital & Class 48 (1), 12-31",
+          "num_citations": 4,
+          "authors": "T Odgers",
+          "pub_key": "2024-the-picket-line-as-pedagogic-space"
+        },
+        {
+          "title": "Brazier Operatives of the World Unite: Affective Labour on the UCU Line",
+          "year": 2023,
+          "venue": "Work, Employment and Society 37 (3), 401-420",
+          "num_citations": 7,
+          "authors": "T Odgers",
+          "pub_key": "2023-brazier-operatives-of-the-world-unite-affective-labour-on-the-ucu-line"
+        },
+        {
+          "title": "Against the Student-as-Consumer: A Polemic",
+          "year": 2021,
+          "venue": "tripleC 19 (1), 88-104",
+          "num_citations": 11,
+          "authors": "T Odgers",
+          "pub_key": "2021-against-the-student-as-consumer-a-polemic"
+        },
+        {
+          "title": "The Means of Pedagogical Production",
+          "year": 2015,
+          "venue": "Historical Materialism 23 (2), 144-170",
+          "num_citations": 19,
+          "authors": "T Odgers",
+          "pub_key": "2015-the-means-of-pedagogical-production"
+        },
+        {
+          "title": "Surplus Value in the Seminar Room",
+          "year": 2012,
+          "venue": "Rethinking Marxism 24 (3), 366-388",
+          "num_citations": 23,
+          "authors": "T Odgers",
+          "pub_key": "2012-surplus-value-in-the-seminar-room"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_petty": {
+      "scholar_id": "ppltn_petty",
+      "name": "Dr Janet Petty",
+      "affiliation": "Lecturer in Digital Culture, University of Poppleton",
+      "interests": [
+        "Digital Culture",
+        "Social Media",
+        "Memes",
+        "Platform Studies"
+      ],
+      "url_picture": "",
+      "citedby": 31,
+      "citedby5y": 31,
+      "hindex": 3,
+      "hindex5y": 3,
+      "i10index": 0,
+      "i10index5y": 0,
+      "cites_per_year": {
+        "2022": 1,
+        "2023": 4,
+        "2024": 9,
+        "2025": 12,
+        "2026": 5
+      },
+      "recent_publications": [
+        {
+          "title": "TikTok and the Crisis of the Lecture",
+          "year": 2025,
+          "venue": "Convergence 31 (2), 220-238",
+          "num_citations": 2,
+          "authors": "J Petty",
+          "pub_key": "2025-tiktok-and-the-crisis-of-the-lecture"
+        },
+        {
+          "title": "Meme Literacy among First-Year Undergraduates",
+          "year": 2024,
+          "venue": "Learning, Media and Technology 49 (1), 55-71",
+          "num_citations": 5,
+          "authors": "J Petty",
+          "pub_key": "2024-meme-literacy-among-first-year-undergraduates"
+        },
+        {
+          "title": "The Influencer and the Impact Agenda",
+          "year": 2023,
+          "venue": "First Monday 28 (6)",
+          "num_citations": 3,
+          "authors": "J Petty",
+          "pub_key": "2023-the-influencer-and-the-impact-agenda"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    },
+    "ppltn_stoat": {
+      "scholar_id": "ppltn_stoat",
+      "name": "Professor Norman Stoat",
+      "affiliation": "Emeritus Professor of Film Studies, University of Poppleton",
+      "interests": [
+        "Film Studies",
+        "Auteur Theory",
+        "Westerns",
+        "Hitchcock"
+      ],
+      "url_picture": "",
+      "citedby": 1810,
+      "citedby5y": 96,
+      "hindex": 21,
+      "hindex5y": 5,
+      "i10index": 24,
+      "i10index5y": 2,
+      "cites_per_year": {
+        "2004": 120,
+        "2005": 142,
+        "2006": 151,
+        "2007": 148,
+        "2008": 139,
+        "2009": 128,
+        "2010": 121,
+        "2011": 110,
+        "2012": 98,
+        "2013": 84,
+        "2014": 71,
+        "2015": 55,
+        "2016": 41,
+        "2017": 30,
+        "2018": 24,
+        "2019": 19,
+        "2020": 15,
+        "2021": 12,
+        "2022": 10,
+        "2023": 9,
+        "2024": 8,
+        "2025": 6,
+        "2026": 2
+      },
+      "recent_publications": [
+        {
+          "title": "The Western and the Wagon Train of Progress",
+          "year": 2014,
+          "venue": "Screen 55 (3), 312-333",
+          "num_citations": 60,
+          "authors": "N Stoat",
+          "pub_key": "2014-the-western-and-the-wagon-train-of-progress"
+        },
+        {
+          "title": "Auteur Theory and the Departmental Hierarchy",
+          "year": 2009,
+          "venue": "Cinema Journal 48 (4), 22-44",
+          "num_citations": 95,
+          "authors": "N Stoat",
+          "pub_key": "2009-auteur-theory-and-the-departmental-hierarchy"
+        },
+        {
+          "title": "Hitchcock and the Audit Culture",
+          "year": 2004,
+          "venue": "Film Quarterly 57 (3), 14-27",
+          "num_citations": 120,
+          "authors": "N Stoat",
+          "pub_key": "2004-hitchcock-and-the-audit-culture"
+        }
+      ],
+      "_fetched_at": 4102444800,
+      "_fetched_iso": "2026-06-01T09:00:00+00:00",
+      "_from_cache": true
+    }
+  },
+  "ref_flags": {
+    "ppltn_lapping": {
+      "2024-the-hermeneutics-of-the-box-set-binge-watching-as-late-modern-ritual": 3.5,
+      "2022-stuart-hall-and-the-senior-common-room-encoding-and-decoding-the-staff-meeting": 4,
+      "2021-towards-a-critical-theory-of-the-lanyard": 3
+    },
+    "ppltn_piercemuller": {
+      "2023-negative-dialectics-in-the-modular-degree": 3,
+      "2022-adorno-at-the-ref-administered-research-and-the-culture-industry": 3.5
+    },
+    "ppltn_odgers": {
+      "2024-the-picket-line-as-pedagogic-space": 2.5,
+      "2023-brazier-operatives-of-the-world-unite-affective-labour-on-the-ucu-line": 2
+    },
+    "ppltn_petty": {
+      "2025-tiktok-and-the-crisis-of-the-lecture": 2
+    }
+  },
+  "scholar_meta": {},
+  "case_studies": [
+    {
+      "id": "cs-poppleton-lanyard",
+      "uoa": "34",
+      "title": "From Lanyard to Legacy: Branded Neckwear and the Architecture of Belonging",
+      "status": "finished",
+      "slot": 1,
+      "period": "2021–2026",
+      "contributors": [
+        "Professor G. F. Lapping (58)",
+        "Jamie Targett (34)"
+      ],
+      "references": [
+        "Lapping, G. F. (2021) 'Towards a Critical Theory of the Lanyard', New Formations 104, 22-41.",
+        "Lapping, G. F. (2017) 'Reading the Mission Statement: A Cultural Studies Approach', European Journal of Cultural Studies 20(3), 301-322.",
+        "Lapping, G. F. (2019) 'The Semiotics of the Vice-Chancellor's Away-Day', Media, Culture & Society 41(6), 812-830."
+      ],
+      "corroborating_sources": [
+        "Testimonial, Director of Corporate Affairs (34), University of Poppleton.",
+        "Minutes of the Senate Lanyard Working Group, 2022 (on file).",
+        "Poppleton Evening Argus, 'University Sees the Future, and It Is Around Your Neck', 9 May 2023.",
+        "BBC Radio 4, 'Thinking Allowed', lanyard feature, 2023."
+      ],
+      "summary": "Underpinning research by Professor G. F. Lapping (58) into the lanyard as a technology of institutional belonging was adopted in its entirety by the University's Office of Corporate Affairs. A colour-coded, four-tier lanyard system was rolled out across all eleven Poppleton campuses, accompanied by a 38-page Lanyard Usage Protocol and the appointment of a dedicated Lanyard Tsar. Senior management report 'a measurable uplift in cross-portfolio stakeholder visibility'; catering staff report being 'at last able to tell the professors from the conference delegates'. The scheme reached an estimated 14,000 staff and students and was the subject of a national radio feature.",
+      "underpinning_research": "In 'Towards a Critical Theory of the Lanyard' (Lapping, 2021), Professor Lapping argued that the lanyard does not merely display identity but produces it, hailing the wearer as a governable subject of the modern institution. Drawing on Althusser and a close reading of the Poppleton conference circuit, the paper proposed a typology of neckwear from the 'aspirational' (worn in the car park) to the 'forsaken' (worn home on the bus). The work was peer-reviewed in New Formations and sits within Lapping's wider programme on the everyday textuality of managerial life.",
+      "details": "The findings were taken up with enthusiasm by Jamie Targett (34), Director of Corporate Affairs, who described the work to our reporter Keith Ponting (30) as 'a genuine paradigm shift in the wearables space'. A Senate Lanyard Working Group was convened; its 2022 report recommended the four-tier system now in force. The Vice-Chancellor, Professor Sir Vivian Bakewell (61), claimed the initiative as 'a personal priority of my leadership' at the 2023 graduation, though the research is Professor Lapping's. Maureen, of the Department of Media and Cultural Studies, was obliged to distribute the lanyards. The scheme has since been benchmarked by two neighbouring universities and a regional NHS trust, evidencing reach well beyond the higher-education sector. Professor Lapping notes that the paper was intended as a warning.",
+      "created_at": "2026-06-01T09:00:00+00:00",
+      "updated_at": "2026-06-01T09:00:00+00:00",
+      "versions": [
+        {
+          "ts": "2026-06-01T09:00:00+00:00",
+          "status": "finished",
+          "note": "Seeded as a worked example in the Poppleton demo."
+        }
+      ]
+    },
+    {
+      "id": "cs-poppleton-mission-statement",
+      "uoa": "34",
+      "title": "Reading the Mission Statement: Public Engagement with Institutional Prose",
+      "status": "proof",
+      "slot": 2,
+      "period": "2021–2026",
+      "contributors": [
+        "Dr Karl Piercemüller (51)",
+        "Professor G. F. Lapping (58)"
+      ],
+      "references": [
+        "Piercemüller, K. (2020) 'The Jargon of Authenticity in the University Prospectus', New German Critique 47(2), 145-167.",
+        "Lapping, G. F. (2017) 'Reading the Mission Statement: A Cultural Studies Approach', European Journal of Cultural Studies 20(3), 301-322.",
+        "Piercemüller, K. (2022) 'Adorno at the REF: Administered Research and the Culture Industry', Telos 199, 88-110."
+      ],
+      "corroborating_sources": [
+        "Visitor book, 'The Art of the Ask' touring exhibition, 2024.",
+        "Testimonial, Head of Brand Management (39), University of Poppleton.",
+        "BBC Radio 4 series 'Word Soup', producer's note, 2024.",
+        "Revised University of Poppleton mission statement, Senate Paper 7(b), 2024."
+      ],
+      "summary": "Research into the language of the university prospectus, led by Dr Karl Piercemüller (51), prompted a wholesale rewriting of the University of Poppleton's mission statement and seeded a touring public exhibition on institutional prose. The revised statement, which now reads in its entirety 'Poppleton: Onwards', was praised by the marketing sector for its 'radical concision' and has been adopted as a teaching case on three MBA programmes.",
+      "underpinning_research": "In 'The Jargon of Authenticity in the University Prospectus' (Piercemüller, 2020), the research demonstrated that the contemporary mission statement communicates nothing by design, its function being purely incantatory. The argument was extended in Lapping's 'Reading the Mission Statement' (2017), which traced the genre from the medieval charter to the bullet point and identified the 'aspirational gerund' ('empowering', 'delivering', 'reimagining') as its grammatical engine.",
+      "details": "Following a well-attended public lecture, the University commissioned the team to audit its own corporate language. The resulting exhibition, 'The Art of the Ask', toured four civic libraries and was visited by upwards of 3,000 members of the public, many of whom, organisers report, 'left visibly moved, or at least confused'. The findings informed a BBC Radio 4 series and the rewriting of the mission statement itself, a process the Vice-Chancellor described as 'brave'. Georgina Edsel (39), Deputy Head of Brand Management, confirmed the new statement had 'tested extremely well with stakeholders who had not read it'. Dr Piercemüller has since declined all invitations to the Strategy Away-Day.",
+      "created_at": "2026-06-01T09:00:00+00:00",
+      "updated_at": "2026-06-01T09:00:00+00:00",
+      "versions": [
+        {
+          "ts": "2026-06-01T09:00:00+00:00",
+          "status": "proof",
+          "note": "Seeded as a worked example in the Poppleton demo."
+        }
+      ]
+    },
+    {
+      "id": "cs-poppleton-away-day",
+      "uoa": "34",
+      "title": "The Away-Day as Transformational Encounter: Impact on the Regional Facilitation Sector",
+      "status": "draft",
+      "slot": 3,
+      "period": "2021–2026",
+      "contributors": [
+        "Professor G. F. Lapping (58)"
+      ],
+      "references": [
+        "Lapping, G. F. (2019) 'The Semiotics of the Vice-Chancellor's Away-Day', Media, Culture & Society 41(6), 812-830.",
+        "Lapping, G. F. (2024) 'The Hermeneutics of the Box Set: Binge-Watching as Late-Modern Ritual', Journal of Cultural Studies 31(2), 145-168."
+      ],
+      "corroborating_sources": [
+        "Companies House filing, Blue Sky Thinking (Poppleton) Ltd.",
+        "Client testimonial, Lower Poppleton Borough Council.",
+        "Invoice schedule, 2022–2025 (on file).",
+        "Programme, 'Visioning the Vision: A Facilitated Encounter', 2023."
+      ],
+      "summary": "Professor Lapping's (58) semiotic analysis of the institutional away-day gave rise to a regional facilitation industry. His identification of the 'flip-chart sublime' and the 'breakout-room contract' has been licensed to a consultancy, Blue Sky Thinking (Poppleton) Ltd, which has delivered 'transformational visioning encounters' to 47 public-sector bodies, supporting an estimated 30 jobs in the local economy.",
+      "underpinning_research": "'The Semiotics of the Vice-Chancellor's Away-Day' (Lapping, 2019) read the away-day as a ritual of corporate communion in which nothing is decided at great expense in a hotel near a motorway junction. The paper catalogued its liturgy: the icebreaker, the Post-it note, the 'parking' of difficult questions, and the buffet as eschatology.",
+      "details": "Although the research was intended as critique, it was received by the sector as a manual. Jamie Targett (34) approached Professor Lapping to 'monetise the learnings'. The resulting consultancy has run facilitated away-days for local authorities, a water company and, on one occasion, the University's own Senate, which spent a full day visioning a vision for the visioning process. The economic impact is the consultancy's turnover and employment; the cultural impact, Professor Lapping observes, 'is that there are now considerably more away-days'.",
+      "created_at": "2026-06-01T09:00:00+00:00",
+      "updated_at": "2026-06-01T09:00:00+00:00",
+      "versions": [
+        {
+          "ts": "2026-06-01T09:00:00+00:00",
+          "status": "draft",
+          "note": "Seeded as a worked example in the Poppleton demo."
+        }
+      ]
+    },
+    {
+      "id": "cs-poppleton-picket-line",
+      "uoa": "34",
+      "title": "Picket-Line Pedagogy: Reframing the Public Debate on Academic Labour",
+      "status": "draft",
+      "slot": 4,
+      "period": "2021–2026",
+      "contributors": [
+        "Ted Odgers (49)",
+        "Professor Gordon Lasenby (57)"
+      ],
+      "references": [
+        "Odgers, T. (2024) 'The Picket Line as Pedagogic Space', Capital & Class 48(1), 12-31.",
+        "Odgers, T. (2023) 'Brazier Operatives of the World Unite: Affective Labour on the UCU Line', Work, Employment and Society 37(3), 401-420.",
+        "Lasenby, G. (2023) 'Bullshit Jobs in the Modern University', The Sociological Review 71(4), 760-781."
+      ],
+      "corroborating_sources": [
+        "Testimonial, General Secretary, University and College Union (on file).",
+        "BBC Radio 4, 'Thinking Allowed', feature on academic labour, 14 March 2024.",
+        "Editorial coverage, Times Higher Education, 2023–2024."
+      ],
+      "summary": "Research by Ted Odgers (49) and Professor Gordon Lasenby (57) on the labour conditions of academic work moved from the seminar room onto the national stage during the higher-education disputes of the 2020s. Their reframing of the picket line as a site of teaching and learning, and of routinised administration as 'bullshit jobs', shaped union communications, briefed broadcast journalism, and changed how a general public discussed what academics actually do all day.",
+      "underpinning_research": "The case rests on a connected body of work begun in 2021: Odgers's ethnographies of strike action, conducted largely while operating the brazier, and Lasenby's sociology of administrative overload. Together they advanced the claim that the visible, collective labour of the picket line is continuous with, rather than opposed to, the educational mission of the university. The work was peer-reviewed in Capital & Class, Work, Employment and Society and The Sociological Review.",
+      "details": "Findings were taken up by the University and College Union in its 2023–2024 campaign materials; Lasenby's 'bullshit jobs' framing was quoted in national press editorials; and Mr Odgers contributed to a widely heard radio feature, from which he had to be collected. A series of public 'teach-outs' modelled on the research reached audiences beyond the academy. The Vice-Chancellor declined to comment. The impact is one of reach (national public debate) and significance (a changed framing of academic labour in union and media discourse).",
+      "created_at": "2026-06-01T09:00:00+00:00",
+      "updated_at": "2026-06-01T09:00:00+00:00",
+      "versions": [
+        {
+          "ts": "2026-06-01T09:00:00+00:00",
+          "status": "draft",
+          "note": "Seeded as a worked example in the Poppleton demo."
+        }
+      ]
+    }
+  ],
+  "uoa_meta": {
+    "34": {
+      "narrative": "Media and Cultural Studies at Poppleton applies the full apparatus of critical theory to the institution that employs it. The unit's signature contribution is a reflexive cultural studies of the contemporary university itself, from the semiotics of the lanyard to the political economy of the picket line. Outputs cluster around three themes: the administered culture of higher education, the labour relations of academic work, and the everyday textuality of managerial life."
+    }
+  }
+}

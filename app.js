@@ -5556,18 +5556,20 @@ loadStaff();
   // The University of Poppleton (Laurie Taylor, Times Higher Education) — its
   // faculty offer their counsel on research assessment.
   const POPPLETON = [
-    "Jamie Targett, Director of Corporate Affairs, here. I've rebranded your 'citation count' as a 'Research Visibility Journey'. The number is identical. The synergy is transformational.\n\n— Jamie Targett, Corporate Affairs",
-    "A memo from the Vice-Chancellor: Poppleton has set itself the ambitious target of becoming a Top 20 university by 2030. We are currently 94th. A detailed implementation plan will follow shortly.\n\n— The Vice-Chancellor",
-    "Maureen says she's printed out your REF spreadsheet, but the printer's done that thing again, and Ted says not to fret as nobody reads them until the night before anyway.\n\n— Maureen, Media & Cultural Studies office",
-    "Professor Gordon Lapping writes: in my day we wrote books and hoped two people read them. Now there is a 'dashboard'. I cannot operate it. My monograph on the semicolon remains, gloriously, uncited.\n\n— Prof. Gordon Lapping",
-    "Ted Odgers, Head of Media & Cultural Studies: the lads have flagged their best four outputs. Three are podcasts and one is a tweet that did 'numbers'. I've assured the panel it's all 'practice-based'.\n\n— Ted Odgers",
-    "Jamie Targett again. We're not 'cutting the department'. We're 'realising a strategic estate consolidation that empowers colleagues to explore exciting opportunities elsewhere'.\n\n— Jamie Targett, Corporate Affairs",
-    "The VC's office reminds all staff that 'excellence' is now one of our six core values, alongside 'excellence', 'impact', 'excellence', 'students at the heart', and 'excellence'.\n\n— The Vice-Chancellor's Office",
-    "Maureen says the man from the league tables rang. We've gone up two places because somebody else went down. Ted's calling it 'a step change in our upward trajectory'. There's cake in the kitchen.\n\n— Maureen, Dept office",
-    "Memo: following the Strategic Review, the Department of Media & Cultural Studies will be renamed the School of Communication, Influence and Brand Futures. The staff, and the carpet, remain unchanged.\n\n— The Vice-Chancellor",
-    "Gordon Lapping: I asked a young person what a 'GPA' was. They explained. I went home and read a poem instead. I recommend it. The poem does not have a target.\n\n— Prof. Gordon Lapping",
-    "Jamie Targett: the impact case study is ready. It's a moving tale of how our research 'touched lives', 'shifted the conversation' and 'unlocked measurable stakeholder value'. The actual research is on page 9, in small print.\n\n— Jamie Targett, Corporate Affairs",
-    "The VC writes: colleagues will be delighted that Poppleton has secured a prestigious place in the new 'Universities That Have a Logo' rankings. We are 1st. We commissioned them.\n\n— The Vice-Chancellor",
+    "Jamie Targett, Director of Corporate Affairs. I've reviewed your citation totals and I'm pleased to confirm that, when benchmarked against every institution that has never been ranked, we are comfortably within the global top 1 per cent. Going forward.\n\n— Jamie Targett, Corporate Affairs",
+    "A memo from the Vice-Chancellor. The minister's suggestion that we revert to our former status is tantamount to turning back the Enlightenment. Need I remind colleagues of the bad old days, before we had a heraldic logo, when townspeople wandered in as though they owned the place?\n\n— The Vice-Chancellor",
+    "Ted Chippings, Head of TEF Submissions, here. I share the general frustration. We had been so looking forward to a firm date on which to begin publicising our newly acquired bronze status.\n\n— Ted Chippings, TEF Submissions",
+    "Professor G.W. Tipping, Social Psychology, observes (from behind the two-way mirror) that your research appears to have no relevance whatsoever to anything in the real world. Excellent. Who can say what value it may hold in the distant future? Just think of what happened with lasers.\n\n— Prof. G.W. Tipping, Social Psychology",
+    "Jamie Targett again. I'm delighted to report that our vast new underheated open-plan offices are working splendidly. Colleagues who never spoke are now in vigorous daily communication regarding packed-lunch odour, printer rotas and the unexplained moustaches added to photographs of loved ones.\n\n— Jamie Targett, Corporate Affairs",
+    "Louise Bimpson, Corporate Director of Human Resources. Rather than dwell on the closure, do let us find the silver lining: the department's former corridor will reopen shortly as part of our exciting new 'Higher Education Experience' heritage attraction.\n\n— Louise Bimpson, Human Resources",
+    "Thought for the Week, from Jennifer Doubleday, Head of Personal Development: the moment you become satisfied with your h-index is the very moment you stop growing. Breathe. Imagine yourself as a tree. (Senior staff who object to the demotion may, this once, remain a leaf.)\n\n— Jennifer Doubleday, Personal Development",
+    "Ted Odgers, Media & Cultural Studies, writes: the panel queried my four flagged outputs. I have explained, slowly, that the podcast is practice-based, the tweet is impact, and the third is 'forthcoming' in the sense that I have not yet started it.\n\n— Ted Odgers, Media & Cultural Studies",
+    "Professor Gordon Lapping regrets he cannot operate the dashboard. He notes that his monograph remains gloriously uncited, and that he has barricaded his office against the open-plan refurbishment with a filing cabinet and two PhD students named, for the references, Dogsbody and Vassal.\n\n— Prof. Gordon Lapping, Media & Cultural Studies",
+    "From the Office of Brand Management (Georgina Edsel, deputy head): critics raise what we concede is a minor statistical issue, namely that some forty universities presently claim a top-ten place. Such carping merely fails to grasp the ethical relativism of progressive public relations.\n\n— Georgina Edsel, Brand Management",
+    "Brigadier T.W. Trouncing, Campus Security. Following the regrettable hand-to-hand wrestling in A Block over the printer, a small cadre of warders will now take up surveillance positions. Persistent non-submission of REF outputs may incur withdrawal of photocopying rights, or, in extreme cases, reassignment to Continuing Education.\n\n— Brig. T.W. Trouncing, Security",
+    "APOLOGY. Last week we erroneously described a colleague as 'research active'. This was an incomplete designation. We should of course have said 'REF-excluded research active'. We regret any distress caused to REF-included research active staff.\n\n— The Poppletonian",
+    "The Vice-Chancellor is gratified to announce that Poppleton has secured first place in the prestigious new 'Universities With a Latin Motto' rankings. We commissioned them. Finem respice!\n\n— The Vice-Chancellor",
+    "Keith Ponting (30) reports: asked to comment on the new metrics dashboard, the Vice-Chancellor explained at length that any figure inconvenient to the institution was, by definition, a methodological artefact, and any figure flattering to it a triumph of strategy.\n\n— Keith Ponting (30), staff reporter",
   ];
 
   let visible = false, mode = "clippy", used = new Set(), timer = null, host = null;
@@ -5585,9 +5587,9 @@ loadStaff();
       return `<span class="clippy-emoji" role="img" aria-label="owl">🦉</span>`;
     }
     if (mode === "poppleton") {
-      // The University of Poppleton — a redbrick crest standing in for the
-      // whole sorry institution.
-      return `<span class="clippy-emoji" role="img" aria-label="university">🏛️</span>`;
+      // The Poppletonian masthead, recreated as a red-and-black wordmark in the
+      // condensed style of the official weekly newsletter. Finem respice!
+      return `<span class="pop-mast" role="img" aria-label="The Poppletonian">THE&nbsp;POPP<span class="pop-red">LE</span>TONIAN<span class="pop-red">:</span></span>`;
     }
     const hk = mode === "hacker";
     return `<svg width="44" height="58" viewBox="0 0 48 64" aria-hidden="true">
