@@ -1,6 +1,11 @@
 """
 Scholar Dashboard — Flask backend.
 
+SPDX-License-Identifier: GPL-3.0-or-later
+Copyright (C) 2026 David M. Berry
+This program is free software under the GNU GPL v3 or (at your option) any
+later version; see the LICENSE file for details.
+
 Version: 0.2.0 (2026-05-23)
   Bumped from initial (unversioned) state. Markdown data layer, REF 2029
   UoA tagging, Stack-by-role view + bell-curve comparison, server-side
@@ -111,7 +116,7 @@ if not DATA_DIR.exists():
         DATA_DIR.mkdir(parents=True, exist_ok=True)
 
 # App version — surfaced in the toolbar and via /api/version.
-__version__ = "3.4.1"
+__version__ = "3.5.0"
 # Bump when an export schema changes in a way older readers can't ingest.
 # Every export embeds this; imports warn (but still try) when they meet a
 # higher number than they understand. See _format_warning().

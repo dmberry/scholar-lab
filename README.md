@@ -33,7 +33,9 @@ read as indicative rather than definitive.
 
 **Author:** David M. Berry ([@dmberry](https://github.com/dmberry))
 
-**Version:** 3.4.1 · proof-of-concept.
+**Version:** 3.5.0 · proof-of-concept.
+
+**Licence:** GPL-3.0-or-later. See [LICENSE](LICENSE).
 
 ## What it does
 
@@ -298,6 +300,9 @@ shows them, untick "Headers and footers" in the print dialog.
 Newest first. Releases are tagged `vX.Y.Z`; each pushed tag triggers a
 cross-platform build.
 
+- **3.5.0** — **Relicensed under GPL-3.0-or-later** (all prior versions
+  included). Adds a `LICENSE` file, per-file SPDX headers, and a README licence
+  section. No functional changes.
 - **3.4.1** — Modal polish: a sticky person-modal header (name + job title)
   that condenses as you scroll; the institutional profile moved into a
   collapsible panel; restyled, vertically-centred chevron markers.
@@ -334,6 +339,24 @@ pickers, portable bundles, and printable reports.
   mis-attributions and citation inflation. Treat every number as indicative.
 - **Not a research-quality bibliometric tool.** It's a planning aid; the human
   judgement (which outputs, which case studies, which rating) is the point.
+
+## Licence
+
+Copyright © 2026 David M. Berry.
+
+Scholar Dashboard is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the Free
+Software Foundation, either version 3 of the License, or (at your option) any
+later version. It is distributed in the hope that it will be useful, but
+WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+details. A full copy is in [LICENSE](LICENSE).
+
+**All prior versions are relicensed too.** As sole copyright holder, David M.
+Berry relicenses every previously released and tagged version of Scholar
+Dashboard (the `0.2.x` and `3.x` series, and all earlier revisions) under
+GPL-3.0-or-later. Any copy of an earlier version obtained before this change,
+which carried no licence, may also be used under these terms.
 
 ---
 

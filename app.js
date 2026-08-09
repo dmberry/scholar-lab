@@ -1,4 +1,6 @@
 // Scholar Dashboard — frontend.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 David M. Berry. GNU GPL v3 or later; see LICENSE.
 // Loads staff.json via /api/staff, renders person cards, and on click
 // hits /api/scholar/<id> which live-fetches Google Scholar (cached server-side).
 
